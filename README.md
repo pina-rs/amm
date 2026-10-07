@@ -30,7 +30,7 @@ The Pina AMM keeps the shape of Raydium's CP-Swap and removes everything an inte
 | `@pina-rs/amm`    | [npm](https://www.npmjs.com/package/@pina-rs/amm)     | TypeScript client for `@solana/kit`                       | [docs/typescript.md](docs/typescript.md)   |
 | `pina_amm`        | [pub.dev](https://pub.dev/packages/pina_amm)          | Dart and Flutter client for `solana_kit`                  | [docs/dart.md](docs/dart.md)               |
 
-The on-chain program itself lives in [`programs/pina_amm`](programs/pina_amm) and is deployed, not published to a registry.
+The on-chain program itself lives in [`programs/pina_amm`](programs/pina_amm). It ships through `pina deploy` (see [docs/deploying.md](docs/deploying.md)), never through a package registry.
 
 ## Quick start
 

@@ -71,7 +71,6 @@ in
     "test:unit".exec = ''
       set -euo pipefail
       cargo test --workspace --all-features --locked
-      pnpm --dir clients/typescript/pina_amm build
       pnpm --dir clients/typescript/pina_amm test
       (cd clients/dart && dart test)
     '';
@@ -153,13 +152,13 @@ in
       set -euo pipefail
       cluster="''${1:?usage: deploy:program <devnet|mainnet-beta> [extra pina deploy flags]}"
       shift
-      pina deploy \\
-        --project programs/pina_amm \\
-        --build \\
-        --cluster "$cluster" \\
-        --program-keypair "''${PINA_AMM_PROGRAM_KEYPAIR:?set PINA_AMM_PROGRAM_KEYPAIR to the program-id keypair file}" \\
-        --upgrade-authority "''${PINA_AMM_UPGRADE_AUTHORITY:?set PINA_AMM_UPGRADE_AUTHORITY to the upgrade-authority keypair file}" \\
-        --payer "''${PINA_AMM_DEPLOY_KEYPAIR:?set PINA_AMM_DEPLOY_KEYPAIR to the fee-payer keypair file}" \\
+      pina deploy \
+        --project programs/pina_amm \
+        --build \
+        --cluster "$cluster" \
+        --program-keypair "''${PINA_AMM_PROGRAM_KEYPAIR:?set PINA_AMM_PROGRAM_KEYPAIR to the program-id keypair file}" \
+        --upgrade-authority "''${PINA_AMM_UPGRADE_AUTHORITY:?set PINA_AMM_UPGRADE_AUTHORITY to the upgrade-authority keypair file}" \
+        --payer "''${PINA_AMM_DEPLOY_KEYPAIR:?set PINA_AMM_DEPLOY_KEYPAIR to the fee-payer keypair file}" \
         "$@"
     '';
   };

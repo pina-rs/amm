@@ -84,8 +84,16 @@ jobs:
           )"
           nix profile add --accept-flake-config "github:cachix/devenv/${devenv_revision}#devenv"
 
-      - name: install workspace dependencies and build the TypeScript client
+      # This job holds the publishing OIDC token, so dependency lifecycle
+      # scripts never run here: pnpm installs with --ignore-scripts and the
+      # TypeScript bundle is built by tsup from the locked tree.
+      - name: install workspace dependencies without lifecycle scripts and build the TypeScript client
         run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile --ignore-scripts
+          (cd clients/dart && dart pub get --enforce-lockfile)
+          pnpm --dir clients/typescript/pina_amm build
+|
           set -euo pipefail
           install:all
           pnpm --dir clients/typescript/pina_amm build

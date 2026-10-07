@@ -79,11 +79,20 @@ Fees are paid to the signer's associated token accounts, which are created if ne
 
 ## Scripting
 
-With `--json`, every command prints a single object:
+With `--json`, every command prints exactly one JSON object on stdout, in one of two shapes.
+
+Commands that act (`config create`, `config update`, `pool create`, `pool set-creator`, `quote`, `swap`, `deposit`, `withdraw`, and `fees ...`) print an envelope. `signature` is `null` for `quote` and under `--simulate`:
 
 ```sh
 $ pina-amm --json quote --pool <POOL> --sell <MINT> --amount-in 1000000
 {"action":"quote","details":{"amount_in":1000000,"amount_out":1813221,"compute_units":4682,...},"signature":null}
+```
+
+Commands that read (`config show` and `pool show`) print the decoded account fields at the top level, with no envelope:
+
+```sh
+$ pina-amm --json pool show --pool <POOL>
+{"address":"...","lp_supply":2000000000,"reserve_0":1000000000,"reserve_1":4000000000,...}
 ```
 
 The CLI exits with status 1 and a message on stderr when anything fails, including a failed simulation, which prints the program logs.

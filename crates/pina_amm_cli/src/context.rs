@@ -163,12 +163,7 @@ pub fn resolve_endpoint(value: &str) -> Result<String, CliError> {
 		"localhost" | "localnet" | "l" => LOCALHOST,
 		url if url.starts_with("https://") => url,
 		url if url.starts_with("http://") => {
-			let host = url
-				.trim_start_matches("http://")
-				.split(['/', ':'])
-				.next()
-				.unwrap_or_default();
-			if !matches!(host, "localhost" | "127.0.0.1" | "[::1]") {
+			if !is_loopback_authority(&url["http://".len()..]) {
 				return Err(CliError::InsecureEndpoint(url.to_owned()));
 			}
 			url
@@ -176,6 +171,22 @@ pub fn resolve_endpoint(value: &str) -> Result<String, CliError> {
 		other => return Err(CliError::InvalidEndpoint(other.to_owned())),
 	};
 	Ok(endpoint.to_owned())
+}
+
+/// Whether the authority of a URL (everything after the scheme) names a
+/// loopback host. Userinfo is rejected outright: in `localhost:1@example.com`
+/// the real host is `example.com`.
+fn is_loopback_authority(rest: &str) -> bool {
+	let authority = rest.split(['/', '?', '#']).next().unwrap_or_default();
+	if authority.contains('@') {
+		return false;
+	}
+	let host = if let Some(bracketed) = authority.strip_prefix('[') {
+		bracketed.split(']').next().unwrap_or_default()
+	} else {
+		authority.split(':').next().unwrap_or_default()
+	};
+	matches!(host, "localhost" | "127.0.0.1" | "::1")
 }
 
 /// Read a Solana CLI keypair file: a JSON array of 64 bytes.
@@ -252,6 +263,19 @@ mod tests {
 			"https://rpc.example.com"
 		);
 		assert!(resolve_endpoint("http://127.0.0.1:8899").is_ok());
+		assert!(resolve_endpoint("http://localhost").is_ok());
+		assert!(resolve_endpoint("http://[::1]:8899/").is_ok());
+		for remote in [
+			"http://localhost:8899@rpc.example.com",
+			"http://localhost.example.com",
+			"http://127.0.0.1.example.com:8899",
+			"http://[::2]:8899",
+		] {
+			assert!(
+				matches!(resolve_endpoint(remote), Err(CliError::InsecureEndpoint(_))),
+				"{remote} must be rejected"
+			);
+		}
 		assert!(matches!(
 			resolve_endpoint("http://rpc.example.com"),
 			Err(CliError::InsecureEndpoint(_))

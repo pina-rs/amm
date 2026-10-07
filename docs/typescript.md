@@ -155,7 +155,21 @@ await sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })(transaction, {
 });
 ```
 
-To sell token 1 instead, swap `inputToken`/`outputToken`, `inputVault`/`outputVault`, and the token programs. For a Token-2022 mint, pass `TOKEN_2022_PROGRAM_ADDRESS` from `@solana-program/token-2022` as that side's token program.
+To sell token 1 instead, swap `inputToken`/`outputToken`, `inputVault`/`outputVault`, and the token programs.
+
+**Token-2022 mints.** The token program is part of an associated token account's address, so a Token-2022 side needs `TOKEN_2022_PROGRAM_ADDRESS` from `@solana-program/token-2022` in three places: its `findAssociatedTokenPda` call, the `tokenProgram` of its `getCreateAssociatedTokenIdempotentInstructionAsync` call, and its `inputTokenProgram` or `outputTokenProgram`. Read each mint's owner to choose:
+
+```ts
+const mint1Account = await fetchEncodedAccount(rpc, pool.data.mint1);
+const tokenProgram1 = mint1Account.exists
+	? mint1Account.programAddress
+	: TOKEN_PROGRAM_ADDRESS;
+const [outputToken] = await findAssociatedTokenPda({
+	owner: wallet.address,
+	mint: pool.data.mint1,
+	tokenProgram: tokenProgram1,
+});
+```
 
 `getSwapExactOutInstruction` takes `amountOut` and `maximumAmountIn` instead.
 

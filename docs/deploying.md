@@ -19,7 +19,7 @@ export PINA_AMM_PROGRAM_KEYPAIR=~/secure/pina_amm-keypair.json
 export PINA_AMM_UPGRADE_AUTHORITY=~/secure/upgrade-authority.json
 export PINA_AMM_DEPLOY_KEYPAIR=~/.config/solana/id.json
 
-devenv shell deploy:program devenv
+devenv shell deploy:program devnet
 devenv shell deploy:program mainnet-beta --allow-mainnet
 ```
 
