@@ -58,7 +58,8 @@ import { createSolanaRpc } from "@solana/kit";
 const rpc = createSolanaRpc("https://api.mainnet-beta.solana.com");
 const { data: pool } = await fetchPool(rpc, poolAddress);
 
-// Sell token 0 for token 1. To sell token 1, swap the vaults.
+// Sell token 0 for token 1. To sell token 1, reverse every input/output pair:
+// the token accounts, the vaults, and the token programs.
 const instruction = getSwapExactInInstruction({
 	trader: wallet, // a TransactionSigner
 	pool: poolAddress,

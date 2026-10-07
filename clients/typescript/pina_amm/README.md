@@ -8,6 +8,7 @@ pnpm add @pina-rs/amm @solana/kit
 
 ```ts
 import { fetchPool, getSwapExactInInstruction } from "@pina-rs/amm";
+import { TOKEN_PROGRAM_ADDRESS } from "@solana-program/token";
 
 const { data: pool } = await fetchPool(rpc, poolAddress);
 const instruction = getSwapExactInInstruction({

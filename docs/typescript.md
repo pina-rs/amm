@@ -97,6 +97,8 @@ import {
 } from "@solana-program/token";
 import {
 	appendTransactionMessageInstructions,
+	assertIsTransactionWithBlockhashLifetime,
+	createSolanaRpcSubscriptions,
 	createTransactionMessage,
 	pipe,
 	sendAndConfirmTransactionFactory,
@@ -140,26 +142,40 @@ const instructions = [
 	}),
 ];
 
-const { value: blockhash } = await rpc.getLatestBlockhash().send();
-const transaction = await signTransactionMessageWithSigners(
-	pipe(
-		createTransactionMessage({ version: 0 }),
-		(message) => setTransactionMessageFeePayerSigner(wallet, message),
-		(message) =>
-			setTransactionMessageLifetimeUsingBlockhash(blockhash, message),
-		(message) => appendTransactionMessageInstructions(instructions, message),
-	),
+const rpcSubscriptions = createSolanaRpcSubscriptions(
+	"wss://api.mainnet-beta.solana.com",
 );
-await sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })(transaction, {
-	commitment: "confirmed",
+const sendAndConfirm = sendAndConfirmTransactionFactory({
+	rpc,
+	rpcSubscriptions,
 });
+
+const { value: blockhash } = await rpc.getLatestBlockhash().send();
+const transactionMessage = pipe(
+	createTransactionMessage({ version: 0 }),
+	(message) => setTransactionMessageFeePayerSigner(wallet, message),
+	(message) => setTransactionMessageLifetimeUsingBlockhash(blockhash, message),
+	(message) => appendTransactionMessageInstructions(instructions, message),
+);
+const transaction = await signTransactionMessageWithSigners(transactionMessage);
+assertIsTransactionWithBlockhashLifetime(transaction);
+await sendAndConfirm(transaction, { commitment: "confirmed" });
 ```
 
-To sell token 1 instead, swap `inputToken`/`outputToken`, `inputVault`/`outputVault`, and the token programs.
+To sell token 1 instead, reverse every input/output pair: swap `inputToken`/`outputToken`, `inputVault`/`outputVault`, and the token programs, create the token-0 account instead of the token-1 account, and quote with the reserves reversed, because `quoteExactIn` takes the input reserve first:
+
+```ts
+const quote = quoteExactIn(amountIn, reserve1, reserve0);
+const minimumAmountOut = (quote * (10_000n - 50n)) / 10_000n; // 0.5%
+```
+
+The helper assumes the creator fee comes from the input, which for a token-1 sale holds in creator fee modes `0` and `2`; mode `1` takes it from the output (see [math.md](math.md)).
 
 **Token-2022 mints.** The token program is part of an associated token account's address, so a Token-2022 side needs `TOKEN_2022_PROGRAM_ADDRESS` from `@solana-program/token-2022` in three places: its `findAssociatedTokenPda` call, the `tokenProgram` of its `getCreateAssociatedTokenIdempotentInstructionAsync` call, and its `inputTokenProgram` or `outputTokenProgram`. Read each mint's owner to choose:
 
 ```ts
+import { fetchEncodedAccount } from "@solana/kit";
+
 const mint1Account = await fetchEncodedAccount(rpc, pool.data.mint1);
 const tokenProgram1 = mint1Account.exists
 	? mint1Account.programAddress
@@ -245,11 +261,12 @@ Depositing `lp` shares costs `ceil(reserve * lp / lpSupply)` of each token, so c
 ```ts
 import { parsePinaAmmEventsFromLogs } from "@pina-rs/amm";
 
-const { value } = await rpc.getTransaction(signature, {
+const response = await rpc.getTransaction(signature, {
+	encoding: "json",
 	maxSupportedTransactionVersion: 0,
 }).send();
 for (
-	const event of parsePinaAmmEventsFromLogs(value?.meta?.logMessages ?? [])
+	const event of parsePinaAmmEventsFromLogs(response?.meta?.logMessages ?? [])
 ) {
 	if (event.name === "swapped") {
 		console.log(event.data.amountIn, event.data.amountOut, event.data.tradeFee);
@@ -267,14 +284,22 @@ import {
 	isPinaAmmError,
 	PINA_AMM_ERROR__SLIPPAGE_EXCEEDED,
 } from "@pina-rs/amm";
+import { unwrapSimulationError } from "@solana/kit";
 
 try {
-	await send(transaction);
+	await sendAndConfirm(transaction, { commitment: "confirmed" });
 } catch (error) {
+	const cause = unwrapSimulationError(error);
 	if (
-		isPinaAmmError(error, transactionMessage, PINA_AMM_ERROR__SLIPPAGE_EXCEEDED)
+		isPinaAmmError(cause, transactionMessage, PINA_AMM_ERROR__SLIPPAGE_EXCEEDED)
 	) {
 		// re-quote and retry
+	} else if (isPinaAmmError(cause, transactionMessage)) {
+		console.error(getPinaAmmErrorMessage(cause.context.code));
+	} else {
+		throw error;
 	}
 }
 ```
+
+A rejected preflight simulation wraps the program error, so unwrap it with `unwrapSimulationError` before checking it.

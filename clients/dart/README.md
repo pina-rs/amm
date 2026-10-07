@@ -9,6 +9,7 @@ dependencies:
 
 ```dart
 import 'package:pina_amm/pina_amm.dart';
+import 'package:solana_kit/solana_kit.dart';
 
 final instruction = getSwapExactInInstruction(
   programAddress: pinaAmmProgramAddress,

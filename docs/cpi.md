@@ -4,9 +4,11 @@
 
 ```toml
 [dependencies]
-pina = { version = "0.23", default-features = false }
+pina = { version = "0.23", default-features = false, features = ["derive"] }
 pina_amm_cpi = "0.1"
 ```
+
+The crate itself needs no `pina` features. The examples below sign with seeds from a `#[pda]` type, which needs `derive`.
 
 ## Validate the program account first
 
@@ -79,7 +81,7 @@ CreatePool {
 .invoke_signed(&amm, &[launch_signer.as_signer(), authority_signer.as_signer()])?;
 ```
 
-[`pina-rs/bonding_curve`](https://github.com/pina-rs/bonding_curve) does exactly this when a curve graduates. Its `Migrate` processor is a complete, tested example.
+[`pina-rs/bonding_curve`](https://github.com/pina-rs/bonding_curve) does exactly this when a curve graduates. Its `Graduate` processor (`programs/pina_bonding_curve/src/processors/graduate.rs`) is a complete, tested example.
 
 ## Reading AMM accounts on chain
 

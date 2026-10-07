@@ -5,10 +5,13 @@
 ```yaml
 dependencies:
   pina_amm: ^0.1.0
+  solana_kit: ^0.10.0
+  solana_kit_rpc_api: ^0.10.0 # for GetTransactionConfig
 ```
 
 ```dart
 import 'package:pina_amm/pina_amm.dart';
+import 'package:solana_kit/solana_kit.dart';
 ```
 
 ## What is exported
@@ -40,11 +43,14 @@ final (pool, _) = await findPoolPda(
 ## Read a pool
 
 ```dart
-final encoded = await fetchEncodedAccount(rpc, pool);
-if (encoded.programAddress != pinaAmmProgramAddress) {
+final account = switch (await fetchEncodedAccount(rpc, pool)) {
+  ExistingAccount(:final account) => account,
+  NonExistingAccount() => throw StateError('no account at $pool'),
+};
+if (account.programAddress != pinaAmmProgramAddress) {
   throw StateError('not a Pina AMM account');
 }
-final state = decodePool(encoded).data;
+final state = decodePool(account).data;
 print('lp supply ${state.lpSupply}');
 ```
 
@@ -68,12 +74,25 @@ final instruction = getSwapExactInInstruction(
 );
 ```
 
-Selling token 1 swaps the token accounts, vaults, and token programs. `getSwapExactOutInstruction` takes `amountOut` and `maximumAmountIn`. Quote with the formulas in [math.md](math.md), or simulate the transaction and read the `Swapped` event.
+Selling token 1 swaps the token accounts, vaults, and token programs, and the reserves you quote with: token 1's reserve becomes the input reserve `x`. `getSwapExactOutInstruction` takes `amountOut` and `maximumAmountIn`. Quote with the formulas in [math.md](math.md), or simulate the transaction and read the `Swapped` event.
 
 ## Events
 
 ```dart
-final events = parsePinaAmmEventsFromLogs(transaction.meta!.logMessages!);
+import 'package:solana_kit_rpc_api/solana_kit_rpc_api.dart';
+
+final response = await rpc
+    .getTransaction(
+      signature,
+      const GetTransactionConfig(maxSupportedTransactionVersion: 0),
+    )
+    .send();
+final logs = switch (response) {
+  {'meta': {'logMessages': final List<Object?> lines}} =>
+    lines.whereType<String>().toList(),
+  _ => const <String>[],
+};
+final events = parsePinaAmmEventsFromLogs(logs);
 for (final event in events) {
   switch (event) {
     case SwappedEvent(:final amountIn, :final amountOut):
@@ -84,7 +103,7 @@ for (final event in events) {
 }
 ```
 
-Pass every log line of one transaction, in order, so records are attributed only to the AMM.
+`solana_kit` returns the raw `getTransaction` result, so the log lines are read from its `meta`. Pass every log line of one transaction, in order, so records are attributed only to the AMM.
 
 ## Flutter notes
 
