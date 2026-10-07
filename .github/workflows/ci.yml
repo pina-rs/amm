@@ -178,7 +178,7 @@ jobs:
           result="$RUNNER_TEMP/publish-readiness.json"
           monochange step publish-readiness --from HEAD --output "$result" \
             --format json > /dev/null || true
-          jq -r '.packages[] | "\(.package): \(.status)\(if .reason then " — \(.reason)" else "" end)"' "$result"
+          jq -r '.packages[] | "\(.package): \(.status) — \(.message)"' "$result"
           jq -e '
             .status == "ready" and
               (.packages | length > 0) and
