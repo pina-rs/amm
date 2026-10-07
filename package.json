@@ -1,0 +1,16 @@
+{
+	"name": "@pina-rs/amm-workspace",
+	"private": true,
+	"type": "module",
+	"packageManager": "pnpm@10.17.1",
+	"description": "Pina AMM workspace: pinned Codama renderers and the generated TypeScript client.",
+	"scripts": {
+		"check": "pnpm --recursive --if-present check",
+		"test": "pnpm --recursive --if-present test"
+	},
+	"devDependencies": {
+		"@codama/renderers-js": "2.5.0",
+		"codama": "1.11.0",
+		"codama-renderers-dart": "0.5.6"
+	}
+}

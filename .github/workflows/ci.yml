@@ -1,0 +1,68 @@
+name: ci
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          extra_nix_config: |
+            accept-flake-config = true
+            extra-substituters = https://devenv.cachix.org
+            extra-trusted-public-keys = devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw=
+
+      - name: Install locked Devenv
+        run: |
+          devenv_revision="$(
+            nix eval --impure --raw --expr '
+              let
+                lock = builtins.fromJSON (builtins.readFile ./devenv.lock);
+              in
+                lock.nodes.devenv.locked.rev
+            '
+          )"
+          nix profile add --accept-flake-config "github:cachix/devenv/${devenv_revision}#devenv"
+
+      - name: Install workspace dependencies
+        run: devenv shell -- install:all
+
+      - name: Require changesets for changed packages
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          set -euo pipefail
+          label_args=()
+          IFS=',' read -ra labels <<< "$LABELS"
+          for label in "${labels[@]}"; do
+            [ -n "$label" ] && label_args+=(--label "$label")
+          done
+          devenv shell -- monochange affected --from "origin/$BASE_REF" --verify "${label_args[@]}"
+
+      - name: Verify program, clients, CLI, and end-to-end suite
+        run: devenv shell -- verify:all

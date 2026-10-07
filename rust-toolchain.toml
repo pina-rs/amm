@@ -1,0 +1,6 @@
+[toolchain]
+# Keep host tooling aligned with the Pina workspace. SBF builds use the
+# independent PINA_BPF_TOOLCHAIN pin from devenv.nix.
+channel = "nightly-2026-09-15"
+components = ["rustfmt", "cargo", "clippy", "rust-analyzer", "llvm-tools", "rust-src", "rustc-dev"]
+profile = "default"

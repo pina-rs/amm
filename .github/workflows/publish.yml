@@ -1,0 +1,127 @@
+name: publish
+
+# Publishes the release packages to crates.io, npm, and pub.dev with trusted
+# publishing (OIDC, no stored tokens) and flips the draft GitHub release
+# created by release-pr.yml. pub.dev only trusts a run whose ref is the
+# release tag, so release-pr.yml dispatches this workflow on the tag. release-pr.yml
+# explicitly dispatches this workflow after creating the tag and draft release
+# because a GITHUB_TOKEN tag push cannot trigger another workflow. The tag
+# trigger remains as a fallback for tags created with credentials that are not
+# subject to GitHub's recursion guard.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish (for example v0.1.0). Used by the automated release handoff and manual retries."
+        required: true
+        type: string
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.tag || github.ref_name }}
+  # Never cancel a publish mid-flight: a partial registry publish is worse than
+  # a queued run waiting its turn.
+  cancel-in-progress: false
+
+# On a tag push github.ref_name is the tag (e.g. v0.1.0); on a manual
+# workflow_dispatch retry inputs.tag is the tag.
+env:
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  publish:
+    name: publish packages and release
+    environment: publisher
+    # Use OIDC for registry publishing, then publish the draft GitHub release.
+    permissions:
+      contents: write # Publish the draft GitHub release after registry publication.
+      id-token: write # Authenticate to crates.io, npm, and pub.dev trusted publishing.
+    if: >-
+      github.repository_owner == 'pina-rs' &&
+      startsWith(inputs.tag || github.ref_name, 'v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: validate release tag input
+        run: |
+          set -euo pipefail
+          if [[ "$RELEASE_TAG" != v* ]]; then
+            echo "::error::Tag '$RELEASE_TAG' must be a release tag like v0.1.0" >&2
+            exit 1
+          fi
+        shell: bash
+
+      - name: checkout release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: install nix
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          extra_nix_config: |
+            accept-flake-config = true
+            extra-substituters = https://devenv.cachix.org
+            extra-trusted-public-keys = devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw=
+
+      - name: install locked devenv
+        run: |
+          devenv_revision="$(
+            nix eval --impure --raw --expr '
+              let
+                lock = builtins.fromJSON (builtins.readFile ./devenv.lock);
+              in
+                lock.nodes.devenv.locked.rev
+            '
+          )"
+          nix profile add --accept-flake-config "github:cachix/devenv/${devenv_revision}#devenv"
+
+      - name: install workspace dependencies and build the TypeScript client
+        run: |
+          set -euo pipefail
+          install:all
+          pnpm --dir clients/typescript/pina_amm build
+        shell: devenv shell -- bash -e {0}
+
+      - name: get crates oidc auth token
+        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
+        id: crates-oidc
+
+      - name: check publish readiness
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.crates-oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          monochange step publish-readiness \
+            --from HEAD \
+            --output "$RUNNER_TEMP/publish-readiness.json" \
+            --format json
+        shell: devenv shell -- bash -e {0}
+
+      - name: publish packages with monochange
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.crates-oidc.outputs.token }}
+          # Stream child publish output so any auth prompt or hang is visible in
+          # the job log instead of being buffered until process exit.
+          PUBLISH_STREAM_OUTPUT: "true"
+        run: |
+          set -euo pipefail
+          monochange step publish-packages \
+            --log-level info \
+            --all \
+            --output "$RUNNER_TEMP/publish-result.json" \
+            --format json
+        shell: devenv shell -- bash -e {0}
+
+      - name: publish draft release
+        run: gh release edit "$RELEASE_TAG" --draft=false --latest --repo "$GITHUB_REPOSITORY"
+        env:
+          GH_TOKEN: ${{ github.token }}

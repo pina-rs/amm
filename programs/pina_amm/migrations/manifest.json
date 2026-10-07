@@ -1,0 +1,915 @@
+{
+	"abiVersion": "0.21",
+	"programId": "pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV",
+	"versionType": "u8",
+	"auto": [
+		"accounts",
+		"instructions",
+		"events"
+	],
+	"contracts": {
+		"account:1:01": {
+			"rustName": "AmmConfig",
+			"versions": [
+				{
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "authority",
+								"rustType": "Address"
+							},
+							{
+								"name": "pool_creator_authority",
+								"rustType": "Address"
+							},
+							{
+								"name": "trade_fee_rate",
+								"rustType": "u32"
+							},
+							{
+								"name": "protocol_fee_rate",
+								"rustType": "u32"
+							},
+							{
+								"name": "creator_fee_rate",
+								"rustType": "u32"
+							},
+							{
+								"name": "index",
+								"rustType": "u16"
+							},
+							{
+								"name": "bump",
+								"rustType": "u8"
+							}
+						]
+					}
+				}
+			]
+		},
+		"account:1:02": {
+			"rustName": "Pool",
+			"versions": [
+				{
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "amm_config",
+								"rustType": "Address"
+							},
+							{
+								"name": "creator",
+								"rustType": "Address"
+							},
+							{
+								"name": "mint_0",
+								"rustType": "Address"
+							},
+							{
+								"name": "mint_1",
+								"rustType": "Address"
+							},
+							{
+								"name": "vault_0",
+								"rustType": "Address"
+							},
+							{
+								"name": "vault_1",
+								"rustType": "Address"
+							},
+							{
+								"name": "lp_mint",
+								"rustType": "Address"
+							},
+							{
+								"name": "lp_supply",
+								"rustType": "u64"
+							},
+							{
+								"name": "protocol_fees_0",
+								"rustType": "u64"
+							},
+							{
+								"name": "protocol_fees_1",
+								"rustType": "u64"
+							},
+							{
+								"name": "creator_fees_0",
+								"rustType": "u64"
+							},
+							{
+								"name": "creator_fees_1",
+								"rustType": "u64"
+							},
+							{
+								"name": "trade_fee_rate",
+								"rustType": "u32"
+							},
+							{
+								"name": "protocol_fee_rate",
+								"rustType": "u32"
+							},
+							{
+								"name": "creator_fee_rate",
+								"rustType": "u32"
+							},
+							{
+								"name": "creator_fee_mode",
+								"rustType": "u8"
+							},
+							{
+								"name": "bump",
+								"rustType": "u8"
+							}
+						]
+					}
+				}
+			]
+		},
+		"event:1:01": {
+			"rustName": "PoolCreated",
+			"versions": [
+				{
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "pool",
+								"rustType": "Address"
+							},
+							{
+								"name": "amm_config",
+								"rustType": "Address"
+							},
+							{
+								"name": "creator",
+								"rustType": "Address"
+							},
+							{
+								"name": "mint_0",
+								"rustType": "Address"
+							},
+							{
+								"name": "mint_1",
+								"rustType": "Address"
+							},
+							{
+								"name": "lp_mint",
+								"rustType": "Address"
+							},
+							{
+								"name": "amount_0",
+								"rustType": "u64"
+							},
+							{
+								"name": "amount_1",
+								"rustType": "u64"
+							},
+							{
+								"name": "lp_supply",
+								"rustType": "u64"
+							}
+						]
+					}
+				}
+			]
+		},
+		"event:1:02": {
+			"rustName": "Swapped",
+			"versions": [
+				{
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "pool",
+								"rustType": "Address"
+							},
+							{
+								"name": "trader",
+								"rustType": "Address"
+							},
+							{
+								"name": "zero_for_one",
+								"rustType": "u8"
+							},
+							{
+								"name": "amount_in",
+								"rustType": "u64"
+							},
+							{
+								"name": "amount_out",
+								"rustType": "u64"
+							},
+							{
+								"name": "trade_fee",
+								"rustType": "u64"
+							},
+							{
+								"name": "protocol_fee",
+								"rustType": "u64"
+							},
+							{
+								"name": "creator_fee",
+								"rustType": "u64"
+							},
+							{
+								"name": "creator_fee_on_input",
+								"rustType": "u8"
+							},
+							{
+								"name": "reserve_0",
+								"rustType": "u64"
+							},
+							{
+								"name": "reserve_1",
+								"rustType": "u64"
+							}
+						]
+					}
+				}
+			]
+		},
+		"event:1:03": {
+			"rustName": "LiquidityChanged",
+			"versions": [
+				{
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "pool",
+								"rustType": "Address"
+							},
+							{
+								"name": "owner",
+								"rustType": "Address"
+							},
+							{
+								"name": "is_deposit",
+								"rustType": "u8"
+							},
+							{
+								"name": "lp_amount",
+								"rustType": "u64"
+							},
+							{
+								"name": "amount_0",
+								"rustType": "u64"
+							},
+							{
+								"name": "amount_1",
+								"rustType": "u64"
+							},
+							{
+								"name": "lp_supply",
+								"rustType": "u64"
+							}
+						]
+					}
+				}
+			]
+		},
+		"event:1:04": {
+			"rustName": "FeesCollected",
+			"versions": [
+				{
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "pool",
+								"rustType": "Address"
+							},
+							{
+								"name": "collector",
+								"rustType": "Address"
+							},
+							{
+								"name": "is_protocol",
+								"rustType": "u8"
+							},
+							{
+								"name": "amount_0",
+								"rustType": "u64"
+							},
+							{
+								"name": "amount_1",
+								"rustType": "u64"
+							}
+						]
+					}
+				}
+			]
+		},
+		"instruction:1:00": {
+			"rustName": "CreateConfigInstruction",
+			"envelope": false,
+			"versions": [
+				{
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "index",
+								"rustType": "u16"
+							},
+							{
+								"name": "trade_fee_rate",
+								"rustType": "u32"
+							},
+							{
+								"name": "protocol_fee_rate",
+								"rustType": "u32"
+							},
+							{
+								"name": "creator_fee_rate",
+								"rustType": "u32"
+							},
+							{
+								"name": "authority",
+								"rustType": "Address"
+							},
+							{
+								"name": "pool_creator_authority",
+								"rustType": "Address"
+							}
+						]
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "payer",
+								"writable": true,
+								"signer": true
+							},
+							{
+								"name": "upgrade_authority",
+								"signer": true
+							},
+							{
+								"name": "program_data"
+							},
+							{
+								"name": "amm_config",
+								"writable": true,
+								"pda": "amm_config"
+							},
+							{
+								"name": "system_program",
+								"defaultValue": "publicKey:11111111111111111111111111111111"
+							}
+						]
+					}
+				}
+			]
+		},
+		"instruction:1:01": {
+			"rustName": "UpdateConfigInstruction",
+			"envelope": false,
+			"versions": [
+				{
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "new_authority",
+								"rustType": "Address"
+							},
+							{
+								"name": "trade_fee_rate",
+								"rustType": "u32"
+							},
+							{
+								"name": "protocol_fee_rate",
+								"rustType": "u32"
+							},
+							{
+								"name": "creator_fee_rate",
+								"rustType": "u32"
+							}
+						]
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "authority",
+								"signer": true
+							},
+							{
+								"name": "amm_config",
+								"writable": true,
+								"pda": "amm_config"
+							}
+						]
+					}
+				}
+			]
+		},
+		"instruction:1:02": {
+			"rustName": "CreatePoolInstruction",
+			"envelope": false,
+			"versions": [
+				{
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "amount_0",
+								"rustType": "u64"
+							},
+							{
+								"name": "amount_1",
+								"rustType": "u64"
+							},
+							{
+								"name": "creator",
+								"rustType": "Address"
+							},
+							{
+								"name": "creator_fee_mode",
+								"rustType": "u8"
+							}
+						]
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "payer",
+								"writable": true,
+								"signer": true
+							},
+							{
+								"name": "depositor",
+								"signer": true
+							},
+							{
+								"name": "pool_creator_authority",
+								"signer": true
+							},
+							{
+								"name": "amm_config",
+								"pda": "amm_config"
+							},
+							{
+								"name": "mint_0"
+							},
+							{
+								"name": "mint_1"
+							},
+							{
+								"name": "pool",
+								"writable": true,
+								"pda": "pool"
+							},
+							{
+								"name": "lp_mint",
+								"writable": true
+							},
+							{
+								"name": "vault_0",
+								"writable": true
+							},
+							{
+								"name": "vault_1",
+								"writable": true
+							},
+							{
+								"name": "depositor_token_0",
+								"writable": true
+							},
+							{
+								"name": "depositor_token_1",
+								"writable": true
+							},
+							{
+								"name": "lp_owner"
+							},
+							{
+								"name": "lp_owner_token",
+								"writable": true
+							},
+							{
+								"name": "token_program_0"
+							},
+							{
+								"name": "token_program_1"
+							},
+							{
+								"name": "lp_token_program",
+								"defaultValue": "publicKey:TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+							},
+							{
+								"name": "associated_token_program",
+								"defaultValue": "publicKey:ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+							},
+							{
+								"name": "system_program",
+								"defaultValue": "publicKey:11111111111111111111111111111111"
+							}
+						]
+					}
+				}
+			]
+		},
+		"instruction:1:03": {
+			"rustName": "DepositInstruction",
+			"envelope": false,
+			"versions": [
+				{
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "lp_amount",
+								"rustType": "u64"
+							},
+							{
+								"name": "maximum_amount_0",
+								"rustType": "u64"
+							},
+							{
+								"name": "maximum_amount_1",
+								"rustType": "u64"
+							}
+						]
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "owner",
+								"signer": true
+							},
+							{
+								"name": "pool",
+								"writable": true
+							},
+							{
+								"name": "vault_0",
+								"writable": true
+							},
+							{
+								"name": "vault_1",
+								"writable": true
+							},
+							{
+								"name": "lp_mint",
+								"writable": true
+							},
+							{
+								"name": "owner_token_0",
+								"writable": true
+							},
+							{
+								"name": "owner_token_1",
+								"writable": true
+							},
+							{
+								"name": "owner_lp_token",
+								"writable": true
+							},
+							{
+								"name": "token_program_0"
+							},
+							{
+								"name": "token_program_1"
+							},
+							{
+								"name": "lp_token_program",
+								"defaultValue": "publicKey:TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+							}
+						]
+					}
+				}
+			]
+		},
+		"instruction:1:04": {
+			"rustName": "WithdrawInstruction",
+			"envelope": false,
+			"versions": [
+				{
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "lp_amount",
+								"rustType": "u64"
+							},
+							{
+								"name": "minimum_amount_0",
+								"rustType": "u64"
+							},
+							{
+								"name": "minimum_amount_1",
+								"rustType": "u64"
+							}
+						]
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "owner",
+								"signer": true
+							},
+							{
+								"name": "pool",
+								"writable": true
+							},
+							{
+								"name": "vault_0",
+								"writable": true
+							},
+							{
+								"name": "vault_1",
+								"writable": true
+							},
+							{
+								"name": "lp_mint",
+								"writable": true
+							},
+							{
+								"name": "owner_token_0",
+								"writable": true
+							},
+							{
+								"name": "owner_token_1",
+								"writable": true
+							},
+							{
+								"name": "owner_lp_token",
+								"writable": true
+							},
+							{
+								"name": "token_program_0"
+							},
+							{
+								"name": "token_program_1"
+							},
+							{
+								"name": "lp_token_program",
+								"defaultValue": "publicKey:TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+							}
+						]
+					}
+				}
+			]
+		},
+		"instruction:1:05": {
+			"rustName": "SwapExactInInstruction",
+			"envelope": false,
+			"versions": [
+				{
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "amount_in",
+								"rustType": "u64"
+							},
+							{
+								"name": "minimum_amount_out",
+								"rustType": "u64"
+							}
+						]
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "trader",
+								"signer": true
+							},
+							{
+								"name": "pool",
+								"writable": true
+							},
+							{
+								"name": "input_token",
+								"writable": true
+							},
+							{
+								"name": "output_token",
+								"writable": true
+							},
+							{
+								"name": "input_vault",
+								"writable": true
+							},
+							{
+								"name": "output_vault",
+								"writable": true
+							},
+							{
+								"name": "input_token_program"
+							},
+							{
+								"name": "output_token_program"
+							}
+						]
+					}
+				}
+			]
+		},
+		"instruction:1:06": {
+			"rustName": "SwapExactOutInstruction",
+			"envelope": false,
+			"versions": [
+				{
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "amount_out",
+								"rustType": "u64"
+							},
+							{
+								"name": "maximum_amount_in",
+								"rustType": "u64"
+							}
+						]
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "trader",
+								"signer": true
+							},
+							{
+								"name": "pool",
+								"writable": true
+							},
+							{
+								"name": "input_token",
+								"writable": true
+							},
+							{
+								"name": "output_token",
+								"writable": true
+							},
+							{
+								"name": "input_vault",
+								"writable": true
+							},
+							{
+								"name": "output_vault",
+								"writable": true
+							},
+							{
+								"name": "input_token_program"
+							},
+							{
+								"name": "output_token_program"
+							}
+						]
+					}
+				}
+			]
+		},
+		"instruction:1:07": {
+			"rustName": "CollectProtocolFeesInstruction",
+			"envelope": false,
+			"versions": [
+				{
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "maximum_amount_0",
+								"rustType": "u64"
+							},
+							{
+								"name": "maximum_amount_1",
+								"rustType": "u64"
+							}
+						]
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "authority",
+								"signer": true
+							},
+							{
+								"name": "amm_config"
+							},
+							{
+								"name": "pool",
+								"writable": true,
+								"pda": "pool"
+							},
+							{
+								"name": "vault_0",
+								"writable": true
+							},
+							{
+								"name": "vault_1",
+								"writable": true
+							},
+							{
+								"name": "recipient_token_0",
+								"writable": true
+							},
+							{
+								"name": "recipient_token_1",
+								"writable": true
+							},
+							{
+								"name": "token_program_0"
+							},
+							{
+								"name": "token_program_1"
+							}
+						]
+					}
+				}
+			]
+		},
+		"instruction:1:08": {
+			"rustName": "CollectCreatorFeesInstruction",
+			"envelope": false,
+			"versions": [
+				{
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "maximum_amount_0",
+								"rustType": "u64"
+							},
+							{
+								"name": "maximum_amount_1",
+								"rustType": "u64"
+							}
+						]
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "creator",
+								"signer": true
+							},
+							{
+								"name": "pool",
+								"writable": true,
+								"pda": "pool"
+							},
+							{
+								"name": "vault_0",
+								"writable": true
+							},
+							{
+								"name": "vault_1",
+								"writable": true
+							},
+							{
+								"name": "recipient_token_0",
+								"writable": true
+							},
+							{
+								"name": "recipient_token_1",
+								"writable": true
+							},
+							{
+								"name": "token_program_0"
+							},
+							{
+								"name": "token_program_1"
+							}
+						]
+					}
+				}
+			]
+		},
+		"instruction:1:09": {
+			"rustName": "SetPoolCreatorInstruction",
+			"envelope": false,
+			"versions": [
+				{
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "new_creator",
+								"rustType": "Address"
+							}
+						]
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "creator",
+								"signer": true
+							},
+							{
+								"name": "pool",
+								"writable": true,
+								"pda": "pool"
+							}
+						]
+					}
+				}
+			]
+		}
+	}
+}

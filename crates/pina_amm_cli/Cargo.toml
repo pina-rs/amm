@@ -1,0 +1,37 @@
+[package]
+name = "pina_amm_cli"
+version.workspace = true
+categories = ["command-line-utilities", "cryptography::cryptocurrencies"]
+edition.workspace = true
+homepage.workspace = true
+keywords = ["solana", "amm", "pina", "cli", "defi"]
+license.workspace = true
+repository = "https://github.com/pina-rs/amm/tree/main/crates/pina_amm_cli"
+rust-version.workspace = true
+description = "Command-line interface for the Pina AMM: create tiers and pools, quote and swap, manage liquidity, and collect fees"
+
+[[bin]]
+name = "pina-amm"
+path = "src/main.rs"
+# The program crate is also documented as `pina_amm`; the binary needs no
+# rustdoc page of its own.
+doc = false
+
+[dependencies]
+base64 = { workspace = true }
+clap = { workspace = true }
+pina_amm_client = { workspace = true }
+serde_json = { workspace = true }
+solana-commitment-config = { workspace = true }
+solana-instruction = { workspace = true }
+solana-keypair = { workspace = true }
+solana-message = { workspace = true }
+solana-pubkey = { workspace = true }
+solana-rpc-client = { workspace = true }
+solana-rpc-client-api = { workspace = true }
+solana-signer = { workspace = true }
+solana-transaction = { workspace = true }
+thiserror = { workspace = true }
+
+[lints]
+workspace = true

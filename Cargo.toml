@@ -1,0 +1,103 @@
+[workspace]
+resolver = "2"
+members = [
+	"clients/cpi/pina_amm",
+	"clients/rust/pina_amm",
+	"crates/pina_amm_cli",
+	"programs/pina_amm",
+]
+exclude = ["programs/pina_amm/tests/surfpool"]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+homepage = "https://github.com/pina-rs/amm"
+license = "Apache-2.0"
+rust-version = "1.89.0"
+
+[workspace.dependencies]
+base64 = { default-features = false, version = "0.22", features = ["std"] }
+clap = { default-features = false, version = "4", features = ["derive", "env", "error-context", "help", "std", "suggestions", "usage"] }
+num-derive = { default-features = false, version = "0.5" }
+num-traits = { default-features = false, version = "0.2" }
+pina = { default-features = false, version = "=0.23.0" }
+pina_amm_client = { path = "clients/rust/pina_amm", version = "0.0.0" }
+proptest = { default-features = false, version = "1", features = ["std"] }
+serde_json = { default-features = false, version = "1", features = ["std"] }
+solana-commitment-config = { default-features = false, version = "3.1" }
+solana-instruction = { default-features = false, version = "~3.4" }
+solana-keypair = { default-features = false, version = "3.1" }
+solana-message = { default-features = false, version = "4.4" }
+solana-program-error = { default-features = false, version = "3.0" }
+solana-pubkey = { default-features = false, version = "4", features = ["std"] }
+solana-rpc-client = { default-features = false, version = "4.2" }
+solana-rpc-client-api = { default-features = false, version = "4.2" }
+solana-signer = { default-features = false, version = "3.0" }
+solana-transaction = { default-features = false, version = "4.1" }
+thiserror = { default-features = false, version = "2" }
+
+[workspace.lints.rust]
+rust_2021_compatibility = { level = "warn", priority = -1 }
+rust_2024_compatibility = { level = "warn", priority = -1 }
+missing_docs = "deny"
+unsafe_code = "deny"
+unstable_features = "deny"
+unused_extern_crates = "warn"
+unused_import_braces = "warn"
+unused_lifetimes = "warn"
+unused_macro_rules = "warn"
+unused_qualifications = "warn"
+variant_size_differences = "warn"
+edition_2024_expr_fragment_specifier = "allow"
+
+[workspace.lints.rust.unexpected_cfgs]
+level = "warn"
+check-cfg = [
+	'cfg(coverage)',
+	'cfg(target_os, values("solana"))',
+	'cfg(target_arch, values("bpf"))',
+	'cfg(target_feature, values("static-syscalls"))',
+]
+
+[workspace.lints.clippy]
+complexity = { level = "warn", priority = -1 }
+correctness = { level = "deny", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+perf = { level = "warn", priority = -1 }
+style = { level = "warn", priority = -1 }
+suspicious = { level = "warn", priority = -1 }
+blocks_in_conditions = "allow"
+cargo_common_metadata = "allow"
+cast_possible_truncation = "allow"
+cast_possible_wrap = "allow"
+cast_precision_loss = "allow"
+cast_sign_loss = "allow"
+expl_impl_clone_on_copy = "allow"
+items_after_statements = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+no_effect_underscore_binding = "allow"
+tabs_in_doc_comments = "allow"
+too_many_lines = "allow"
+wildcard_dependencies = "deny"
+wildcard_imports = "allow"
+
+# Production profile for the deployed program. Every setting either shrinks the
+# deployed binary or keeps the build honest about it. Overflow checks stay on
+# while the program is young: every hand-written operation is already checked,
+# and this turns any missed one into a failed transaction instead of a wrap.
+[profile.release]
+codegen-units = 1
+lto = "fat"
+opt-level = 3
+overflow-checks = true
+panic = "abort"
+strip = true
+
+# Build scripts and proc macros do not ship in the deployed program.
+[profile.release.build-override]
+codegen-units = 1
+incremental = false
+opt-level = 3
