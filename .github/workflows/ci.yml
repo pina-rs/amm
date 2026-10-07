@@ -66,3 +66,143 @@ jobs:
 
       - name: Verify program, clients, CLI, and end-to-end suite
         run: devenv shell -- verify:all
+
+  # Simulates the release a pull request would produce and dry-runs its
+  # publication, so a release that cannot publish fails here instead of
+  # after its tags exist. It runs for pull requests that add or change
+  # changesets and for the release pull request itself.
+  release-publish:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Decide whether this pull request releases
+        id: scope
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          RELEASE_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'release') || contains(github.event.pull_request.labels.*.name, 'ci-full') }}
+        run: |
+          set -euo pipefail
+          if [ "$RELEASE_LABEL" = true ] ||
+            ! git diff --quiet "origin/$BASE_REF...HEAD" -- .changeset; then
+            echo "releases=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "releases=false" >> "$GITHUB_OUTPUT"
+            echo "This pull request does not change changesets; nothing to release."
+          fi
+
+      - name: Install Nix
+        if: steps.scope.outputs.releases == 'true'
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          extra_nix_config: |
+            accept-flake-config = true
+            extra-substituters = https://devenv.cachix.org
+            extra-trusted-public-keys = devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw=
+
+      - name: Install locked Devenv
+        if: steps.scope.outputs.releases == 'true'
+        run: |
+          devenv_revision="$(
+            nix eval --impure --raw --expr '
+              let
+                lock = builtins.fromJSON (builtins.readFile ./devenv.lock);
+              in
+                lock.nodes.devenv.locked.rev
+            '
+          )"
+          nix profile add --accept-flake-config "github:cachix/devenv/${devenv_revision}#devenv"
+
+      - name: Install workspace dependencies and build the TypeScript client
+        if: steps.scope.outputs.releases == 'true'
+        run: |
+          set -euo pipefail
+          install:all
+          pnpm --dir clients/typescript/pina_amm build
+        shell: devenv shell -- bash -e {0}
+
+      - name: Configure a local release identity
+        if: steps.scope.outputs.releases == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Create the release commit locally
+        id: release
+        if: steps.scope.outputs.releases == 'true'
+        run: |
+          set -euo pipefail
+          # The release pull request already carries its release commit.
+          if monochange step release-record --from HEAD --format json \
+            --jq '.resolved_commit == .record_commit' 2>/dev/null | grep -qx true; then
+            echo "created=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          before="$(git rev-parse HEAD)"
+          output="$RUNNER_TEMP/release-output.txt"
+          # Production release preparation without the source-provider write:
+          # the commit and its release record stay on this disposable runner.
+          if ! monochange run release --create-pr=false > "$output" 2>&1; then
+            if grep -q 'no releaseable packages were found in discovered changesets' "$output"; then
+              echo "No releaseable packages; skipping the publish dry-run."
+              echo "created=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            cat "$output" >&2
+            exit 1
+          fi
+          cat "$output"
+          if [ "$before" = "$(git rev-parse HEAD)" ]; then
+            echo "No release commit was created; skipping the publish dry-run."
+            echo "created=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          monochange step release-record --from HEAD --format json \
+            --jq '.resolved_commit == .record_commit' | grep -qx true
+          echo "created=true" >> "$GITHUB_OUTPUT"
+        shell: devenv shell -- bash -e {0}
+
+      - name: Check registry publication readiness
+        if: steps.release.outputs.created == 'true'
+        run: |
+          set -euo pipefail
+          # Readiness names every package that still needs its first-time
+          # placeholder and trusted publisher; see docs/releasing.md.
+          result="$RUNNER_TEMP/publish-readiness.json"
+          monochange step publish-readiness --from HEAD --output "$result" \
+            --format json > /dev/null || true
+          jq -r '.packages[] | "\(.package): \(.status) — \(.message)"' "$result"
+          jq -e '
+            .status == "ready" and
+              (.packages | length > 0) and
+              all(.packages[]; .status == "ready")
+          ' "$result" > /dev/null
+        shell: devenv shell -- bash -e {0}
+
+      - name: Dry-run the release publication
+        if: steps.release.outputs.created == 'true'
+        run: |
+          set -euo pipefail
+          # Select from the release record instead of a package allowlist that
+          # could silently omit a new package.
+          report="$RUNNER_TEMP/publish-dry-run.json"
+          monochange step publish-packages --dry-run --all --format json | tee "$report"
+          # Readiness and the dry-run must cover the same packages, and the
+          # dry-run must plan something without failing.
+          jq -s -e '
+            (.[0].packages | map(.package) | sort) ==
+              (.[1].package_publish.packages
+                | map(select(.status != "skipped_existing"))
+                | map(.package)
+                | sort) and
+              .[1].package_publish.summary.planned > 0 and
+              .[1].package_publish.summary.failed == 0
+          ' "$RUNNER_TEMP/publish-readiness.json" "$report" > /dev/null
+        shell: devenv shell -- bash -e {0}
