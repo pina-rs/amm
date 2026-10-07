@@ -4,6 +4,7 @@ let
 in
 {
   packages = with pkgs; [
+    actionlint
     cargo-deny
     curl
     custom.agave
@@ -117,6 +118,7 @@ in
         -D warnings
       RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps --locked
       dprint check
+      actionlint
       pnpm --dir clients/typescript/pina_amm check
       (cd clients/dart && dart analyze --fatal-infos --fatal-warnings)
       monochange check

@@ -93,10 +93,6 @@ jobs:
           pnpm install --frozen-lockfile --ignore-scripts
           (cd clients/dart && dart pub get --enforce-lockfile)
           pnpm --dir clients/typescript/pina_amm build
-|
-          set -euo pipefail
-          install:all
-          pnpm --dir clients/typescript/pina_amm build
         shell: devenv shell -- bash -e {0}
 
       - name: get crates oidc auth token
