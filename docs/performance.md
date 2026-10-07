@@ -39,5 +39,5 @@ About **81 KB** for the deployed `pina_amm.so`, built with fat LTO, one codegen 
 ```sh
 devenv shell build:program
 devenv shell test:surfpool    # prints "<instruction>: <units> CU (budget <limit>)"
-pina profile target/deploy/pina_amm.so   # static size breakdown
+pina profile target/deploy/pina_amm.so   # static compute-unit analysis
 ```

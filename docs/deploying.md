@@ -45,17 +45,19 @@ Pass `--authority` so day-to-day tier management and protocol-fee collection mov
 
 ### A tier for a bonding curve
 
-The [bonding curve](https://github.com/pina-rs/bonding_curve) migrates graduated launches into the AMM. It needs a tier reserved for its migration authority PDA so nobody can create its pools first:
+The [bonding curve](https://github.com/pina-rs/bonding_curve) migrates graduated launches into the AMM. It needs a tier reserved for its AMM authority PDA so nobody can create its pools first:
 
 ```sh
-# The curve program's migration authority: PDA [b"amm_authority"] under the curve program.
+# The curve's AMM authority: PDA [b"amm_authority"] under the curve program
+# CurveqeE6jzkyHQMcWaGENzd7jrd8m9R1u4dZ17GnSa9, which is
+# ALk5JUXnbaYwVeHG4ymAVVfPKW1xaUTCrSyrvKiq7CGZ.
 pina-amm -u mainnet -k ~/secure/upgrade-authority.json \
   config create --index 100 --trade-fee-rate 2500 --protocol-fee-rate 160000 \
-  --creator-fee-rate 5000 --pool-creator-authority <CURVE_AMM_AUTHORITY_PDA> \
+  --creator-fee-rate 5000 --pool-creator-authority ALk5JUXnbaYwVeHG4ymAVVfPKW1xaUTCrSyrvKiq7CGZ \
   --authority <TIER_MULTISIG>
 ```
 
-Launchpad operators then name tier 100 in their curve configurations.
+Launchpad operators then pass tier 100's address (printed by `pina-amm config show --index 100`) as `--amm-config` when they create a curve configuration.
 
 ## Verify
 
