@@ -31,3 +31,7 @@ pubspec.lock
 .env.*
 !.env.example
 *-keypair.json
+
+# Monochange keeps per-machine caches here; release records under
+# `.monochange/` stay committed.
+.monochange/local/

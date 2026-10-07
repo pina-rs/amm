@@ -1,0 +1,35 @@
+[package]
+name = "pina_amm"
+version.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+publish = false
+repository = "https://github.com/pina-rs/amm/tree/main/programs/pina_amm"
+rust-version.workspace = true
+description = "Pina AMM: a permissionless constant-product market maker for Solana"
+
+[package.metadata.cli]
+solana = "3.0.0"
+
+[lib]
+# `cdylib` only. A second `lib` crate type makes rustc reject LTO for the
+# program, which costs 20-35% of deployed program size. Clients and other
+# programs use the generated crates in `clients/` instead of linking this one.
+crate-type = ["cdylib"]
+
+[features]
+default = []
+# Formatted failure diagnostics and caller locations. Costs `core::fmt` in the
+# deployed binary; use it while debugging, never for production deploys.
+verbose-logs = ["pina/verbose-logs"]
+bpf-entrypoint = []
+
+[dependencies]
+pina = { workspace = true, features = ["account-resize", "derive", "logs", "token", "validation"] }
+
+[dev-dependencies]
+proptest.workspace = true
+
+[lints]
+workspace = true

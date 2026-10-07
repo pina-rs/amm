@@ -1,0 +1,22 @@
+{
+  "paths": [
+    "Cargo.toml",
+    "src/generated/accounts/amm_config.rs",
+    "src/generated/accounts/mod.rs",
+    "src/generated/accounts/pool.rs",
+    "src/generated/instructions/collect_creator_fees.rs",
+    "src/generated/instructions/collect_protocol_fees.rs",
+    "src/generated/instructions/create_config.rs",
+    "src/generated/instructions/create_pool.rs",
+    "src/generated/instructions/deposit.rs",
+    "src/generated/instructions/mod.rs",
+    "src/generated/instructions/set_pool_creator.rs",
+    "src/generated/instructions/swap_exact_in.rs",
+    "src/generated/instructions/swap_exact_out.rs",
+    "src/generated/instructions/update_config.rs",
+    "src/generated/instructions/withdraw.rs",
+    "src/generated/mod.rs",
+    "src/generated/programs.rs",
+    "src/lib.rs"
+  ]
+}

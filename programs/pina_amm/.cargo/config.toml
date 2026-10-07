@@ -1,0 +1,2 @@
+[alias]
+build-program = "build-sbf --sbf-out-dir target/deploy -F bpf-entrypoint"

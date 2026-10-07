@@ -1,0 +1,199 @@
+# :schema https://monochange.github.io/monochange/schemas/monochange.schema.json
+#
+# Every package in this repository releases together as the `amm` group, so a
+# program change, its regenerated clients, and the CLI always share one
+# version and one `v{version}` tag.
+#
+# Release notes have two audiences:
+#
+# - the default stream is for contributors and integrators reading the
+#   repository changelog (`changelog.md`): API names, migrations, tests;
+# - the `user` stream is the public announcement attached to each GitHub
+#   release (`release-notes/v{version}.md`): what someone using the AMM can now
+#   do, in plain language.
+#
+# A change that matters to both audiences gets two changesets. See
+# `docs/releasing.md`.
+
+[defaults]
+parent_bump = "patch"
+include_private = false
+warn_on_group_mismatch = true
+package_type = "cargo"
+changelog = false
+
+[changelog.streams.user]
+description = "Public release notes for people using the Pina AMM"
+
+[changelog.sections]
+breaking = { heading = "Breaking changes", priority = 10 }
+feat = { heading = "Features", priority = 20 }
+fix = { heading = "Fixes", priority = 30 }
+user = { heading = "What's new", description = "Outcomes people using the Pina AMM can see", priority = 35 }
+docs = { heading = "Documentation", priority = 40 }
+other = { heading = "Maintenance", priority = 50 }
+
+[changelog.types]
+breaking = { bump = "major", section = "breaking", description = "An incompatible change to the program, a client, or the CLI" }
+feat = { bump = "minor", section = "feat", description = "A backwards-compatible capability" }
+fix = { bump = "patch", section = "fix", description = "A backwards-compatible correction" }
+user = { bump = "none", section = "user", stream = "user", description = "Public wording paired with a breaking, feat, or fix changeset" }
+docs = { bump = "none", section = "docs", description = "Documentation that ships with no package change" }
+none = { bump = "none", section = "other", description = "Tooling, CI, and tests that change no published package" }
+
+[changelog.outputs.user]
+stream = "user"
+path = "release-notes/v{{ version }}.md"
+format = "monochange"
+mode = "release"
+targets = ["amm"]
+
+[lints]
+use = ["cargo/baseline", "npm/baseline", "changesets/recommended"]
+include = [".changeset/**"]
+
+[lints.rules]
+"changesets/summary" = { level = "error", required = true, heading_level = 1, min_length = 12, max_length = 80, forbid_trailing_period = true, forbid_conventional_commit_prefix = true, require_description = true }
+"changesets/types/user" = { level = "error", required_bump = "none", required_sections = ["User impact"], forbidden_headings = ["Developer notes"], min_body_chars = 60 }
+# Clients inherit their repository URL per crate; the workspace URL is enough.
+"cargo/manifest-repository" = "off"
+
+[source]
+provider = "github"
+owner = "pina-rs"
+repo = "amm"
+
+[source.releases]
+enabled = true
+source = "monochange"
+branches = ["main"]
+changelog_output = "user"
+enforce_for_tags = true
+enforce_for_publish = true
+enforce_for_commit = false
+changeset_context_timeout_seconds = 120
+
+[source.pull_requests]
+enabled = true
+branch_prefix = "monochange/release"
+base = "main"
+title = "chore(release): prepare release"
+labels = ["release", "automated"]
+auto_merge = false
+
+[changesets.affected]
+enabled = true
+required = true
+skip_labels = ["release", "dependencies"]
+comment_on_failure = false
+ignored_paths = [
+	"**/tests/**",
+	"**/*.md",
+	"docs/**",
+	".github/**",
+	".changeset/**",
+	"devenv.*",
+	"dprint.json",
+	"deny.toml",
+]
+
+[cli.change]
+help_text = "Record release intent for the amm group"
+inputs = [
+	{ name = "interactive", type = "boolean", default = false, short = "i" },
+	{ name = "type", type = "choice", choices = ["breaking", "feat", "fix", "user", "docs", "none"], required = true },
+	{ name = "reason", type = "string", required = true },
+	{ name = "details", type = "string" },
+	{ name = "output", type = "path" },
+]
+steps = [
+	{ name = "create change file", type = "CreateChangeFile", inputs = { interactive = "{{ inputs.interactive }}", package = ["amm"], type = "{{ inputs.type }}", reason = "{{ inputs.reason }}", details = "{{ inputs.details }}", output = "{{ inputs.output }}" } },
+]
+
+[cli.release]
+help_text = "Prepare, format, commit, and open the release pull request"
+inputs = [
+	{ name = "create_pr", help_text = "Open or update the release pull request after the local release commit", type = "boolean", default = true },
+]
+steps = [
+	{ name = "prepare release", type = "PrepareRelease", allow_empty_changesets = true, inputs = { format = "json" } },
+	{ name = "format release commit", type = "Command", shell = "bash", command = "dprint fmt --allow-no-files", when = "{{ number_of_changesets > 0 }}" },
+	{ name = "commit release", type = "CommitRelease", inputs = { stage_all = true, no_verify = true }, when = "{{ number_of_changesets > 0 }}" },
+	{ name = "open release request", type = "OpenReleaseRequest", inputs = { stage_all = true, no_verify = true }, when = "{{ number_of_changesets > 0 && inputs.create_pr }}" },
+]
+
+# The on-chain program deploys through `pina deploy`, never a registry.
+[package.pina_amm_program]
+path = "programs/pina_amm"
+type = "cargo"
+publish = { enabled = false }
+
+[package.pina_amm_cpi]
+path = "clients/cpi/pina_amm"
+type = "cargo"
+
+[package.pina_amm_client]
+path = "clients/rust/pina_amm"
+type = "cargo"
+
+[package.pina_amm_cli]
+path = "crates/pina_amm_cli"
+type = "cargo"
+
+[package.pina_amm_client_typescript]
+path = "clients/typescript/pina_amm"
+type = "npm"
+
+[package.pina_amm_client_dart]
+path = "clients/dart"
+type = "dart"
+
+[group.amm]
+packages = [
+	"pina_amm_program",
+	"pina_amm_cpi",
+	"pina_amm_client",
+	"pina_amm_cli",
+	"pina_amm_client_typescript",
+	"pina_amm_client_dart",
+]
+tag = true
+release = true
+version_format = "primary"
+changelog = { path = "changelog.md", format = "keep_a_changelog", include = "all" }
+versioned_files = [
+	{ path = "Cargo.toml", type = "cargo", fields = ["workspace.package.version"] },
+	{ path = "Cargo.toml", type = "cargo", fields = ["workspace.dependencies.pina_amm_client.version"] },
+]
+
+[ecosystems.cargo]
+enabled = true
+lockfile_commands = [
+	{ command = "cargo update --workspace", cwd = ".", shell = "bash" },
+]
+
+[ecosystems.cargo.publish]
+enabled = true
+mode = "builtin"
+trusted_publishing = { enabled = true, repository = "pina-rs/amm", workflow = "publish.yml", environment = "publisher" }
+
+[ecosystems.cargo.publish_order]
+dependency_fields = ["dependencies", "build-dependencies"]
+
+[ecosystems.npm]
+enabled = true
+lockfile_commands = [{ command = "pnpm install --lockfile-only" }]
+
+[ecosystems.npm.publish]
+enabled = true
+mode = "builtin"
+registry = "npm"
+trusted_publishing = { enabled = true, repository = "pina-rs/amm", workflow = "publish.yml", environment = "publisher" }
+
+[ecosystems.dart]
+enabled = true
+
+[ecosystems.dart.publish]
+enabled = true
+mode = "builtin"
+trusted_publishing = { enabled = true, repository = "pina-rs/amm", workflow = "publish.yml", environment = "publisher" }

@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 6517ae392fb40dbf10fdfbf1d1d7f645baf576fc692924817ebe634e073620cf # shrinks to input = 3819766699159149803, output = 4315135461453384712, amount_out = 3361830398795392410, rates = FeeRates { trade: 43716, protocol: 0, creator: 35355 }, on_input = false

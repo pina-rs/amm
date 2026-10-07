@@ -1,0 +1,9 @@
+[project]
+program = "."
+
+# Generated clients live at the repository root under `clients/`. Pina refuses
+# `..` in configured paths, so the `generate:clients` devenv script passes
+# `--output clients` from the repository root.
+[clients]
+output = "clients"
+languages = ["cpi", "rust", "typescript", "dart"]
