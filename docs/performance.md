@@ -20,6 +20,16 @@ The suite fails if any instruction exceeds its ceiling, so a regression is caugh
 
 About **81 KB** for the deployed `pina_amm.so`, built with fat LTO, one codegen unit, and `opt-level = 3`. Rent for the program-data account scales with this size.
 
+The size-optimised profiles were measured and rejected:
+
+| Profile           | Size  | `SwapExactIn`    | Result                                        |
+| ----------------- | ----- | ---------------- | --------------------------------------------- |
+| `opt-level = 3`   | 81 KB | ~4,700 CU        | Used                                          |
+| `opt-level = "s"` | 86 KB | —                | Larger than the speed profile                 |
+| `opt-level = "z"` | 77 KB | ~6,000 CU (+27%) | Every swap pays for a 6% one-time rent saving |
+
+A market maker is deployed once and called on every swap, so it uses the speed profile. `pina build` applies that profile itself; build with `pina build --no-size-profile` to try another.
+
 ## Where the savings come from
 
 | Choice                                   | Effect                                                                                                           |
