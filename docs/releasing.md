@@ -91,7 +91,7 @@ Trusted publishing can only be configured on a package that already exists, so e
    This reserves `pina_amm_cpi`, `pina_amm_client`, and `pina_amm_cli` on crates.io, `@pina-rs/amm` on npm, and `pina_amm` on pub.dev.
 3. Register the trusted publisher on each package: repository `pina-rs/amm`, workflow `publish.yml`, environment `publisher`.
    - **crates.io**: each crate's settings, under Trusted Publishing.
-   - **npm**: the package's settings, under Trusted Publisher (GitHub Actions).
+   - **npm**: the package's settings, under Trusted Publisher (GitHub Actions), with **Allow npm publish** ticked. The workflow publishes with `npm publish`, which a stage-only publisher rejects. From a terminal, use npm 12 or later: `npm trust github @pina-rs/amm --file publish.yml --repo pina-rs/amm --env publisher --allow-publish --allow-stage-publish`. npm 11 cannot set these permissions and fails with a bare `400`.
    - **pub.dev**: the package's admin tab, enabling publishing from GitHub Actions with the tag pattern `v{{version}}` and the `publisher` environment.
 4. Re-run `release-publish` on the release pull request and merge it once it passes.
 
