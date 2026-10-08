@@ -195,6 +195,11 @@ trusted_publishing = { enabled = true, repository = "pina-rs/amm", workflow = "p
 
 [ecosystems.dart]
 enabled = true
+# Let pub write its own lockfile: the built-in rewrite re-serializes the YAML,
+# which `dart pub get` then reverts, so `check:clients` reports drift.
+lockfile_commands = [
+	{ command = "dart pub get", cwd = "clients/dart", shell = "bash" },
+]
 
 [ecosystems.dart.publish]
 enabled = true
