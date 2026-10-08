@@ -1,0 +1,101 @@
+---
+/**
+ * Accessible tabs of highlighted code. Each tab's code renders on the server
+ * with both themes; CSS shows the one that matches the page.
+ */
+import { Code } from "astro:components";
+
+type Lang = "ts" | "rust" | "dart" | "sh";
+
+interface Tab {
+	id: string;
+	label: string;
+	lang: Lang;
+	code: string;
+	/** Where the full example lives. */
+	guide: { label: string; href: string };
+}
+
+interface Props {
+	label: string;
+	tabs: readonly Tab[];
+}
+
+const { label, tabs } = Astro.props;
+---
+
+<div class="code-tabs" data-code-tabs>
+	<div class="code-tabs__list" role="tablist" aria-label={label}>
+		{
+			tabs.map((tab, index) => (
+				<button
+					type="button"
+					role="tab"
+					id={`tab-${tab.id}`}
+					aria-controls={`panel-${tab.id}`}
+					aria-selected={index === 0 ? "true" : "false"}
+					tabindex={index === 0 ? 0 : -1}
+				>
+					{tab.label}
+				</button>
+			))
+		}
+	</div>
+	{
+		tabs.map((tab, index) => (
+			<div class="code-tabs__panel" role="tabpanel" id={`panel-${tab.id}`} aria-labelledby={`tab-${tab.id}`} hidden={index !== 0}>
+				<Code code={tab.code} lang={tab.lang} themes={{ light: "github-light", dark: "github-dark" }} defaultColor={false} />
+				<a class="code-tabs__guide" href={tab.guide.href}>
+					{tab.guide.label} →
+				</a>
+			</div>
+		))
+	}
+</div>
+
+<script>
+	for (const root of document.querySelectorAll<HTMLElement>("[data-code-tabs]")) {
+		const tabs = [...root.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+
+		function select(next: HTMLButtonElement, focus: boolean): void {
+			for (const tab of tabs) {
+				const selected = tab === next;
+				tab.setAttribute("aria-selected", String(selected));
+				tab.tabIndex = selected ? 0 : -1;
+				const panel = document.getElementById(tab.getAttribute("aria-controls") ?? "");
+				if (panel !== null) {
+					panel.hidden = !selected;
+				}
+			}
+			if (focus) {
+				next.focus();
+			}
+		}
+
+		function tabForKey(key: string, index: number): HTMLButtonElement | undefined {
+			switch (key) {
+				case "ArrowRight":
+					return tabs[(index + 1) % tabs.length];
+				case "ArrowLeft":
+					return tabs[(index - 1 + tabs.length) % tabs.length];
+				case "Home":
+					return tabs[0];
+				case "End":
+					return tabs.at(-1);
+				default:
+					return undefined;
+			}
+		}
+
+		for (const [index, tab] of tabs.entries()) {
+			tab.addEventListener("click", () => select(tab, false));
+			tab.addEventListener("keydown", (event) => {
+				const target = tabForKey(event.key, index);
+				if (target !== undefined) {
+					event.preventDefault();
+					select(target, true);
+				}
+			});
+		}
+	}
+</script>

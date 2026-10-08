@@ -2,6 +2,8 @@
 
 A permissionless constant-product market maker for Solana, built with [Pina](https://github.com/pina-rs/pina).
 
+**Website and documentation:** [amm.pina.rs](https://amm.pina.rs)
+
 Anyone can create a pool for any two tokens, trade against it, and provide liquidity. Fee tiers are curated by the program's upgrade authority, so traders and liquidity providers choose between a small set of well-known fee levels instead of reading every pool's terms. A tier can also be reserved for one pool creator — such as a launchpad program — so that program's pools cannot be front-run.
 
 ```text
@@ -97,6 +99,7 @@ devenv shell build:program   # SBF artifact and IDL in target/
 devenv shell test:unit       # Rust, TypeScript, and Dart unit tests
 devenv shell test:surfpool   # end-to-end suite on an offline Surfnet
 devenv shell lint:all        # Pina security lints, clippy, docs, formatting
+devenv shell dev:website     # amm.pina.rs locally, with docs/ as its documentation
 devenv shell verify:all      # everything CI runs
 ```
 

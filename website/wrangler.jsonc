@@ -1,0 +1,16 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "pina-amm-website",
+	"main": "worker/index.ts",
+	"compatibility_date": "2026-10-01",
+	"assets": {
+		"directory": "./dist",
+		"binding": "ASSETS",
+		"not_found_handling": "404-page",
+		// Static pages never invoke the Worker; only the API does.
+		"run_worker_first": ["/api/*"]
+	},
+	// Requires the pina.rs zone in the same Cloudflare account.
+	"routes": [{ "pattern": "amm.pina.rs", "custom_domain": true }],
+	"observability": { "enabled": true }
+}

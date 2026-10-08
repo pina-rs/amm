@@ -1,0 +1,64 @@
+@import "@fontsource-variable/bricolage-grotesque";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/jetbrains-mono";
+
+/*
+ * Pina design tokens, shared by the landing page and the docs.
+ * Dark is the default to match Starlight; `data-theme="light"` switches.
+ * Each Pina product keeps the family palette and picks one accent:
+ * the AMM's is liquidity green, with pineapple gold marking fees.
+ */
+:root {
+	color-scheme: dark;
+
+	--pina-font-display: "Bricolage Grotesque Variable", ui-sans-serif, system-ui, sans-serif;
+	--pina-font-body: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+	--pina-font-mono: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+	--pina-bg: #0d0f12;
+	--pina-bg-raised: #14171c;
+	--pina-bg-sunken: #090b0d;
+	--pina-ink: #eeece6;
+	--pina-text: #c7c9cc;
+	--pina-muted: #979da6;
+	--pina-faint: #5d636c;
+	--pina-rule: #22262d;
+	--pina-rule-strong: #343a44;
+	--pina-accent: #38d39f;
+	--pina-accent-text: #74e6c0;
+	--pina-accent-ink: #04211a;
+	--pina-accent-wash: rgb(56 211 159 / 0.12);
+	--pina-gold: #f4c04f;
+	--pina-gold-wash: rgb(244 192 79 / 0.16);
+	/* The other Pina product's accent, for links to it. */
+	--pina-sibling: #ff8a3d;
+	--pina-sibling-wash: rgb(255 138 61 / 0.14);
+	--pina-shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 24px 48px -24px rgb(0 0 0 / 0.6);
+
+	--pina-radius: 14px;
+	--pina-radius-sm: 8px;
+	--pina-max-width: 72rem;
+}
+
+:root[data-theme="light"] {
+	color-scheme: light;
+
+	--pina-bg: #f5f2ea;
+	--pina-bg-raised: #fdfbf6;
+	--pina-bg-sunken: #ebe6da;
+	--pina-ink: #15171b;
+	--pina-text: #2c3037;
+	--pina-muted: #59606a;
+	--pina-faint: #8b9099;
+	--pina-rule: #e0d9c9;
+	--pina-rule-strong: #cbc2ad;
+	--pina-accent: #0a7556;
+	--pina-accent-text: #075c43;
+	--pina-accent-ink: #ffffff;
+	--pina-accent-wash: rgb(10 117 86 / 0.09);
+	--pina-gold: #b27313;
+	--pina-gold-wash: rgb(178 115 19 / 0.12);
+	--pina-sibling: #c2410c;
+	--pina-sibling-wash: rgb(194 65 12 / 0.1);
+	--pina-shadow: 0 1px 0 rgb(255 255 255 / 0.7) inset, 0 24px 48px -28px rgb(60 48 20 / 0.28);
+}
