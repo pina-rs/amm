@@ -15,7 +15,7 @@ interface Props {
 }
 
 const { title, description = site.description } = Astro.props;
-const pageTitle = title === undefined ? `${site.name} · Constant-product market maker for Solana` : `${title} | ${site.name}`;
+const pageTitle = title === undefined ? `${site.name} · ${site.tagline}` : `${title} | ${site.name}`;
 const canonical = new URL(Astro.url.pathname, site.url);
 ---
 
@@ -50,7 +50,7 @@ const canonical = new URL(Astro.url.pathname, site.url);
 			<div class="container site-header__inner">
 				<a class="brand" href="/" aria-label={`${site.name} home`}>
 					<span class="brand__mark" set:html={mark} />
-					<span class="brand__name">Pina <span>AMM</span></span>
+					<span class="brand__name">{site.brand.family} <span>{site.brand.product}</span></span>
 				</a>
 				<nav class="site-nav" aria-label="Main">
 					<a href="/docs/">Docs</a>
@@ -84,7 +84,7 @@ const canonical = new URL(Astro.url.pathname, site.url);
 					<a href="/docs/security/">Security</a>
 					<a href={`${site.repository}/releases`}>Releases</a>
 					<a href={site.repository}>GitHub</a>
-					<a href={site.bondingCurve}>Pina Bonding Curve</a>
+					<a href={site.sibling.href}>{site.sibling.name}</a>
 				</nav>
 			</div>
 		</footer>

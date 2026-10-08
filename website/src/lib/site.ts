@@ -4,6 +4,9 @@ import type { RepoDocsConfig } from "./repo-docs";
 /** Facts about the project that the landing page and docs share. */
 export const site = {
 	name: "Pina AMM",
+	/** The wordmark: the family name, then the product in the accent colour. */
+	brand: { family: "Pina", product: "AMM" },
+	tagline: "Constant-product market maker for Solana",
 	url: "https://amm.pina.rs",
 	description:
 		"A permissionless constant-product market maker for Solana, built with Pina. Fees lock when a pool is created, and a swap costs about 4,700 compute units.",
@@ -11,7 +14,11 @@ export const site = {
 	branch: "main",
 	programId: "pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV",
 	pina: "https://github.com/pina-rs/pina",
-	bondingCurve: "https://bonding-curve.pina.rs",
+	/** The other Pina product, linked from the footer. */
+	sibling: {
+		name: "Pina Bonding Curve",
+		href: "https://bonding-curve.pina.rs",
+	},
 } as const;
 
 /** The published packages, in the order the landing page lists them. */
