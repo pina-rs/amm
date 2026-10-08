@@ -30,6 +30,9 @@
 	--pina-accent-wash: rgb(56 211 159 / 0.12);
 	--pina-gold: #f4c04f;
 	--pina-gold-wash: rgb(244 192 79 / 0.16);
+	/* The other Pina product's accent, for links to it. */
+	--pina-sibling: #ff8a3d;
+	--pina-sibling-wash: rgb(255 138 61 / 0.14);
 	--pina-shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 24px 48px -24px rgb(0 0 0 / 0.6);
 
 	--pina-radius: 14px;
@@ -55,5 +58,7 @@
 	--pina-accent-wash: rgb(10 117 86 / 0.09);
 	--pina-gold: #b27313;
 	--pina-gold-wash: rgb(178 115 19 / 0.12);
+	--pina-sibling: #c2410c;
+	--pina-sibling-wash: rgb(194 65 12 / 0.1);
 	--pina-shadow: 0 1px 0 rgb(255 255 255 / 0.7) inset, 0 24px 48px -28px rgb(60 48 20 / 0.28);
 }

@@ -708,6 +708,10 @@ code {
 	.reasons {
 		grid-template-columns: repeat(4, minmax(0, 1fr));
 	}
+
+	.reasons--three {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
 }
 
 .reason {
@@ -913,7 +917,7 @@ code {
 
 .section--launch {
 	background:
-		radial-gradient(ellipse 60% 120% at 100% 50%, var(--pina-gold-wash), transparent 70%),
+		radial-gradient(ellipse 60% 120% at 100% 50%, var(--pina-sibling-wash), transparent 70%),
 		var(--pina-bg);
 }
 
@@ -944,12 +948,12 @@ code {
 }
 
 .launch__card:hover {
-	border-color: var(--pina-gold);
+	border-color: var(--pina-sibling);
 	transform: translateY(-2px);
 }
 
 .launch__eyebrow {
-	color: var(--pina-gold);
+	color: var(--pina-sibling);
 	font-size: 0.72rem;
 	font-weight: 600;
 	letter-spacing: 0.08em;
@@ -967,7 +971,7 @@ code {
 	position: absolute;
 	top: 50%;
 	right: 1.4rem;
-	color: var(--pina-gold);
+	color: var(--pina-sibling);
 	font-size: 1.4rem;
 	transform: translateY(-50%);
 }
