@@ -1,0 +1,57 @@
+/* Maps the Pina tokens onto Starlight's theme variables. */
+:root {
+	--sl-font: var(--pina-font-body);
+	--sl-font-mono: var(--pina-font-mono);
+
+	--sl-color-accent-low: #0e3a2d;
+	--sl-color-accent: var(--pina-accent);
+	--sl-color-accent-high: #a9f2d8;
+
+	--sl-color-white: #f7f5f0;
+	--sl-color-gray-1: #e4e2dc;
+	--sl-color-gray-2: var(--pina-text);
+	--sl-color-gray-3: #8e949c;
+	--sl-color-gray-4: #5b6169;
+	--sl-color-gray-5: #2b3037;
+	--sl-color-gray-6: #16191e;
+	--sl-color-black: var(--pina-bg);
+}
+
+:root[data-theme="light"] {
+	--sl-color-accent-low: #cfeee2;
+	--sl-color-accent: var(--pina-accent);
+	--sl-color-accent-high: #064c39;
+
+	--sl-color-white: var(--pina-ink);
+	--sl-color-gray-1: #23262c;
+	--sl-color-gray-2: var(--pina-text);
+	--sl-color-gray-3: #555b65;
+	--sl-color-gray-4: #8a8f98;
+	--sl-color-gray-5: #d3cbba;
+	--sl-color-gray-6: #ece7db;
+	--sl-color-gray-7: #f1ede4;
+	--sl-color-black: var(--pina-bg);
+}
+
+.site-title,
+h1#_top,
+.sl-markdown-content :is(h2, h3, h4) {
+	font-family: var(--pina-font-display);
+	letter-spacing: -0.015em;
+}
+
+h1#_top {
+	font-weight: 700;
+}
+
+.site-title {
+	font-weight: 700;
+}
+
+.sl-markdown-content table {
+	font-size: var(--sl-text-sm);
+}
+
+.sl-markdown-content code:not(pre code) {
+	border-radius: 4px;
+}

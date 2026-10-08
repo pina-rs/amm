@@ -26,6 +26,10 @@ devenv shell test:unit
 devenv shell test:surfpool   # real SBF artifact on an offline Surfnet, including the CLI
 ```
 
+## Website
+
+`website/` is amm.pina.rs: an Astro and Starlight site served by a Cloudflare Worker. It renders `docs/*.md` directly, so the guides stay plain GitHub Markdown with a `# Title` first line and relative links; never copy a guide into the site. The landing page's live pool uses the exact-input formula from `docs/math.md`; keep `website/src/lib/constant-product.ts` in step with `programs/pina_amm/src/math.rs`. The deploy job runs only on `main`; never deploy from a pull request. See [website/README.md](website/README.md).
+
 ## Release intent
 
 Every pull request that changes a published package adds a changeset in `.changeset/`. User-visible changes add a second `user` changeset with a `## User impact` section in plain language. See `docs/releasing.md`.

@@ -1,0 +1,279 @@
+---
+import CodeTabs from "../components/CodeTabs.astro";
+import CopyButton from "../components/CopyButton.astro";
+import CurvePlayground from "../components/CurvePlayground.astro";
+import SiteShell from "../components/SiteShell.astro";
+import { packages, site } from "../lib/site";
+
+const reasons = [
+	{
+		title: "Nothing to trust after creation",
+		body: "A pool copies its tier's fee rates when it is created. Updating a tier only affects new pools, and no instruction can pause a pool or reach its funds.",
+		href: "/docs/fees/",
+	},
+	{
+		title: "Small and fast",
+		body: "A swap costs about 4,700 compute units including both token transfers, and the whole program is about 81 KB.",
+		href: "/docs/performance/",
+	},
+	{
+		title: "Creator fees built in",
+		body: "Any tier can add a creator fee, paid to the pool's creator in the token they choose. A launchpad can route post-launch trading income without another program.",
+		href: "/docs/fees/#creator-fees",
+	},
+	{
+		title: "Token-2022 ready",
+		body: "SPL Token and Token-2022 mints both work, as long as their extensions cannot change how many tokens a transfer moves.",
+		href: "/docs/architecture/",
+	},
+] as const;
+
+const figures = [
+	{ value: "4,700", unit: "CU", label: "per swap, both transfers included" },
+	{ value: "81", unit: "KB", label: "deployed program" },
+	{ value: "10", unit: "", label: "instructions with fixed account lists" },
+	{ value: "0", unit: "", label: "admin paths to a pool's funds" },
+] as const;
+
+const snippets = [
+	{
+		id: "typescript",
+		label: "TypeScript",
+		lang: "ts",
+		guide: { label: "TypeScript guide", href: "/docs/typescript/" },
+		code: `import { fetchPool, getSwapExactInInstruction } from "@pina-rs/amm";
+import { TOKEN_PROGRAM_ADDRESS } from "@solana-program/token";
+import { createSolanaRpc } from "@solana/kit";
+
+const rpc = createSolanaRpc("https://api.mainnet-beta.solana.com");
+const { data: pool } = await fetchPool(rpc, poolAddress);
+
+const instruction = getSwapExactInInstruction({
+	trader: wallet,
+	pool: poolAddress,
+	inputToken: walletToken0,
+	outputToken: walletToken1,
+	inputVault: pool.vault0,
+	outputVault: pool.vault1,
+	inputTokenProgram: TOKEN_PROGRAM_ADDRESS,
+	outputTokenProgram: TOKEN_PROGRAM_ADDRESS,
+	amountIn: 1_000_000n,
+	minimumAmountOut: 990_000n,
+});`,
+	},
+	{
+		id: "rust",
+		label: "Rust",
+		lang: "rust",
+		guide: { label: "Rust client guide", href: "/docs/rust-client/" },
+		code: `use pina_amm_client::instructions::{SwapExactIn, SwapExactInInstructionData};
+
+let data = SwapExactInInstructionData::new(|data| {
+	data.amount_in.set(1_000_000);
+	data.minimum_amount_out.set(minimum_out);
+})?;
+let instruction = SwapExactIn::new(
+	trader,
+	pool,
+	trader_token_0, // input: selling token 0
+	trader_token_1, // output
+	state.vault0,
+	state.vault1,
+	token_program_0,
+	token_program_1,
+)
+.instruction(data);`,
+	},
+	{
+		id: "dart",
+		label: "Dart",
+		lang: "dart",
+		guide: { label: "Dart guide", href: "/docs/dart/" },
+		code: `final instruction = getSwapExactInInstruction(
+  programAddress: pinaAmmProgramAddress,
+  trader: wallet.address,
+  pool: pool,
+  inputToken: walletToken0,
+  outputToken: walletToken1,
+  inputVault: state.vault0,
+  outputVault: state.vault1,
+  inputTokenProgram: tokenProgramAddress,
+  outputTokenProgram: tokenProgramAddress,
+  amountIn: BigInt.from(1000000),
+  minimumAmountOut: minimumOut,
+);`,
+	},
+	{
+		id: "cpi",
+		label: "CPI",
+		lang: "rust",
+		guide: { label: "CPI guide", href: "/docs/cpi/" },
+		code: `use pina_amm_cpi::{SwapExactIn, SwapExactInIx};
+
+SwapExactIn {
+	trader: self.vault_authority,
+	pool: self.pool,
+	input_token: self.program_token_0,
+	output_token: self.program_token_1,
+	input_vault: self.pool_vault_0,
+	output_vault: self.pool_vault_1,
+	input_token_program: self.token_program,
+	output_token_program: self.token_program,
+	ix: SwapExactInIx {
+		amount_in,
+		minimum_amount_out,
+	},
+}
+.invoke_signed(&amm, &[vault_authority_seeds.to_signer().as_signer()])?;`,
+	},
+	{
+		id: "cli",
+		label: "CLI",
+		lang: "sh",
+		guide: { label: "CLI guide", href: "/docs/cli/" },
+		code: `cargo install pina_amm_cli
+
+# Quote a trade, then send it with a 0.5% slippage limit.
+pina-amm quote --pool <POOL> --sell <MINT> --amount-in 1000000
+pina-amm swap  --pool <POOL> --sell <MINT> --amount-in 1000000 --slippage-bps 50`,
+	},
+] as const;
+
+const guides = [
+	{ title: "Architecture", body: "Accounts, PDAs, lifecycle, and the design decisions behind them.", href: "/docs/architecture/" },
+	{ title: "Math", body: "Reproduce any quote and check every rounding rule.", href: "/docs/math/" },
+	{ title: "Fees", body: "Fee tiers, protocol fees, creator fees, and restricted tiers.", href: "/docs/fees/" },
+	{ title: "Instructions", body: "Data, accounts, errors, and events for all ten instructions.", href: "/docs/instructions/" },
+	{ title: "Security", body: "The threat model and the invariants the program enforces.", href: "/docs/security/" },
+	{ title: "Deploying", body: "Deploy the program and create the first fee tiers.", href: "/docs/deploying/" },
+] as const;
+---
+
+<SiteShell>
+	<section class="hero">
+		<div class="container hero__inner">
+			<div class="hero__copy">
+				<a class="status-pill" href="/docs/security/"><span aria-hidden="true"></span>Pre-release · not yet deployed or audited</a>
+				<h1 class="hero__title">Swap on terms that <em>never move</em>.</h1>
+				<p class="hero__lede">
+					Pina AMM is a permissionless constant-product market maker for Solana. A pool locks its fee rates when it is created, with no pause switch and no admin path to its funds, and a swap costs about 4,700 compute units.
+				</p>
+				<div class="hero__actions">
+					<a class="button button--primary" href="/docs/">Read the docs</a>
+					<a class="button button--secondary" href="/docs/integrating/">Choose a client</a>
+				</div>
+				<div class="program-id">
+					<span class="program-id__label">Program</span>
+					<code>{site.programId}</code>
+					<CopyButton value={site.programId} label="Copy program ID" />
+				</div>
+			</div>
+			<CurvePlayground />
+		</div>
+	</section>
+
+	<section class="section" aria-labelledby="why-title">
+		<div class="container">
+			<h2 id="why-title" class="section__title">Built to be read, not trusted</h2>
+			<p class="section__lede">
+				It keeps the shape of Raydium's CP-Swap and removes everything an integration does not need.
+			</p>
+			<ul class="reasons" role="list">
+				{
+					reasons.map((reason, index) => (
+						<li class="reason">
+							<span class="reason__index" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+							<h3>{reason.title}</h3>
+							<p>{reason.body}</p>
+							<a href={reason.href} aria-label={`Read more: ${reason.title}`}>
+								Read more →
+							</a>
+						</li>
+					))
+				}
+			</ul>
+		</div>
+	</section>
+
+	<section class="section section--band" aria-labelledby="figures-title">
+		<div class="container">
+			<h2 id="figures-title" class="section__title section__title--small">Measured on the real program</h2>
+			<dl class="figures">
+				{
+					figures.map((figure) => (
+						<div class="figure">
+							<dt>{figure.label}</dt>
+							<dd>
+								{figure.value}
+								{figure.unit !== "" && <span>{figure.unit}</span>}
+							</dd>
+						</div>
+					))
+				}
+			</dl>
+			<p class="figures__note">
+				The end-to-end suite runs every instruction against the compiled program and fails if a swap exceeds 6,000 compute units. <a href="/docs/performance/">See the measurements</a>.
+			</p>
+		</div>
+	</section>
+
+	<section class="section" aria-labelledby="clients-title">
+		<div class="container split">
+			<div class="split__copy">
+				<h2 id="clients-title" class="section__title">A client for your stack</h2>
+				<p class="section__lede">
+					Rust, TypeScript, Dart, and on-chain CPI clients are generated from the program's IDL, so they always match it. A hand-written CLI covers everything else.
+				</p>
+				<ul class="packages" role="list">
+					{
+						packages.map((pkg) => (
+							<li>
+								<a href={pkg.href}>
+									<code>{pkg.name}</code>
+									<span class="packages__registry">{pkg.registry}</span>
+								</a>
+								<p>{pkg.summary}</p>
+							</li>
+						))
+					}
+				</ul>
+			</div>
+			<CodeTabs label="Swap examples" tabs={snippets} />
+		</div>
+	</section>
+
+	<section class="section section--launch" aria-labelledby="launch-title">
+		<div class="container launch">
+			<div>
+				<h2 id="launch-title" class="section__title">Pools no one can front-run</h2>
+				<p class="section__lede">
+					A tier can be reserved for a single pool creator, such as a launchpad program's PDA. Only that program can open pools in it, so its graduation pools cannot be created first by someone else.
+				</p>
+			</div>
+			<a class="launch__card" href={site.bondingCurve}>
+				<span class="launch__eyebrow">Built on this</span>
+				<strong>Pina Bonding Curve</strong>
+				<span>Self-serve launchpads that graduate every launch into a Pina AMM pool at exactly the price it reached.</span>
+				<span class="launch__go" aria-hidden="true">→</span>
+			</a>
+		</div>
+	</section>
+
+	<section class="section" aria-labelledby="docs-title">
+		<div class="container">
+			<h2 id="docs-title" class="section__title">Read the details</h2>
+			<ul class="guides" role="list">
+				{
+					guides.map((guide) => (
+						<li>
+							<a class="guide" href={guide.href}>
+								<strong>{guide.title}</strong>
+								<span>{guide.body}</span>
+							</a>
+						</li>
+					))
+				}
+			</ul>
+		</div>
+	</section>
+</SiteShell>

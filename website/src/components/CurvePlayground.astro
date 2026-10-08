@@ -1,0 +1,386 @@
+---
+/**
+ * The hero's live pool. The server renders the first frame (a 50 SOL sale in
+ * the 0.25% tier); the script then lets visitors drag the trade along the
+ * curve, change tier and direction, and replay a day of trades to watch fees
+ * push the curve outward.
+ */
+import {
+	amountForStep,
+	BASE,
+	curvePath,
+	DEFAULT_FEE_TIER,
+	describeTrade,
+	FEE_TIERS,
+	formatAmount,
+	formatRate,
+	INITIAL_POOL,
+	invariant,
+	PLOT,
+	plotX,
+	plotY,
+	QUOTE,
+	REPLAY_TRADES,
+	SLIDER_STEPS,
+	stepForAmount,
+	swap,
+	units,
+} from "../lib/playground";
+
+const initialStep = stepForAmount("sell-base", 50n * 10n ** 9n);
+const k = invariant(INITIAL_POOL);
+const from = { x: plotX(units(INITIAL_POOL.base, BASE.decimals)), y: plotY(units(INITIAL_POOL.quote, QUOTE.decimals)) };
+const trade = swap(INITIAL_POOL, "sell-base", amountForStep("sell-base", initialStep), DEFAULT_FEE_TIER);
+const to = { x: plotX(units(trade.after.base, BASE.decimals)), y: plotY(units(trade.after.quote, QUOTE.decimals)) };
+const summary = describeTrade(INITIAL_POOL, trade);
+const plotBottom = PLOT.height - PLOT.bottom;
+const plotRight = PLOT.width - PLOT.right;
+---
+
+<section class="playground" aria-labelledby="playground-title" data-playground>
+	<div class="playground__head">
+		<div>
+			<p class="playground__eyebrow">Try the curve</p>
+			<h2 id="playground-title" class="playground__title">SOL / USDC pool</h2>
+		</div>
+		<div class="segmented" role="radiogroup" aria-label="Fee tier">
+			{
+				FEE_TIERS.map((rate) => (
+					<button type="button" role="radio" aria-checked={rate === DEFAULT_FEE_TIER ? "true" : "false"} data-fee-tier={rate.toString()}>
+						{formatRate(rate)}
+					</button>
+				))
+			}
+		</div>
+	</div>
+
+	<svg class="playground__chart" viewBox={`0 0 ${PLOT.width} ${PLOT.height}`} role="img" aria-labelledby="playground-chart-label" data-chart>
+		<title id="playground-chart-label">
+			The pool's reserves on the curve x·y = k. Moving along the curve is a trade; fees stay in the pool and push the curve outward.
+		</title>
+		<g class="chart-grid" aria-hidden="true">
+			{
+				PLOT.baseTicks.map((tick) => (
+					<g>
+						<line x1={plotX(tick)} x2={plotX(tick)} y1={PLOT.top} y2={plotBottom} />
+						<text x={plotX(tick)} y={plotBottom + 20} text-anchor="middle">{formatAmount(tick, 0)}</text>
+					</g>
+				))
+			}
+			{
+				PLOT.quoteTicks.map((tick) => (
+					<g>
+						<line x1={PLOT.left} x2={plotRight} y1={plotY(tick)} y2={plotY(tick)} />
+						<text x={PLOT.left - 10} y={plotY(tick) + 4} text-anchor="end">{`${formatAmount(tick / 1_000, 0)}k`}</text>
+					</g>
+				))
+			}
+			<line class="chart-axis" x1={PLOT.left} x2={plotRight} y1={plotBottom} y2={plotBottom} />
+			<line class="chart-axis" x1={PLOT.left} x2={PLOT.left} y1={PLOT.top} y2={plotBottom} />
+			<text class="chart-label" x={plotRight} y={plotBottom - 10} text-anchor="end">SOL reserve →</text>
+			<text class="chart-label" x={PLOT.left + 10} y={PLOT.top + 14}>↑ USDC reserve</text>
+		</g>
+		<path class="chart-fees" d="" data-fee-band />
+		<path class="chart-curve chart-curve--start" d={curvePath(k)} data-start-curve />
+		<path class="chart-curve" d={curvePath(k)} data-curve />
+		<path class="chart-trade" d={curvePath(k, units(INITIAL_POOL.base, BASE.decimals), units(trade.after.base, BASE.decimals))} data-trade />
+		<g class="chart-guides" aria-hidden="true">
+			<line x1={to.x} x2={to.x} y1={to.y} y2={plotBottom} data-guide-x />
+			<line x1={PLOT.left} x2={to.x} y1={to.y} y2={to.y} data-guide-y />
+		</g>
+		<circle class="chart-point chart-point--from" cx={from.x} cy={from.y} r="6" data-from />
+		<circle class="chart-handle" cx={to.x} cy={to.y} r="10" data-handle />
+		<text class="chart-k" x={plotX(PLOT.kLabelBase) + 14} y={plotY(k / PLOT.kLabelBase)} data-k-label>x·y = k</text>
+	</svg>
+
+	<div class="playground__controls">
+		<div class="segmented" role="radiogroup" aria-label="Direction">
+			<button type="button" role="radio" aria-checked="true" data-direction="sell-base">Sell SOL</button>
+			<button type="button" role="radio" aria-checked="false" data-direction="sell-quote">Sell USDC</button>
+		</div>
+		<label class="playground__amount">
+			<span class="visually-hidden">Amount to sell</span>
+			<input type="range" min="0" max={SLIDER_STEPS} step="1" value={initialStep} data-amount />
+			<output data-amount-label>{summary.amount}</output>
+		</label>
+	</div>
+
+	<dl class="readout" aria-live="polite" aria-atomic="true">
+		<div>
+			<dt>You receive</dt>
+			<dd data-readout="out">{summary.out}</dd>
+		</div>
+		<div>
+			<dt>Average price</dt>
+			<dd data-readout="price">{summary.price}</dd>
+		</div>
+		<div>
+			<dt>Fee</dt>
+			<dd data-readout="fee">{summary.fee}</dd>
+		</div>
+		<div>
+			<dt>Pool price</dt>
+			<dd data-readout="move">{summary.move}</dd>
+		</div>
+	</dl>
+
+	<div class="playground__foot">
+		<button type="button" class="button button--quiet" data-simulate>Replay {formatAmount(REPLAY_TRADES, 0)} trades</button>
+		<button type="button" class="button button--link" data-reset hidden>Reset pool</button>
+		<p class="playground__result" data-result>Fees stay in the pool. Replay a burst of trades to watch k grow.</p>
+	</div>
+</section>
+
+<script>
+	import {
+		amountForStep,
+		BASE,
+		baseAtPlotX,
+		curvePath,
+		DEFAULT_FEE_TIER,
+		describeTrade,
+		type Direction,
+		equivalentStep,
+		formatAmount,
+		INITIAL_POOL,
+		invariant,
+		PLOT,
+		plotX,
+		plotY,
+		type Pool,
+		QUOTE,
+		REPLAY_DURATION_MS,
+		REPLAY_TRADES,
+		spotPrice,
+		stepForAmount,
+		swap,
+		tradeTowards,
+		units,
+	} from "../lib/playground";
+
+
+	function required<T extends Element>(root: ParentNode, selector: string): T {
+		const element = root.querySelector<T>(selector);
+		if (element === null) {
+			throw new Error(`Playground is missing ${selector}`);
+		}
+		return element;
+	}
+
+	for (const root of document.querySelectorAll<HTMLElement>("[data-playground]")) {
+		const chart = required<SVGSVGElement>(root, "[data-chart]");
+		const curve = required<SVGPathElement>(root, "[data-curve]");
+		const startCurve = required<SVGPathElement>(root, "[data-start-curve]");
+		const feeBand = required<SVGPathElement>(root, "[data-fee-band]");
+		const tradePath = required<SVGPathElement>(root, "[data-trade]");
+		const fromPoint = required<SVGCircleElement>(root, "[data-from]");
+		const handle = required<SVGCircleElement>(root, "[data-handle]");
+		const guideX = required<SVGLineElement>(root, "[data-guide-x]");
+		const guideY = required<SVGLineElement>(root, "[data-guide-y]");
+		const kLabel = required<SVGTextElement>(root, "[data-k-label]");
+		const slider = required<HTMLInputElement>(root, "[data-amount]");
+		const amountLabel = required<HTMLOutputElement>(root, "[data-amount-label]");
+		const simulateButton = required<HTMLButtonElement>(root, "[data-simulate]");
+		const resetButton = required<HTMLButtonElement>(root, "[data-reset]");
+		const result = required<HTMLElement>(root, "[data-result]");
+		const idleResult = result.textContent ?? "";
+		const readout = {
+			out: required<HTMLElement>(root, '[data-readout="out"]'),
+			price: required<HTMLElement>(root, '[data-readout="price"]'),
+			fee: required<HTMLElement>(root, '[data-readout="fee"]'),
+			move: required<HTMLElement>(root, '[data-readout="move"]'),
+		};
+		const tierButtons = [...root.querySelectorAll<HTMLButtonElement>("[data-fee-tier]")];
+		const directionButtons = [...root.querySelectorAll<HTMLButtonElement>("[data-direction]")];
+		const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+
+		const state: { pool: Pool; feeRate: bigint; direction: Direction; step: number; simulating: boolean } = {
+			pool: INITIAL_POOL,
+			feeRate: DEFAULT_FEE_TIER,
+			direction: "sell-base",
+			step: Number(slider.value),
+			simulating: false,
+		};
+
+		function point(pool: Pool): { x: number; y: number } {
+			return { x: plotX(units(pool.base, BASE.decimals)), y: plotY(units(pool.quote, QUOTE.decimals)) };
+		}
+
+		function setChecked(buttons: HTMLButtonElement[], isChecked: (button: HTMLButtonElement) => boolean): void {
+			for (const button of buttons) {
+				button.setAttribute("aria-checked", String(isChecked(button)));
+			}
+		}
+
+		function renderPool(): void {
+			const k = invariant(state.pool);
+			const k0 = invariant(INITIAL_POOL);
+			curve.setAttribute("d", curvePath(k));
+			startCurve.classList.toggle("is-visible", k > k0 * 1.0005);
+			// The band between the starting curve and today's is the fees LPs kept.
+			const forward = curvePath(k0).slice(1);
+			const backward = curvePath(k).slice(1).split("L").reverse().join("L");
+			feeBand.setAttribute("d", k > k0 ? `M${forward}L${backward}Z` : "");
+			kLabel.setAttribute("x", String(plotX(PLOT.kLabelBase) + 14));
+			kLabel.setAttribute("y", String(plotY(k / PLOT.kLabelBase)));
+			const from = point(state.pool);
+			fromPoint.setAttribute("cx", String(from.x));
+			fromPoint.setAttribute("cy", String(from.y));
+		}
+
+		function renderTrade(): void {
+			const trade = swap(state.pool, state.direction, amountForStep(state.direction, state.step), state.feeRate);
+			const to = point(trade.after);
+			handle.setAttribute("cx", String(to.x));
+			handle.setAttribute("cy", String(to.y));
+			guideX.setAttribute("x1", String(to.x));
+			guideX.setAttribute("x2", String(to.x));
+			guideX.setAttribute("y1", String(to.y));
+			guideY.setAttribute("x2", String(to.x));
+			guideY.setAttribute("y1", String(to.y));
+			guideY.setAttribute("y2", String(to.y));
+			tradePath.setAttribute(
+				"d",
+				curvePath(invariant(state.pool), units(state.pool.base, BASE.decimals), units(trade.after.base, BASE.decimals)),
+			);
+			const summary = describeTrade(state.pool, trade);
+			amountLabel.textContent = summary.amount;
+			readout.out.textContent = summary.out;
+			readout.price.textContent = summary.price;
+			readout.fee.textContent = summary.fee;
+			readout.move.textContent = summary.move;
+		}
+
+		function render(): void {
+			renderPool();
+			renderTrade();
+		}
+
+		function setDirection(direction: Direction, step: number): void {
+			state.direction = direction;
+			state.step = step;
+			slider.value = String(step);
+			setChecked(directionButtons, (button) => button.dataset.direction === direction);
+		}
+
+		function setControlsDisabled(disabled: boolean): void {
+			for (const control of [slider, simulateButton, resetButton, ...tierButtons, ...directionButtons]) {
+				control.disabled = disabled;
+			}
+		}
+
+		for (const button of tierButtons) {
+			button.addEventListener("click", () => {
+				state.feeRate = BigInt(button.dataset.feeTier ?? DEFAULT_FEE_TIER.toString());
+				setChecked(tierButtons, (candidate) => candidate === button);
+				renderTrade();
+			});
+		}
+
+		for (const button of directionButtons) {
+			button.addEventListener("click", () => {
+				const direction: Direction = button.dataset.direction === "sell-quote" ? "sell-quote" : "sell-base";
+				setDirection(direction, equivalentStep(state.pool, state.direction, state.step, direction));
+				renderTrade();
+			});
+		}
+
+		slider.addEventListener("input", () => {
+			state.step = Number(slider.value);
+			renderTrade();
+		});
+
+		function dragTo(event: PointerEvent): void {
+			const matrix = chart.getScreenCTM();
+			if (matrix === null) {
+				return;
+			}
+			const x = new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse()).x;
+			const target = Math.min(Math.max(baseAtPlotX(x), PLOT.base[0]), PLOT.base[1]);
+			const { direction, amountIn } = tradeTowards(state.pool, target, state.feeRate);
+			setDirection(direction, stepForAmount(direction, amountIn));
+			renderTrade();
+		}
+
+		chart.addEventListener("pointerdown", (event) => {
+			if (state.simulating) {
+				return;
+			}
+			chart.setPointerCapture(event.pointerId);
+			chart.classList.add("is-dragging");
+			dragTo(event);
+		});
+		chart.addEventListener("pointermove", (event) => {
+			if (chart.hasPointerCapture(event.pointerId)) {
+				dragTo(event);
+			}
+		});
+		for (const type of ["pointerup", "pointercancel"] as const) {
+			chart.addEventListener(type, (event) => {
+				chart.releasePointerCapture(event.pointerId);
+				chart.classList.remove("is-dragging");
+			});
+		}
+
+		/** One random trade that drifts the price back towards where it started. */
+		function randomTrade(pool: Pool): Pool {
+			const drift = spotPrice(pool) / spotPrice(INITIAL_POOL) - 1;
+			const direction: Direction = Math.random() < Math.min(Math.max(0.5 + drift * 4, 0.1), 0.9) ? "sell-base" : "sell-quote";
+			const reserveIn = direction === "sell-base" ? pool.base : pool.quote;
+			const share = 0.002 + Math.random() * 0.03;
+			const amountIn = BigInt(Math.floor(Number(reserveIn) * share));
+			return swap(pool, direction, amountIn, state.feeRate).after;
+		}
+
+		function finishReplay(trades: number): void {
+			state.simulating = false;
+			setControlsDisabled(false);
+			resetButton.hidden = false;
+			const growth = invariant(state.pool) / invariant(INITIAL_POOL);
+			result.textContent = `${formatAmount(trades, 0)} trades later, k is ${formatAmount((growth - 1) * 100, 2)}% higher. `
+				+ `Every LP share is now backed by ${formatAmount((Math.sqrt(growth) - 1) * 100, 2)}% more liquidity, all of it fees.`;
+			render();
+		}
+
+		simulateButton.addEventListener("click", () => {
+			state.simulating = true;
+			setControlsDisabled(true);
+			result.textContent = "Trading…";
+			if (reducedMotion.matches) {
+				for (let trade = 0; trade < REPLAY_TRADES; trade += 1) {
+					state.pool = randomTrade(state.pool);
+				}
+				finishReplay(REPLAY_TRADES);
+				return;
+			}
+			// Paced by elapsed time, not frames, so the replay takes as long on any display.
+			let done = 0;
+			const startedAt = performance.now();
+			const frame = (now: number) => {
+				const due = Math.min(REPLAY_TRADES, Math.ceil(((now - startedAt) / REPLAY_DURATION_MS) * REPLAY_TRADES));
+				for (; done < due; done += 1) {
+					state.pool = randomTrade(state.pool);
+				}
+				renderPool();
+				const here = point(state.pool);
+				handle.setAttribute("cx", String(here.x));
+				handle.setAttribute("cy", String(here.y));
+				if (done < REPLAY_TRADES) {
+					requestAnimationFrame(frame);
+				} else {
+					finishReplay(done);
+				}
+			};
+			requestAnimationFrame(frame);
+		});
+
+		resetButton.addEventListener("click", () => {
+			state.pool = INITIAL_POOL;
+			resetButton.hidden = true;
+			result.textContent = idleResult;
+			render();
+		});
+
+		render();
+	}
+</script>

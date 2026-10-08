@@ -1,0 +1,3 @@
+# Astro and Wrangler caches; dist/ and node_modules/ are ignored at the root.
+.astro/
+.wrangler/

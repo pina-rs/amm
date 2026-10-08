@@ -1,5 +1,11 @@
 packages:
   - clients/typescript/*
+  - website
 
 linkWorkspacePackages: true
 preferWorkspacePackages: true
+
+# Wrangler's local runtime and the bundler install platform binaries.
+onlyBuiltDependencies:
+  - esbuild
+  - workerd

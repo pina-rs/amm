@@ -1,0 +1,40 @@
+---
+interface Props {
+	value: string;
+	label: string;
+}
+
+const { value, label } = Astro.props;
+---
+
+<button type="button" class="copy-button" data-copy={value} aria-label={label}>
+	<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path></svg>
+	<span class="copy-button__status" aria-live="polite"></span>
+</button>
+
+<script>
+	for (const button of document.querySelectorAll<HTMLButtonElement>("[data-copy]")) {
+		const status = button.querySelector<HTMLElement>(".copy-button__status");
+		button.addEventListener("click", async () => {
+			try {
+				await navigator.clipboard.writeText(button.dataset.copy ?? "");
+				button.dataset.state = "copied";
+				if (status !== null) {
+					status.textContent = "Copied";
+				}
+			} catch (error) {
+				button.dataset.state = "failed";
+				if (status !== null) {
+					status.textContent = "Copy failed";
+				}
+				console.error("Copying to the clipboard failed", error);
+			}
+			setTimeout(() => {
+				delete button.dataset.state;
+				if (status !== null) {
+					status.textContent = "";
+				}
+			}, 1_600);
+		});
+	}
+</script>

@@ -73,6 +73,7 @@ in
       set -euo pipefail
       cargo test --workspace --all-features --locked
       pnpm --dir clients/typescript/pina_amm test
+      pnpm --dir website test
       (cd clients/dart && dart test)
     '';
 
@@ -120,8 +121,28 @@ in
       dprint check
       actionlint
       pnpm --dir clients/typescript/pina_amm check
+      pnpm --dir website check
       (cd clients/dart && dart analyze --fatal-infos --fatal-warnings)
       monochange check
+    '';
+
+    # amm.pina.rs: the landing page plus docs/ rendered as the documentation.
+    # See website/README.md.
+    "dev:website".exec = ''
+      set -euo pipefail
+      pnpm --dir website dev
+    '';
+
+    "build:website".exec = ''
+      set -euo pipefail
+      pnpm --dir website build
+    '';
+
+    # Builds and deploys the Cloudflare Worker. Needs CLOUDFLARE_API_TOKEN and
+    # CLOUDFLARE_ACCOUNT_ID; the website workflow runs it on every push to main.
+    "deploy:website".exec = ''
+      set -euo pipefail
+      pnpm --dir website deploy
     '';
 
     "fix:format".exec = ''
@@ -141,6 +162,7 @@ in
       set -euo pipefail
       lint:all
       check:clients
+      build:website
       test:unit
       test:surfpool
       security:audit
