@@ -170,6 +170,9 @@ versioned_files = [
 enabled = true
 lockfile_commands = [
 	{ command = "cargo update --workspace", cwd = ".", shell = "bash" },
+	# The end-to-end suite is its own workspace with its own lockfile; refresh
+	# only its member and path entries so a version bump keeps `--locked` green.
+	{ command = "cargo update --workspace --manifest-path programs/pina_amm/tests/surfpool/Cargo.toml", cwd = ".", shell = "bash" },
 ]
 
 [ecosystems.cargo.publish]
