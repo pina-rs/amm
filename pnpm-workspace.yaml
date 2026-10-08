@@ -9,3 +9,8 @@ preferWorkspacePackages: true
 onlyBuiltDependencies:
   - esbuild
   - workerd
+
+# miniflare (through wrangler) pins sharp 0.35.4, which carries GHSA-wq5f-xc86-pv6w
+# and GHSA-rgj7-g3m4-5g8c. 0.35.5 is the patched release of the same minor line.
+overrides:
+  sharp: 0.35.5
