@@ -142,7 +142,8 @@ in
     # CLOUDFLARE_ACCOUNT_ID; the website workflow runs it on every push to main.
     "deploy:website".exec = ''
       set -euo pipefail
-      pnpm --dir website deploy
+      # `run` is required: `pnpm deploy` is a built-in that shadows the script.
+      pnpm --dir website run deploy
     '';
 
     "fix:format".exec = ''
