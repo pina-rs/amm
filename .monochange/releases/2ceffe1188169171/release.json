@@ -1,0 +1,398 @@
+{
+	"schema_version": "0.9",
+	"kind": "monochange.releaseRecord",
+	"created_at": "2026-10-08T22:24:03Z",
+	"command": "release",
+	"version": "0.1.0",
+	"versions": {
+		"amm": "0.1.0"
+	},
+	"release_targets": [
+		{
+			"id": "amm",
+			"kind": "group",
+			"version": "0.1.0",
+			"version_format": "primary",
+			"tag": true,
+			"release": true,
+			"tag_name": "v0.1.0",
+			"rendered_title": "v0.1.0 (2026-10-08)",
+			"rendered_changelog_title": "[0.1.0](https://github.com/pina-rs/amm/releases/tag/v0.1.0) (2026-10-08)",
+			"members": [
+				"pina_amm_program",
+				"pina_amm_cpi",
+				"pina_amm_client",
+				"pina_amm_cli",
+				"pina_amm_client_typescript",
+				"pina_amm_client_dart"
+			]
+		}
+	],
+	"released_packages": [
+		"@pina-rs/amm",
+		"pina_amm",
+		"pina_amm_cli",
+		"pina_amm_client",
+		"pina_amm_cpi"
+	],
+	"changed_files": [
+		"Cargo.lock",
+		"Cargo.toml",
+		"changelog.md",
+		"clients/cpi/pina_amm/Cargo.toml",
+		"clients/dart/pubspec.yaml",
+		"clients/rust/pina_amm/Cargo.toml",
+		"clients/typescript/pina_amm/package.json",
+		"crates/pina_amm_cli/Cargo.toml",
+		"programs/pina_amm/Cargo.toml",
+		"release-notes/v0.1.0.md"
+	],
+	"package_publications": [
+		{
+			"package": "pina_amm_cli",
+			"ecosystem": "cargo",
+			"registry": "crates_io",
+			"version": "0.1.0",
+			"mode": "builtin",
+			"trusted_publishing": {
+				"enabled": true,
+				"mode": "required",
+				"repository": "pina-rs/amm",
+				"workflow": "publish.yml",
+				"environment": "publisher"
+			}
+		},
+		{
+			"package": "pina_amm_client",
+			"ecosystem": "cargo",
+			"registry": "crates_io",
+			"version": "0.1.0",
+			"mode": "builtin",
+			"trusted_publishing": {
+				"enabled": true,
+				"mode": "required",
+				"repository": "pina-rs/amm",
+				"workflow": "publish.yml",
+				"environment": "publisher"
+			}
+		},
+		{
+			"package": "pina_amm_client_dart",
+			"ecosystem": "dart",
+			"registry": "pub_dev",
+			"version": "0.1.0",
+			"mode": "builtin",
+			"trusted_publishing": {
+				"enabled": true,
+				"mode": "required",
+				"repository": "pina-rs/amm",
+				"workflow": "publish.yml",
+				"environment": "publisher"
+			}
+		},
+		{
+			"package": "pina_amm_client_typescript",
+			"ecosystem": "npm",
+			"registry": "npm",
+			"version": "0.1.0",
+			"mode": "builtin",
+			"trusted_publishing": {
+				"enabled": true,
+				"mode": "required",
+				"repository": "pina-rs/amm",
+				"workflow": "publish.yml",
+				"environment": "publisher"
+			}
+		},
+		{
+			"package": "pina_amm_cpi",
+			"ecosystem": "cargo",
+			"registry": "crates_io",
+			"version": "0.1.0",
+			"mode": "builtin",
+			"trusted_publishing": {
+				"enabled": true,
+				"mode": "required",
+				"repository": "pina-rs/amm",
+				"workflow": "publish.yml",
+				"environment": "publisher"
+			}
+		}
+	],
+	"updated_changelogs": [
+		"changelog.md",
+		"release-notes/v0.1.0.md"
+	],
+	"deleted_changesets": [
+		".changeset/launch-pina-amm-user.md",
+		".changeset/launch-pina-amm.md"
+	],
+	"changesets": [
+		{
+			"path": ".changeset/launch-pina-amm-user.md",
+			"summary": "Trade and provide liquidity on the Pina AMM",
+			"details": "##### User impact\n\nYou can create a market for any two Solana tokens, trade between them for a small fee, and earn a share of those fees by adding liquidity. Fees are fixed when a market is created and can never be raised afterwards. Token creators can earn an ongoing fee from trading in their market, paid in the token of their choice.",
+			"targets": [
+				{
+					"id": "amm",
+					"kind": "group",
+					"bump": "none",
+					"origin": "direct-change",
+					"evidence_refs": [],
+					"change_type": "user"
+				}
+			],
+			"context": {
+				"provider": "github",
+				"host": "github.com",
+				"capabilities": {
+					"commit_web_urls": true,
+					"actor_profiles": true,
+					"review_request_lookup": true,
+					"related_issues": true,
+					"issue_comments": true
+				},
+				"introduced": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "fe0f261131dfe82d5afa61125e40ad0f504c21f1",
+						"short_sha": "fe0f261",
+						"url": "https://github.com/pina-rs/amm/commit/fe0f261131dfe82d5afa61125e40ad0f504c21f1",
+						"authored_at": "2026-10-07T13:19:14+01:00",
+						"committed_at": "2026-10-07T13:19:14+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "1160934+ifiokjr@users.noreply.github.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#1",
+						"title": "feat: add the Pina AMM program, clients, CLI, and documentation",
+						"url": "https://github.com/pina-rs/amm/pull/1",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"last_updated": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "fe0f261131dfe82d5afa61125e40ad0f504c21f1",
+						"short_sha": "fe0f261",
+						"url": "https://github.com/pina-rs/amm/commit/fe0f261131dfe82d5afa61125e40ad0f504c21f1",
+						"authored_at": "2026-10-07T13:19:14+01:00",
+						"committed_at": "2026-10-07T13:19:14+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "1160934+ifiokjr@users.noreply.github.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#1",
+						"title": "feat: add the Pina AMM program, clients, CLI, and documentation",
+						"url": "https://github.com/pina-rs/amm/pull/1",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"related_issues": []
+			}
+		},
+		{
+			"path": ".changeset/launch-pina-amm.md",
+			"summary": "Launch the Pina AMM program, clients, and CLI",
+			"details": "The first release of the Pina AMM: a constant-product market maker built with Pina 0.23.\n\n- **Program** (`pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV`): fee tiers gated by the upgrade authority, permissionless pool creation with optional pool-creator restriction, exact-input and exact-output swaps, proportional liquidity, protocol and creator fee accrual and collection, and Token-2022 support for transfer-neutral extensions. Swaps cost about 4,700 compute units.\n- **`pina_amm_client`**, **`pina_amm_cpi`**, **`@pina-rs/amm`**, and **`pina_amm`** (Dart): generated from the program IDL with the version-0 migration baseline.\n- **`pina_amm_cli`**: the `pina-amm` binary, which quotes by simulation and applies slippage limits.\n\nAn end-to-end Surfpool suite drives every instruction, the generated Rust client, and the CLI against the compiled program, and enforces compute-unit ceilings.",
+			"targets": [
+				{
+					"id": "amm",
+					"kind": "group",
+					"bump": "minor",
+					"origin": "direct-change",
+					"evidence_refs": [],
+					"change_type": "feat"
+				}
+			],
+			"context": {
+				"provider": "github",
+				"host": "github.com",
+				"capabilities": {
+					"commit_web_urls": true,
+					"actor_profiles": true,
+					"review_request_lookup": true,
+					"related_issues": true,
+					"issue_comments": true
+				},
+				"introduced": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "fe0f261131dfe82d5afa61125e40ad0f504c21f1",
+						"short_sha": "fe0f261",
+						"url": "https://github.com/pina-rs/amm/commit/fe0f261131dfe82d5afa61125e40ad0f504c21f1",
+						"authored_at": "2026-10-07T13:19:14+01:00",
+						"committed_at": "2026-10-07T13:19:14+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "1160934+ifiokjr@users.noreply.github.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#1",
+						"title": "feat: add the Pina AMM program, clients, CLI, and documentation",
+						"url": "https://github.com/pina-rs/amm/pull/1",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"last_updated": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "fe0f261131dfe82d5afa61125e40ad0f504c21f1",
+						"short_sha": "fe0f261",
+						"url": "https://github.com/pina-rs/amm/commit/fe0f261131dfe82d5afa61125e40ad0f504c21f1",
+						"authored_at": "2026-10-07T13:19:14+01:00",
+						"committed_at": "2026-10-07T13:19:14+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "1160934+ifiokjr@users.noreply.github.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#1",
+						"title": "feat: add the Pina AMM program, clients, CLI, and documentation",
+						"url": "https://github.com/pina-rs/amm/pull/1",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"related_issues": []
+			}
+		}
+	],
+	"changelogs": [
+		{
+			"owner_id": "amm",
+			"owner_kind": "group",
+			"output": "default",
+			"stream": "default",
+			"path": "changelog.md",
+			"format": "keep_a_changelog",
+			"notes": {
+				"title": "[0.1.0](https://github.com/pina-rs/amm/releases/tag/v0.1.0) (2026-10-08)",
+				"summary": [
+					"Grouped release for `amm`."
+				],
+				"sections": [
+					{
+						"title": "Features",
+						"collapsed": false,
+						"entries": [
+							"#### Launch the Pina AMM program, clients, and CLI\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #1](https://github.com/pina-rs/amm/pull/1)\n\nThe first release of the Pina AMM: a constant-product market maker built with Pina 0.23.\n\n- **Program** (`pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV`): fee tiers gated by the upgrade authority, permissionless pool creation with optional pool-creator restriction, exact-input and exact-output swaps, proportional liquidity, protocol and creator fee accrual and collection, and Token-2022 support for transfer-neutral extensions. Swaps cost about 4,700 compute units.\n- **`pina_amm_client`**, **`pina_amm_cpi`**, **`@pina-rs/amm`**, and **`pina_amm`** (Dart): generated from the program IDL with the version-0 migration baseline.\n- **`pina_amm_cli`**: the `pina-amm` binary, which quotes by simulation and applies slippage limits.\n\nAn end-to-end Surfpool suite drives every instruction, the generated Rust client, and the CLI against the compiled program, and enforces compute-unit ceilings."
+						]
+					}
+				]
+			},
+			"rendered": "## [0.1.0](https://github.com/pina-rs/amm/releases/tag/v0.1.0) (2026-10-08)\n\nGrouped release for `amm`.\n\n### Features\n\n#### Launch the Pina AMM program, clients, and CLI\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #1](https://github.com/pina-rs/amm/pull/1)\n\nThe first release of the Pina AMM: a constant-product market maker built with Pina 0.23.\n\n- **Program** (`pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV`): fee tiers gated by the upgrade authority, permissionless pool creation with optional pool-creator restriction, exact-input and exact-output swaps, proportional liquidity, protocol and creator fee accrual and collection, and Token-2022 support for transfer-neutral extensions. Swaps cost about 4,700 compute units.\n- **`pina_amm_client`**, **`pina_amm_cpi`**, **`@pina-rs/amm`**, and **`pina_amm`** (Dart): generated from the program IDL with the version-0 migration baseline.\n- **`pina_amm_cli`**: the `pina-amm` binary, which quotes by simulation and applies slippage limits.\n\nAn end-to-end Surfpool suite drives every instruction, the generated Rust client, and the CLI against the compiled program, and enforces compute-unit ceilings."
+		},
+		{
+			"owner_id": "amm",
+			"owner_kind": "group",
+			"output": "user",
+			"stream": "user",
+			"path": "release-notes/v0.1.0.md",
+			"format": "monochange",
+			"notes": {
+				"title": "[0.1.0](https://github.com/pina-rs/amm/releases/tag/v0.1.0) (2026-10-08)",
+				"summary": [
+					"Grouped release for `amm`."
+				],
+				"sections": [
+					{
+						"title": "What's new",
+						"collapsed": false,
+						"entries": [
+							"#### Trade and provide liquidity on the Pina AMM\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #1](https://github.com/pina-rs/amm/pull/1)\n\n##### User impact\n\nYou can create a market for any two Solana tokens, trade between them for a small fee, and earn a share of those fees by adding liquidity. Fees are fixed when a market is created and can never be raised afterwards. Token creators can earn an ongoing fee from trading in their market, paid in the token of their choice."
+						]
+					}
+				]
+			},
+			"rendered": "## [0.1.0](https://github.com/pina-rs/amm/releases/tag/v0.1.0) (2026-10-08)\n\nGrouped release for `amm`.\n\n### What's new\n\n#### Trade and provide liquidity on the Pina AMM\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #1](https://github.com/pina-rs/amm/pull/1)\n\n##### User impact\n\nYou can create a market for any two Solana tokens, trade between them for a small fee, and earn a share of those fees by adding liquidity. Fees are fixed when a market is created and can never be raised afterwards. Token creators can earn an ongoing fee from trading in their market, paid in the token of their choice."
+		}
+	],
+	"provider": {
+		"kind": "github",
+		"owner": "pina-rs",
+		"repo": "amm",
+		"host": null
+	}
+}
