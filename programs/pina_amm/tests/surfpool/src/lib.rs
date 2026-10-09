@@ -62,6 +62,7 @@ mod code {
 	pub const SLIPPAGE_EXCEEDED: u32 = 9;
 	pub const INSUFFICIENT_LIQUIDITY: u32 = 10;
 	pub const POOL_CREATOR_NOT_AUTHORIZED: u32 = 14;
+	pub const DEFAULT_CREATOR: u32 = 15;
 }
 
 fn config_address(index: u16) -> Pubkey {
@@ -671,6 +672,25 @@ fn create_pool_rejects_unordered_mints_and_unsupported_extensions() {
 			&owner,
 		);
 		h.expect_custom_error(&[fee_mint], &[&owner], code::UNSUPPORTED_MINT);
+
+		// A pool whose creator fees accrue to the default address could never
+		// pay them out. The wire layout is `[discriminator, amount_0, amount_1,
+		// creator, creator_fee_mode]`, so the creator sits at bytes 17..49.
+		let (token_0, token_1) = ordered_mints(&h, &TOKEN_PROGRAM, &[], &TOKEN_PROGRAM, &[]);
+		let (mut default_creator, _) = create_pool_instruction(
+			&h,
+			&PoolSpec {
+				config,
+				token_0,
+				token_1,
+				amounts: (1_000_000, 1_000_000),
+				creator_fee_mode: 0,
+				pool_creator_authority: None,
+			},
+			&owner,
+		);
+		default_creator.data[17..49].fill(0);
+		h.expect_custom_error(&[default_creator], &[&owner], code::DEFAULT_CREATOR);
 		h.stop().expect("stop");
 	});
 }
@@ -1133,6 +1153,13 @@ fn set_pool_creator_hands_over_fee_rights() {
 		)
 		.expect("set creator");
 		assert_eq!(pool_state(&h, &fixture.pool).creator, successor.pubkey());
+
+		// The default address can never sign, so fees must not be handed to it.
+		h.expect_custom_error(
+			&[set_creator(&successor.pubkey(), &Pubkey::default())],
+			&[&successor],
+			code::DEFAULT_CREATOR,
+		);
 		h.stop().expect("stop");
 	});
 }

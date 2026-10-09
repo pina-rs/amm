@@ -63,6 +63,10 @@ const int pinaAmmErrorVaultAccountingMismatch = 0xd; // 13
 /// Message: "This fee tier only lets its pool-creator authority create pools."
 const int pinaAmmErrorPoolCreatorNotAuthorized = 0xe; // 14
 
+/// The pool creator may not be the default address, which can never sign or collect.
+/// Message: "The pool creator may not be the default address, which can never sign or collect."
+const int pinaAmmErrorDefaultCreator = 0xf; // 15
+
 /// Map of error codes to human-readable messages.
 const Map<int, String> _pinaAmmErrorMessages = {
   pinaAmmErrorInvalidFeeRates: 'Fee rates are out of range: trade plus creator fee above 10% or protocol share above 100%.',
@@ -91,6 +95,7 @@ const Map<int, String> _pinaAmmErrorMessages = {
       'A vault holds less than the fees accrued against it.',
   pinaAmmErrorPoolCreatorNotAuthorized:
       'This fee tier only lets its pool-creator authority create pools.',
+  pinaAmmErrorDefaultCreator: 'The pool creator may not be the default address, which can never sign or collect.',
 };
 
 /// Get the error message for a PinaAmm program error code.

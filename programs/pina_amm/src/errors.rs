@@ -41,4 +41,6 @@ pub enum AmmError {
 	VaultAccountingMismatch = 13,
 	/// This fee tier only lets its pool-creator authority create pools.
 	PoolCreatorNotAuthorized = 14,
+	/// The pool creator may not be the default address, which can never sign or collect.
+	DefaultCreator = 15,
 }
