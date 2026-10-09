@@ -49,6 +49,7 @@ The upgrade authority is the single point of trust, as for any upgradeable Solan
 | Inflate share price as the first depositor                                 | Locked minimum liquidity                                    | `liquidity_locks_the_minimum` (unit)                             |
 | Donate to manipulate LP accounting                                         | Donations simply accrue to all LPs                          | `donations_accrue_to_liquidity_providers`                        |
 | Create a tier without authority                                            | `Unauthorized`                                              | `create_config_requires_the_upgrade_authority`                   |
+| Name the default address as a pool creator, making its fees unclaimable    | `DefaultCreator`                                            | `create_pool_rejects_unordered_mints_and_unsupported_extensions` |
 
 ## Static analysis
 
