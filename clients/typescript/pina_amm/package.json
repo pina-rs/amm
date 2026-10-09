@@ -1,6 +1,6 @@
 {
 	"name": "@pina-rs/amm",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "TypeScript client for the Pina AMM: instruction builders, account decoders, PDAs, events, and errors for @solana/kit",
 	"keywords": [
 		"solana",

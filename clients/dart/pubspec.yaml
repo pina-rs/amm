@@ -2,7 +2,7 @@ name: pina_amm
 description: >-
   Dart and Flutter client for the Pina AMM on Solana: instruction builders,
   account decoders, PDAs, events, and errors generated from the program IDL.
-version: 0.0.0
+version: 0.1.0
 homepage: https://github.com/pina-rs/amm
 repository: https://github.com/pina-rs/amm/tree/main/clients/dart
 issue_tracker: https://github.com/pina-rs/amm/issues

@@ -4707,7 +4707,7 @@ dependencies = [
 
 [[package]]
 name = "pina_amm_client"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "num-derive 0.5.1",
  "num-traits",

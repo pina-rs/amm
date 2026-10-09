@@ -1,6 +1,6 @@
 [package]
 name = "pina_amm_client"
-version.workspace = true
+version = "0.1.0"
 categories = ["cryptography::cryptocurrencies"]
 edition.workspace = true
 homepage.workspace = true

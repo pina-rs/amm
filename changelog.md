@@ -1,11 +1,19 @@
----
-amm:
-  bump: minor
-  type: feat
-  version: "0.1.0"
----
+# Changelog
 
-# Launch the Pina AMM program, clients, and CLI
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.1.0](https://github.com/pina-rs/amm/releases/tag/v0.1.0) (2026-10-08)
+
+Grouped release for `amm`.
+
+### Features
+
+#### Launch the Pina AMM program, clients, and CLI
+
+_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #1](https://github.com/pina-rs/amm/pull/1)
 
 The first release of the Pina AMM: a constant-product market maker built with Pina 0.23.
 

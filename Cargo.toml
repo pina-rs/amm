@@ -9,7 +9,7 @@ members = [
 exclude = ["programs/pina_amm/tests/surfpool"]
 
 [workspace.package]
-version = "0.0.0"
+version = "0.1.0"
 edition = "2024"
 homepage = "https://github.com/pina-rs/amm"
 license = "Apache-2.0"
@@ -21,7 +21,7 @@ clap = { default-features = false, version = "4", features = ["derive", "env", "
 num-derive = { default-features = false, version = "0.5" }
 num-traits = { default-features = false, version = "0.2" }
 pina = { default-features = false, version = "=0.23.0" }
-pina_amm_client = { path = "clients/rust/pina_amm", version = "0.0.0" }
+pina_amm_client = { path = "clients/rust/pina_amm", version = "0.1.0" }
 proptest = { default-features = false, version = "1", features = ["std"] }
 serde_json = { default-features = false, version = "1", features = ["std"] }
 solana-commitment-config = { default-features = false, version = "3.1" }
