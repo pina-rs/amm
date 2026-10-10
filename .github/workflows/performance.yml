@@ -1,0 +1,171 @@
+name: "performance"
+permissions:
+  contents: read
+on:
+  pull_request:
+    branches:
+      - main
+    # Benchmarks only carry signal when the program, the clients that prove
+    # its wire format, or the benchmark harness itself change.
+    paths:
+      - programs/**
+      - clients/**
+      - crates/**
+      - scripts/benchmark.ts
+      - scripts/compare-benchmarks.ts
+      - scripts/benchmark-policy.json
+      - .github/workflows/performance.yml
+      - Cargo.toml
+      - Cargo.lock
+      - rust-toolchain.toml
+      - devenv.nix
+      - devenv.lock
+      - devenv.yaml
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# The benchmark job fails when the policy in `scripts/benchmark-policy.json`
+# trips: any increase in the deployed binary's size, or more than a 2%
+# compute-unit increase on any instruction. A pull request that accepts a
+# regression carries the `performance-approved` label, which turns the gate
+# into a report; nothing else overrides it. Pushes to `main` never run this
+# workflow: benchmarks compare a pull request against its base.
+jobs:
+  benchmark:
+    name: compute units and binary size
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'release') }}
+    timeout-minutes: 45
+    runs-on: ubuntu-24.04
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target/perf
+    outputs:
+      status: ${{ steps.compare.outputs.status }}
+      report: ${{ steps.report.outputs.report }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          extra_nix_config: |
+            accept-flake-config = true
+            extra-substituters = https://devenv.cachix.org
+            extra-trusted-public-keys = devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw=
+
+      - name: Install locked Devenv
+        run: |
+          devenv_revision="$(
+            nix eval --impure --raw --expr '
+              let
+                lock = builtins.fromJSON (builtins.readFile ./devenv.lock);
+              in
+                lock.nodes.devenv.locked.rev
+            '
+          )"
+          nix profile add --accept-flake-config "github:cachix/devenv/${devenv_revision}#devenv"
+
+      - name: Install workspace dependencies
+        run: devenv shell -- install:all
+
+      - name: Create base worktree
+        run: git worktree add --detach ../performance-base "${{ github.event.pull_request.base.sha }}"
+
+      - name: Benchmark base
+        run: pnpm exec tsx ./scripts/benchmark.ts --build-root ../performance-base --out ./target/perf/base
+        shell: devenv shell -c -- bash -e {0}
+
+      - name: Benchmark head
+        run: pnpm exec tsx ./scripts/benchmark.ts --out ./target/perf/head
+        shell: devenv shell -c -- bash -e {0}
+
+      - name: Compare benchmarks
+        id: compare
+        run: |
+          set +e
+          pnpm exec tsx ./scripts/compare-benchmarks.ts \
+            --base ./target/perf/base \
+            --head ./target/perf/head \
+            --markdown ./target/perf/report.md \
+            --json ./target/perf/report.json
+          status=$?
+          set -e
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          cat ./target/perf/report.md >> "$GITHUB_STEP_SUMMARY"
+        shell: devenv shell -c -- bash -e {0}
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: performance-report
+          path: target/perf/
+          if-no-files-found: error
+
+      - name: Export report body
+        id: report
+        if: always()
+        run: |
+          {
+            echo 'report<<EOF'
+            cat ./target/perf/report.md
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Enforce the performance policy
+        if: ${{ steps.compare.outputs.status != '0' && !contains(github.event.pull_request.labels.*.name, 'performance-approved') }}
+        run: |
+          echo "::error::The performance policy tripped (binary size or compute units). Label the pull request 'performance-approved' to accept the regression."
+          exit 1
+
+  comment:
+    name: performance report
+    needs: benchmark
+    if: ${{ always() && needs.benchmark.result != 'skipped' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Find the performance comment
+        id: find
+        uses: actions/github-script@ed597811beb4b8065f0d58605f5593d7d432507d # v8.0.0
+        with:
+          script: |
+            const marker = '<!-- performance-report -->';
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.data.find((comment) => comment.body.includes(marker));
+            core.setOutput('id', existing ? existing.id : '');
+
+      - name: Create or update the performance comment
+        uses: actions/github-script@ed597811beb4b8065f0d5593d7d432507d # v8.0.0
+        with:
+          script: |
+            const marker = '<!-- performance-report -->';
+            const body = `${marker}\n${{ needs.benchmark.outputs.report }}`;
+            const id = '${{ steps.find.outputs.id }}';
+            if (id === '') {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: Number(id),
+                body,
+              });
+            }
