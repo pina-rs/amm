@@ -4,6 +4,7 @@ use pina::*;
 
 use crate::ID;
 use crate::errors::AmmError;
+use crate::events::ConfigUpdated;
 use crate::instructions::CreateConfigInstruction;
 use crate::instructions::UpdateConfigInstruction;
 use crate::math::FeeRates;
@@ -89,14 +90,24 @@ impl<'a> ProcessAccountInfos<'a> for UpdateConfigAccounts<'a> {
 			return Err(AmmError::Unauthorized.into());
 		}
 
-		let mut config = self.amm_config.as_account_mut::<AmmConfig>(&ID)?;
-		if &config.authority != self.authority.address() {
-			return Err(AmmError::Unauthorized.into());
+		let config_address = *self.amm_config.address();
+		{
+			let mut config = self.amm_config.as_account_mut::<AmmConfig>(&ID)?;
+			if &config.authority != self.authority.address() {
+				return Err(AmmError::Unauthorized.into());
+			}
+			config.authority = args.new_authority;
+			config.trade_fee_rate.set(rates.trade);
+			config.protocol_fee_rate.set(rates.protocol);
+			config.creator_fee_rate.set(rates.creator);
 		}
-		config.authority = args.new_authority;
-		config.trade_fee_rate.set(rates.trade);
-		config.protocol_fee_rate.set(rates.protocol);
-		config.creator_fee_rate.set(rates.creator);
-		Ok(())
+		ConfigUpdated::emit(|event| {
+			event.amm_config = config_address;
+			event.new_authority = args.new_authority;
+			event.trade_fee_rate.set(rates.trade);
+			event.protocol_fee_rate.set(rates.protocol);
+			event.creator_fee_rate.set(rates.creator);
+			Ok(())
+		})
 	}
 }

@@ -122,6 +122,14 @@
 							{
 								"name": "bump",
 								"rustType": "u8"
+							},
+							{
+								"name": "price_0_cumulative_last",
+								"rustType": "u128"
+							},
+							{
+								"name": "last_update_timestamp",
+								"rustType": "u64"
 							}
 						]
 					}
@@ -298,6 +306,94 @@
 							{
 								"name": "amount_1",
 								"rustType": "u64"
+							}
+						]
+					}
+				}
+			]
+		},
+		"event:1:05": {
+			"rustName": "PoolSynced",
+			"versions": [
+				{
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "pool",
+								"rustType": "Address"
+							},
+							{
+								"name": "reserve_0",
+								"rustType": "u64"
+							},
+							{
+								"name": "reserve_1",
+								"rustType": "u64"
+							},
+							{
+								"name": "price_0_cumulative_last",
+								"rustType": "u128"
+							},
+							{
+								"name": "last_update_timestamp",
+								"rustType": "u64"
+							}
+						]
+					}
+				}
+			]
+		},
+		"event:1:06": {
+			"rustName": "ConfigUpdated",
+			"versions": [
+				{
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "amm_config",
+								"rustType": "Address"
+							},
+							{
+								"name": "new_authority",
+								"rustType": "Address"
+							},
+							{
+								"name": "trade_fee_rate",
+								"rustType": "u32"
+							},
+							{
+								"name": "protocol_fee_rate",
+								"rustType": "u32"
+							},
+							{
+								"name": "creator_fee_rate",
+								"rustType": "u32"
+							}
+						]
+					}
+				}
+			]
+		},
+		"event:1:07": {
+			"rustName": "PoolCreatorChanged",
+			"versions": [
+				{
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "pool",
+								"rustType": "Address"
+							},
+							{
+								"name": "previous_creator",
+								"rustType": "Address"
+							},
+							{
+								"name": "new_creator",
+								"rustType": "Address"
 							}
 						]
 					}
@@ -905,6 +1001,39 @@
 								"name": "pool",
 								"writable": true,
 								"pda": "pool"
+							}
+						]
+					}
+				}
+			]
+		},
+		"instruction:1:0a": {
+			"rustName": "SyncPoolInstruction",
+			"envelope": false,
+			"versions": [
+				{
+					"schema": {
+						"layout": "fixed",
+						"fields": []
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "pool",
+								"writable": true,
+								"pda": "pool"
+							},
+							{
+								"name": "vault_0"
+							},
+							{
+								"name": "vault_1"
+							},
+							{
+								"name": "token_program_0"
+							},
+							{
+								"name": "token_program_1"
 							}
 						]
 					}

@@ -351,6 +351,46 @@ pub fn assert_constant_product(
 	Ok(())
 }
 
+/// One in Q64.64 fixed point, the unit of the price accumulator.
+pub const Q64: u128 = 1 << 64;
+
+/// Advance the time-weighted price accumulator of token 1 in token 0.
+///
+/// The accumulator sums `price_0 * elapsed_seconds` as Q64.64 price times
+/// seconds, exactly like Uniswap V2: the price in force for an interval is
+/// the pool's price at the start of it, so a caller samples the accumulator
+/// at two times and divides the difference by the time difference. A pool
+/// with an empty side records no price, and a zero `last_update` only
+/// anchors the clock, so a first sample after a migration adds nothing.
+pub fn advance_price_accumulator(
+	reserve_0: u64,
+	reserve_1: u64,
+	cumulative: u128,
+	last_update: u64,
+	now: u64,
+) -> Result<(u128, u64), ProgramError> {
+	if now <= last_update {
+		return Ok((cumulative, last_update));
+	}
+	let advanced = if last_update == 0 || reserve_0 == 0 || reserve_1 == 0 {
+		cumulative
+	} else {
+		let price_0 = u128::from(reserve_1)
+			.checked_mul(Q64)
+			.ok_or(AmmError::MathOverflow)?
+			/ u128::from(reserve_0);
+		let elapsed = now - last_update;
+		cumulative
+			.checked_add(
+				price_0
+					.checked_mul(u128::from(elapsed))
+					.ok_or(AmmError::MathOverflow)?,
+			)
+			.ok_or(AmmError::MathOverflow)?
+	};
+	Ok((advanced, now))
+}
+
 /// LP issued by a new pool and the part minted to its first depositor.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct InitialLiquidity {
@@ -612,6 +652,32 @@ mod tests {
 				amount_0: 1_000,
 				amount_1: 1_500,
 			}
+		);
+	}
+
+	#[test]
+	fn the_accumulator_sums_price_times_time() {
+		let price = |r0: u64, r1: u64| u128::from(r1) * Q64 / u128::from(r0);
+		// Ten seconds at 2:1, then ten at 4:1.
+		let (cumulative, _) =
+			advance_price_accumulator(100, 200, 0, 1_000, 1_010).expect("advance");
+		assert_eq!(cumulative, price(100, 200) * 10);
+		let (cumulative, _) =
+			advance_price_accumulator(100, 400, cumulative, 1_010, 1_020).expect("advance");
+		assert_eq!(cumulative, price(100, 200) * 10 + price(100, 400) * 10);
+		// A zero start or an empty side anchors the clock without a price.
+		assert_eq!(
+			advance_price_accumulator(100, 200, 0, 0, 500).expect("anchor"),
+			(0, 500)
+		);
+		assert_eq!(
+			advance_price_accumulator(0, 200, 7, 500, 600).expect("empty"),
+			(7, 600)
+		);
+		// Time moving backwards or standing still changes nothing.
+		assert_eq!(
+			advance_price_accumulator(100, 200, 7, 600, 599).expect("backwards"),
+			(7, 600)
 		);
 	}
 

@@ -55,6 +55,11 @@ in
       rm -rf -- clients/typescript/pina_amm/node_modules
       pina generate --project programs/pina_amm --output clients --npx node
       pnpm install --frozen-lockfile >/dev/null
+      # Codama's Dart renderer emits `Object.hash` with one argument per
+      # field, but Dart caps it at 20 arguments; accounts with more fields
+      # need `Object.hashAll`. Runs before formatting so the committed
+      # client always compiles.
+      node tools/normalize-generated.mjs clients/dart/lib
       dart format clients/dart >/dev/null
       dprint fmt --allow-no-files 'clients/**/*.{ts,json,toml}' >/dev/null
     '';
@@ -74,6 +79,7 @@ in
       cargo test --workspace --all-features --locked
       pnpm --dir clients/typescript/pina_amm test
       pnpm --dir website test
+      node --test tools/normalize-generated.test.mjs
       (cd clients/dart && dart test)
     '';
 
