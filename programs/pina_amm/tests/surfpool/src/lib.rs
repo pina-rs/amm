@@ -36,6 +36,8 @@ use pina_amm_client::instructions::SwapExactIn;
 use pina_amm_client::instructions::SwapExactInInstructionData;
 use pina_amm_client::instructions::SwapExactOut;
 use pina_amm_client::instructions::SwapExactOutInstructionData;
+use pina_amm_client::instructions::SyncPool;
+use pina_amm_client::instructions::SyncPoolInstructionData;
 use pina_amm_client::instructions::UpdateConfig;
 use pina_amm_client::instructions::UpdateConfigInstructionData;
 use pina_amm_client::instructions::Withdraw;
@@ -288,6 +290,8 @@ fn pool_state(h: &Harness, pool: &Pubkey) -> Pool {
 		creator_fee_rate: state.creator_fee_rate.get(),
 		creator_fee_mode: state.creator_fee_mode,
 		bump: state.bump,
+		price0_cumulative_last: state.price0_cumulative_last.get(),
+		last_update_timestamp: state.last_update_timestamp.get(),
 	}
 }
 
@@ -326,6 +330,17 @@ fn swap_exact_in_instruction(
 		})
 		.expect("swap data"),
 	)
+}
+
+fn sync_instruction(fixture: &PoolFixture) -> Instruction {
+	SyncPool::new(
+		fixture.pool,
+		fixture.vault_0,
+		fixture.vault_1,
+		fixture.program_0,
+		fixture.program_1,
+	)
+	.instruction(SyncPoolInstructionData::new(|_| {}).expect("sync data"))
 }
 
 fn swap_exact_out_instruction(
@@ -1237,6 +1252,50 @@ fn prefunded_pool_addresses_cannot_block_creation() {
 /// addresses involved, so its ceiling leaves room for that spread.
 #[test]
 #[ignore = "run with `pina test`"]
+fn sync_accumulates_the_time_weighted_price() {
+	pina_test::run(async {
+		let h = Harness::start().await.expect("start");
+		let admin = install_admin(&h);
+		let fixture = spl_pool(&h, &admin, 0);
+		let created_at = pool_state(&h, &fixture.pool).last_update_timestamp;
+		// Reserves of 1,000,000,000 token 0 and 4,000,000,000 token 1 put
+		// price_0, token 1 per token 0 in Q64.64, at four.
+		let price_0 = 4_000_000_000u128 * (1u128 << 64) / 1_000_000_000u128;
+
+		h.advance_seconds(10).expect("advance");
+		h.send(&[sync_instruction(&fixture)], &[]).expect("sync");
+		let synced = pool_state(&h, &fixture.pool);
+		let elapsed = synced.last_update_timestamp - created_at;
+		assert!(elapsed >= 9, "clock advanced by {elapsed}");
+		assert_eq!(synced.price0_cumulative_last, price_0 * u128::from(elapsed));
+
+		// A swap advances the accumulator with the price in force before it.
+		h.advance_seconds(10).expect("advance");
+		let trader = funded_trader(&h, &fixture, 1_000_000_000);
+		h.send(
+			&[swap_exact_in_instruction(
+				&fixture,
+				&trader.pubkey(),
+				true,
+				1_000_000,
+				0,
+			)],
+			&[&trader],
+		)
+		.expect("swap");
+		let swapped = pool_state(&h, &fixture.pool);
+		let second = swapped.last_update_timestamp - synced.last_update_timestamp;
+		assert!(second >= 9, "clock advanced by {second}");
+		assert_eq!(
+			swapped.price0_cumulative_last,
+			synced.price0_cumulative_last + price_0 * u128::from(second)
+		);
+		h.stop().expect("stop");
+	});
+}
+
+#[test]
+#[ignore = "run with `pina test`"]
 fn compute_units_stay_within_budget() {
 	pina_test::run(async {
 		let h = Harness::start().await.expect("start");
@@ -1286,6 +1345,7 @@ fn compute_units_stay_within_budget() {
 			&[&trader],
 			6_000,
 		);
+		measure("sync", sync_instruction(&fixture), &[], 4_000);
 		measure(
 			"deposit",
 			deposit_instruction(&fixture, &lp.pubkey(), 1_000_000, (u64::MAX, u64::MAX)),

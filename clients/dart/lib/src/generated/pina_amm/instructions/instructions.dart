@@ -10,5 +10,6 @@ export 'deposit.dart';
 export 'set_pool_creator.dart';
 export 'swap_exact_in.dart';
 export 'swap_exact_out.dart';
+export 'sync_pool.dart';
 export 'update_config.dart';
 export 'withdraw.dart';

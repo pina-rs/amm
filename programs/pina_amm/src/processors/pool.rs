@@ -1,5 +1,7 @@
 //! `CreatePool`.
 
+use pina::sysvars::Sysvar;
+use pina::sysvars::clock::Clock;
 use pina::*;
 
 use crate::ID;
@@ -127,6 +129,8 @@ impl<'a> ProcessAccountInfos<'a> for CreatePoolAccounts<'a> {
 			return Err(AmmError::PoolAccountMismatch.into());
 		}
 
+		let activation_timestamp =
+			u64::try_from(Clock::get()?.unix_timestamp).map_err(|_| AmmError::MathOverflow)?;
 		let liquidity = initial_liquidity(amount_0, amount_1)?;
 		let (_, pool_bump) = CreateProgramAccount {
 			account: self.pool,
@@ -148,6 +152,8 @@ impl<'a> ProcessAccountInfos<'a> for CreatePoolAccounts<'a> {
 			pool.creator_fee_rate.set(creator_fee_rate);
 			pool.creator_fee_mode = creator_fee_mode;
 			pool.bump = bump;
+			pool.price_0_cumulative_last.set(0);
+			pool.last_update_timestamp.set(activation_timestamp);
 			Ok(())
 		})?;
 

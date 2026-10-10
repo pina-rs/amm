@@ -7,7 +7,7 @@
  */
 
 import { getPinaPodDiscriminatorDecoder, getPinaPodMigrationVersionDecoder } from "../pinaPodCodecs";
-import { assertAccountExists, assertAccountsExist, combineCodec, decodeAccount, fetchEncodedAccount, fetchEncodedAccounts, getAddressDecoder, getAddressEncoder, getStructDecoder, getStructEncoder, getU32Decoder, getU32Encoder, getU64Decoder, getU64Encoder, getU8Decoder, getU8Encoder, transformEncoder, type Account, type Address, type EncodedAccount, type FetchAccountConfig, type FetchAccountsConfig, type FixedSizeCodec, type FixedSizeDecoder, type FixedSizeEncoder, type MaybeAccount, type MaybeEncodedAccount, type ReadonlyUint8Array } from '@solana/kit';
+import { assertAccountExists, assertAccountsExist, combineCodec, decodeAccount, fetchEncodedAccount, fetchEncodedAccounts, getAddressDecoder, getAddressEncoder, getStructDecoder, getStructEncoder, getU128Decoder, getU128Encoder, getU32Decoder, getU32Encoder, getU64Decoder, getU64Encoder, getU8Decoder, getU8Encoder, transformEncoder, type Account, type Address, type EncodedAccount, type FetchAccountConfig, type FetchAccountsConfig, type FixedSizeCodec, type FixedSizeDecoder, type FixedSizeEncoder, type MaybeAccount, type MaybeEncodedAccount, type ReadonlyUint8Array } from '@solana/kit';
 import { findPoolPda, type PoolSeeds } from '../pdas';
 
 export const POOL_DISCRIMINATOR = 2;
@@ -65,7 +65,14 @@ creatorFeeRate: number;
 /** `CreatorFeeMode` wire value. */
 creatorFeeMode: number; 
 /** Canonical bump of this pool's PDA. */
-bump: number;  };
+bump: number; 
+/**
+ * Time-weighted price of token 1 in token 0, summed as Q64.64 price
+ * times seconds. `SyncPool` and every swap advance it.
+ */
+price0CumulativeLast: bigint; 
+/** Unix second of the last accumulator advance; zero before the first. */
+lastUpdateTimestamp: bigint;  };
 
 export type PoolArgs = { 
 /** Fee tier this pool was created under. */
@@ -108,16 +115,23 @@ creatorFeeRate: number;
 /** `CreatorFeeMode` wire value. */
 creatorFeeMode: number; 
 /** Canonical bump of this pool's PDA. */
-bump: number;  };
+bump: number; 
+/**
+ * Time-weighted price of token 1 in token 0, summed as Q64.64 price
+ * times seconds. `SyncPool` and every swap advance it.
+ */
+price0CumulativeLast: number | bigint; 
+/** Unix second of the last accumulator advance; zero before the first. */
+lastUpdateTimestamp: number | bigint;  };
 
 /** Gets the encoder for {@link PoolArgs} account data. */
 export function getPoolEncoder(): FixedSizeEncoder<PoolArgs> {
-    return transformEncoder(getStructEncoder([['discriminator', getU8Encoder()], ['migrationVersion', getU8Encoder()], ['ammConfig', getAddressEncoder()], ['creator', getAddressEncoder()], ['mint0', getAddressEncoder()], ['mint1', getAddressEncoder()], ['vault0', getAddressEncoder()], ['vault1', getAddressEncoder()], ['lpMint', getAddressEncoder()], ['lpSupply', getU64Encoder()], ['protocolFees0', getU64Encoder()], ['protocolFees1', getU64Encoder()], ['creatorFees0', getU64Encoder()], ['creatorFees1', getU64Encoder()], ['tradeFeeRate', getU32Encoder()], ['protocolFeeRate', getU32Encoder()], ['creatorFeeRate', getU32Encoder()], ['creatorFeeMode', getU8Encoder()], ['bump', getU8Encoder()]]), (value) => ({ ...value, discriminator: 2, migrationVersion: 0 }));
+    return transformEncoder(getStructEncoder([['discriminator', getU8Encoder()], ['migrationVersion', getU8Encoder()], ['ammConfig', getAddressEncoder()], ['creator', getAddressEncoder()], ['mint0', getAddressEncoder()], ['mint1', getAddressEncoder()], ['vault0', getAddressEncoder()], ['vault1', getAddressEncoder()], ['lpMint', getAddressEncoder()], ['lpSupply', getU64Encoder()], ['protocolFees0', getU64Encoder()], ['protocolFees1', getU64Encoder()], ['creatorFees0', getU64Encoder()], ['creatorFees1', getU64Encoder()], ['tradeFeeRate', getU32Encoder()], ['protocolFeeRate', getU32Encoder()], ['creatorFeeRate', getU32Encoder()], ['creatorFeeMode', getU8Encoder()], ['bump', getU8Encoder()], ['price0CumulativeLast', getU128Encoder()], ['lastUpdateTimestamp', getU64Encoder()]]), (value) => ({ ...value, discriminator: 2, migrationVersion: 0 }));
 }
 
 /** Gets the decoder for {@link Pool} account data. */
 export function getPoolDecoder(): FixedSizeDecoder<Pool> {
-    return getStructDecoder([['discriminator', getPinaPodDiscriminatorDecoder(POOL_DISCRIMINATOR, getU8Decoder())], ['migrationVersion', getPinaPodMigrationVersionDecoder(0, getU8Decoder())], ['ammConfig', getAddressDecoder()], ['creator', getAddressDecoder()], ['mint0', getAddressDecoder()], ['mint1', getAddressDecoder()], ['vault0', getAddressDecoder()], ['vault1', getAddressDecoder()], ['lpMint', getAddressDecoder()], ['lpSupply', getU64Decoder()], ['protocolFees0', getU64Decoder()], ['protocolFees1', getU64Decoder()], ['creatorFees0', getU64Decoder()], ['creatorFees1', getU64Decoder()], ['tradeFeeRate', getU32Decoder()], ['protocolFeeRate', getU32Decoder()], ['creatorFeeRate', getU32Decoder()], ['creatorFeeMode', getU8Decoder()], ['bump', getU8Decoder()]]);
+    return getStructDecoder([['discriminator', getPinaPodDiscriminatorDecoder(POOL_DISCRIMINATOR, getU8Decoder())], ['migrationVersion', getPinaPodMigrationVersionDecoder(0, getU8Decoder())], ['ammConfig', getAddressDecoder()], ['creator', getAddressDecoder()], ['mint0', getAddressDecoder()], ['mint1', getAddressDecoder()], ['vault0', getAddressDecoder()], ['vault1', getAddressDecoder()], ['lpMint', getAddressDecoder()], ['lpSupply', getU64Decoder()], ['protocolFees0', getU64Decoder()], ['protocolFees1', getU64Decoder()], ['creatorFees0', getU64Decoder()], ['creatorFees1', getU64Decoder()], ['tradeFeeRate', getU32Decoder()], ['protocolFeeRate', getU32Decoder()], ['creatorFeeRate', getU32Decoder()], ['creatorFeeMode', getU8Decoder()], ['bump', getU8Decoder()], ['price0CumulativeLast', getU128Decoder()], ['lastUpdateTimestamp', getU64Decoder()]]);
 }
 
 /** Gets the codec for {@link Pool} account data. */

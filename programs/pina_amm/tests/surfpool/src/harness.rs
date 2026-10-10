@@ -39,6 +39,9 @@ pub const ATA_PROGRAM: Pubkey =
 	Pubkey::from_str_const("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
 /// The system program.
 pub const SYSTEM_PROGRAM: Pubkey = Pubkey::from_str_const("11111111111111111111111111111111");
+/// The clock sysvar.
+pub const CLOCK_SYSVAR: Pubkey =
+	Pubkey::from_str_const("SysvarC1ock11111111111111111111111111111111");
 /// The upgradeable BPF loader.
 pub const UPGRADEABLE_LOADER: Pubkey =
 	Pubkey::from_str_const("BPFLoaderUpgradeab1e11111111111111111111111");
@@ -123,6 +126,23 @@ impl Harness {
 				authority: *authority,
 			})
 			.map_err(|error| format!("set upgrade authority: {error}"))
+	}
+
+	/// The cluster's Unix timestamp, read from the clock sysvar.
+	pub fn now(&self) -> i64 {
+		let clock = self.account(&CLOCK_SYSVAR).expect("clock sysvar");
+		i64::from_le_bytes(clock.data[32..40].try_into().expect("unix timestamp"))
+	}
+
+	/// Move the cluster clock forward by `seconds`.
+	pub fn advance_seconds(&self, seconds: i64) -> Result<(), String> {
+		let target = u64::try_from(self.now() + seconds).map_err(|error| error.to_string())?;
+		let _ = self.surfnet.events().try_iter().count();
+		self.surfnet
+			.cheatcodes()
+			.time_travel_to_timestamp(target * 1_000)
+			.map(|_| ())
+			.map_err(|error| format!("time travel: {error}"))
 	}
 
 	/// The AMM's program-data account.

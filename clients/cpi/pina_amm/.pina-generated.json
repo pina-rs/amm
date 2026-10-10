@@ -13,6 +13,7 @@
     "src/generated/instructions/set_pool_creator.rs",
     "src/generated/instructions/swap_exact_in.rs",
     "src/generated/instructions/swap_exact_out.rs",
+    "src/generated/instructions/sync_pool.rs",
     "src/generated/instructions/update_config.rs",
     "src/generated/instructions/withdraw.rs",
     "src/generated/mod.rs",

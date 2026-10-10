@@ -7,7 +7,10 @@
  */
 
 export * from "./logs";
+export * from './configUpdated';
 export * from './feesCollected';
 export * from './liquidityChanged';
 export * from './poolCreated';
+export * from './poolCreatorChanged';
+export * from './poolSynced';
 export * from './swapped';
