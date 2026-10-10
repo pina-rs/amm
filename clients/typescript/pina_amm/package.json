@@ -36,8 +36,9 @@
 	"scripts": {
 		"build": "tsup",
 		"check": "tsc --noEmit --project tsconfig.json",
-		"test": "pnpm build && node --test test/*.test.mjs",
-		"prepack": "pnpm build"
+		"journey": "tsx journeys/surfpool.journey.ts",
+		"prepack": "pnpm build",
+		"test": "pnpm build && node --test test/*.test.mjs"
 	},
 	"dependencies": {
 		"@solana/program-client-core": "^8.3.0"
@@ -47,9 +48,10 @@
 	},
 	"devDependencies": {
 		"@solana/kit": "^8.3.0",
+		"@types/node": "^24.6.0",
 		"tsup": "^8.5.0",
-		"typescript": "^5.9.3",
-		"@types/node": "^24.6.0"
+		"tsx": "^4.20.0",
+		"typescript": "^5.9.3"
 	},
 	"publishConfig": {
 		"access": "public",

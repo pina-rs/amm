@@ -11,6 +11,7 @@
 
 mod cli;
 mod harness;
+mod journeys;
 
 use harness::Harness;
 use harness::MintExtension;

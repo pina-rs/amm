@@ -1,0 +1,8 @@
+{
+	"binarySize": {
+		"maxIncreaseBytes": 0
+	},
+	"computeUnits": {
+		"thresholdPercent": 2
+	}
+}
