@@ -9,7 +9,7 @@
 import { assertIsInstructionWithAccounts, containsBytes, extendClient, getU8Encoder, SOLANA_ERROR__PROGRAM_CLIENTS__FAILED_TO_IDENTIFY_ACCOUNT, SOLANA_ERROR__PROGRAM_CLIENTS__FAILED_TO_IDENTIFY_INSTRUCTION, SOLANA_ERROR__PROGRAM_CLIENTS__UNRECOGNIZED_INSTRUCTION_TYPE, SolanaError, type Address, type ClientWithRpc, type ClientWithTransactionPlanning, type ClientWithTransactionSending, type ExtendedClient, type GetAccountInfoApi, type GetMultipleAccountsApi, type Instruction, type InstructionWithData, type ReadonlyUint8Array } from '@solana/kit';
 import { addSelfFetchFunctions, addSelfPlanAndSendFunctions, type SelfFetchFunctions, type SelfPlanAndSendFunctions } from '@solana/program-client-core';
 import { getAmmConfigCodec, getPoolCodec, type AmmConfig, type AmmConfigArgs, type Pool, type PoolArgs } from '../accounts';
-import { getCollectCreatorFeesInstruction, getCollectProtocolFeesInstruction, getCreateConfigInstruction, getCreatePoolInstructionAsync, getDepositInstruction, getSetPoolCreatorInstruction, getSwapExactInInstruction, getSwapExactOutInstruction, getUpdateConfigInstruction, getWithdrawInstruction, parseCollectCreatorFeesInstruction, parseCollectProtocolFeesInstruction, parseCreateConfigInstruction, parseCreatePoolInstruction, parseDepositInstruction, parseSetPoolCreatorInstruction, parseSwapExactInInstruction, parseSwapExactOutInstruction, parseUpdateConfigInstruction, parseWithdrawInstruction, type CollectCreatorFeesInput, type CollectProtocolFeesInput, type CreateConfigInput, type CreatePoolAsyncInput, type DepositInput, type ParsedCollectCreatorFeesInstruction, type ParsedCollectProtocolFeesInstruction, type ParsedCreateConfigInstruction, type ParsedCreatePoolInstruction, type ParsedDepositInstruction, type ParsedSetPoolCreatorInstruction, type ParsedSwapExactInInstruction, type ParsedSwapExactOutInstruction, type ParsedUpdateConfigInstruction, type ParsedWithdrawInstruction, type SetPoolCreatorInput, type SwapExactInInput, type SwapExactOutInput, type UpdateConfigInput, type WithdrawInput } from '../instructions';
+import { getCollectCreatorFeesInstruction, getCollectProtocolFeesInstruction, getCreateConfigInstruction, getCreatePoolInstructionAsync, getDepositInstruction, getSetPoolCreatorInstruction, getSwapExactInInstruction, getSwapExactOutInstruction, getSyncPoolInstruction, getUpdateConfigInstruction, getWithdrawInstruction, parseCollectCreatorFeesInstruction, parseCollectProtocolFeesInstruction, parseCreateConfigInstruction, parseCreatePoolInstruction, parseDepositInstruction, parseSetPoolCreatorInstruction, parseSwapExactInInstruction, parseSwapExactOutInstruction, parseSyncPoolInstruction, parseUpdateConfigInstruction, parseWithdrawInstruction, type CollectCreatorFeesInput, type CollectProtocolFeesInput, type CreateConfigInput, type CreatePoolAsyncInput, type DepositInput, type ParsedCollectCreatorFeesInstruction, type ParsedCollectProtocolFeesInstruction, type ParsedCreateConfigInstruction, type ParsedCreatePoolInstruction, type ParsedDepositInstruction, type ParsedSetPoolCreatorInstruction, type ParsedSwapExactInInstruction, type ParsedSwapExactOutInstruction, type ParsedSyncPoolInstruction, type ParsedUpdateConfigInstruction, type ParsedWithdrawInstruction, type SetPoolCreatorInput, type SwapExactInInput, type SwapExactOutInput, type SyncPoolInput, type UpdateConfigInput, type WithdrawInput } from '../instructions';
 import { getMigrateInstruction, type MigrateInput } from "../instructions";
 
 import { findAmmConfigPda, findPoolLpMintPda, findPoolPda, findPoolVaultPda } from '../pdas';
@@ -25,7 +25,7 @@ if (containsBytes(data, getU8Encoder().encode(2), 0) && containsBytes(data, getU
     throw new SolanaError(SOLANA_ERROR__PROGRAM_CLIENTS__FAILED_TO_IDENTIFY_ACCOUNT, { accountData: data, programName: "pinaAmm" });
 }
 
-export enum PinaAmmEvent { PoolCreated, Swapped, LiquidityChanged, FeesCollected }
+export enum PinaAmmEvent { PoolCreated, Swapped, LiquidityChanged, FeesCollected, PoolSynced, ConfigUpdated, PoolCreatorChanged }
 
 export function identifyPinaAmmEvent(event: { data: ReadonlyUint8Array } | ReadonlyUint8Array): PinaAmmEvent {
     const data = 'data' in event ? event.data : event;
@@ -33,10 +33,13 @@ export function identifyPinaAmmEvent(event: { data: ReadonlyUint8Array } | Reado
 if (containsBytes(data, getU8Encoder().encode(2), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) { return PinaAmmEvent.Swapped; }
 if (containsBytes(data, getU8Encoder().encode(3), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) { return PinaAmmEvent.LiquidityChanged; }
 if (containsBytes(data, getU8Encoder().encode(4), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) { return PinaAmmEvent.FeesCollected; }
+if (containsBytes(data, getU8Encoder().encode(5), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) { return PinaAmmEvent.PoolSynced; }
+if (containsBytes(data, getU8Encoder().encode(6), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) { return PinaAmmEvent.ConfigUpdated; }
+if (containsBytes(data, getU8Encoder().encode(7), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) { return PinaAmmEvent.PoolCreatorChanged; }
     throw new Error('The provided event could not be identified as a pinaAmm event.');
 }
 
-export enum PinaAmmInstruction { CreateConfig, UpdateConfig, CreatePool, Deposit, Withdraw, SwapExactIn, SwapExactOut, CollectProtocolFees, CollectCreatorFees, SetPoolCreator }
+export enum PinaAmmInstruction { CreateConfig, UpdateConfig, CreatePool, Deposit, Withdraw, SwapExactIn, SwapExactOut, CollectProtocolFees, CollectCreatorFees, SetPoolCreator, SyncPool }
 
 export function identifyPinaAmmInstruction(instruction: { data: ReadonlyUint8Array } | ReadonlyUint8Array): PinaAmmInstruction {
     const data = 'data' in instruction ? instruction.data : instruction;
@@ -50,6 +53,7 @@ if (containsBytes(data, getU8Encoder().encode(6), 0)) { return PinaAmmInstructio
 if (containsBytes(data, getU8Encoder().encode(7), 0)) { return PinaAmmInstruction.CollectProtocolFees; }
 if (containsBytes(data, getU8Encoder().encode(8), 0)) { return PinaAmmInstruction.CollectCreatorFees; }
 if (containsBytes(data, getU8Encoder().encode(9), 0)) { return PinaAmmInstruction.SetPoolCreator; }
+if (containsBytes(data, getU8Encoder().encode(10), 0)) { return PinaAmmInstruction.SyncPool; }
     throw new SolanaError(SOLANA_ERROR__PROGRAM_CLIENTS__FAILED_TO_IDENTIFY_INSTRUCTION, { instructionData: data, programName: "pinaAmm" });
 }
 
@@ -64,6 +68,7 @@ export type ParsedPinaAmmInstruction<TProgram extends string = 'pAMMvXaqR2VVFqzn
 | { instructionType: PinaAmmInstruction.CollectProtocolFees } & ParsedCollectProtocolFeesInstruction<TProgram>
 | { instructionType: PinaAmmInstruction.CollectCreatorFees } & ParsedCollectCreatorFeesInstruction<TProgram>
 | { instructionType: PinaAmmInstruction.SetPoolCreator } & ParsedSetPoolCreatorInstruction<TProgram>
+| { instructionType: PinaAmmInstruction.SyncPool } & ParsedSyncPoolInstruction<TProgram>
 
 
         export function parsePinaAmmInstruction<TProgram extends string>(
@@ -92,6 +97,8 @@ case PinaAmmInstruction.CollectCreatorFees: { assertIsInstructionWithAccounts(in
 return { instructionType: PinaAmmInstruction.CollectCreatorFees, ...parseCollectCreatorFeesInstruction(instruction) }; }
 case PinaAmmInstruction.SetPoolCreator: { assertIsInstructionWithAccounts(instruction);
 return { instructionType: PinaAmmInstruction.SetPoolCreator, ...parseSetPoolCreatorInstruction(instruction) }; }
+case PinaAmmInstruction.SyncPool: { assertIsInstructionWithAccounts(instruction);
+return { instructionType: PinaAmmInstruction.SyncPool, ...parseSyncPoolInstruction(instruction) }; }
                 default: throw new SolanaError(SOLANA_ERROR__PROGRAM_CLIENTS__UNRECOGNIZED_INSTRUCTION_TYPE, { instructionType: instructionType as string, programName: "pinaAmm" });
             }
         }
@@ -100,7 +107,7 @@ export type PinaAmmPlugin = { accounts: PinaAmmPluginAccounts; instructions: Pin
 
 export type PinaAmmPluginAccounts = { ammConfig: ReturnType<typeof getAmmConfigCodec> & SelfFetchFunctions<AmmConfigArgs, AmmConfig>; pool: ReturnType<typeof getPoolCodec> & SelfFetchFunctions<PoolArgs, Pool>; }
 
-export type PinaAmmPluginInstructions = { createConfig: (input: CreateConfigInput) => ReturnType<typeof getCreateConfigInstruction> & SelfPlanAndSendFunctions; updateConfig: (input: UpdateConfigInput) => ReturnType<typeof getUpdateConfigInstruction> & SelfPlanAndSendFunctions; createPool: (input: CreatePoolAsyncInput) => ReturnType<typeof getCreatePoolInstructionAsync> & SelfPlanAndSendFunctions; deposit: (input: DepositInput) => ReturnType<typeof getDepositInstruction> & SelfPlanAndSendFunctions; withdraw: (input: WithdrawInput) => ReturnType<typeof getWithdrawInstruction> & SelfPlanAndSendFunctions; swapExactIn: (input: SwapExactInInput) => ReturnType<typeof getSwapExactInInstruction> & SelfPlanAndSendFunctions; swapExactOut: (input: SwapExactOutInput) => ReturnType<typeof getSwapExactOutInstruction> & SelfPlanAndSendFunctions; collectProtocolFees: (input: CollectProtocolFeesInput) => ReturnType<typeof getCollectProtocolFeesInstruction> & SelfPlanAndSendFunctions; collectCreatorFees: (input: CollectCreatorFeesInput) => ReturnType<typeof getCollectCreatorFeesInstruction> & SelfPlanAndSendFunctions; setPoolCreator: (input: SetPoolCreatorInput) => ReturnType<typeof getSetPoolCreatorInstruction> & SelfPlanAndSendFunctions; }
+export type PinaAmmPluginInstructions = { createConfig: (input: CreateConfigInput) => ReturnType<typeof getCreateConfigInstruction> & SelfPlanAndSendFunctions; updateConfig: (input: UpdateConfigInput) => ReturnType<typeof getUpdateConfigInstruction> & SelfPlanAndSendFunctions; createPool: (input: CreatePoolAsyncInput) => ReturnType<typeof getCreatePoolInstructionAsync> & SelfPlanAndSendFunctions; deposit: (input: DepositInput) => ReturnType<typeof getDepositInstruction> & SelfPlanAndSendFunctions; withdraw: (input: WithdrawInput) => ReturnType<typeof getWithdrawInstruction> & SelfPlanAndSendFunctions; swapExactIn: (input: SwapExactInInput) => ReturnType<typeof getSwapExactInInstruction> & SelfPlanAndSendFunctions; swapExactOut: (input: SwapExactOutInput) => ReturnType<typeof getSwapExactOutInstruction> & SelfPlanAndSendFunctions; collectProtocolFees: (input: CollectProtocolFeesInput) => ReturnType<typeof getCollectProtocolFeesInstruction> & SelfPlanAndSendFunctions; collectCreatorFees: (input: CollectCreatorFeesInput) => ReturnType<typeof getCollectCreatorFeesInstruction> & SelfPlanAndSendFunctions; setPoolCreator: (input: SetPoolCreatorInput) => ReturnType<typeof getSetPoolCreatorInstruction> & SelfPlanAndSendFunctions; syncPool: (input: SyncPoolInput) => ReturnType<typeof getSyncPoolInstruction> & SelfPlanAndSendFunctions; }
 
 export type PinaAmmPluginPdas = { ammConfig: typeof findAmmConfigPda; pool: typeof findPoolPda; poolVault: typeof findPoolVaultPda; poolLpMint: typeof findPoolLpMintPda; }
 
@@ -110,6 +117,6 @@ export function pinaAmmProgram() {
     return <T extends PinaAmmPluginRequirements>(client: T): ExtendedClient<T, { pinaAmm: PinaAmmPlugin }> => {
         return extendClient(client, { pinaAmm: <PinaAmmPlugin>{ accounts: { ammConfig: addSelfFetchFunctions(client, getAmmConfigCodec()), pool: addSelfFetchFunctions(client, getPoolCodec()) }, instructions: { 
 			migrate: (input: MigrateInput) =>
-				addSelfPlanAndSendFunctions(client, getMigrateInstruction(input)),createConfig: input => addSelfPlanAndSendFunctions(client, getCreateConfigInstruction(input)), updateConfig: input => addSelfPlanAndSendFunctions(client, getUpdateConfigInstruction(input)), createPool: input => addSelfPlanAndSendFunctions(client, getCreatePoolInstructionAsync(input)), deposit: input => addSelfPlanAndSendFunctions(client, getDepositInstruction(input)), withdraw: input => addSelfPlanAndSendFunctions(client, getWithdrawInstruction(input)), swapExactIn: input => addSelfPlanAndSendFunctions(client, getSwapExactInInstruction(input)), swapExactOut: input => addSelfPlanAndSendFunctions(client, getSwapExactOutInstruction(input)), collectProtocolFees: input => addSelfPlanAndSendFunctions(client, getCollectProtocolFeesInstruction(input)), collectCreatorFees: input => addSelfPlanAndSendFunctions(client, getCollectCreatorFeesInstruction(input)), setPoolCreator: input => addSelfPlanAndSendFunctions(client, getSetPoolCreatorInstruction(input)) }, pdas: { ammConfig: findAmmConfigPda, pool: findPoolPda, poolVault: findPoolVaultPda, poolLpMint: findPoolLpMintPda }, identifyAccount: identifyPinaAmmAccount, identifyInstruction: identifyPinaAmmInstruction, parseInstruction: parsePinaAmmInstruction } });
+				addSelfPlanAndSendFunctions(client, getMigrateInstruction(input)),createConfig: input => addSelfPlanAndSendFunctions(client, getCreateConfigInstruction(input)), updateConfig: input => addSelfPlanAndSendFunctions(client, getUpdateConfigInstruction(input)), createPool: input => addSelfPlanAndSendFunctions(client, getCreatePoolInstructionAsync(input)), deposit: input => addSelfPlanAndSendFunctions(client, getDepositInstruction(input)), withdraw: input => addSelfPlanAndSendFunctions(client, getWithdrawInstruction(input)), swapExactIn: input => addSelfPlanAndSendFunctions(client, getSwapExactInInstruction(input)), swapExactOut: input => addSelfPlanAndSendFunctions(client, getSwapExactOutInstruction(input)), collectProtocolFees: input => addSelfPlanAndSendFunctions(client, getCollectProtocolFeesInstruction(input)), collectCreatorFees: input => addSelfPlanAndSendFunctions(client, getCollectCreatorFeesInstruction(input)), setPoolCreator: input => addSelfPlanAndSendFunctions(client, getSetPoolCreatorInstruction(input)), syncPool: input => addSelfPlanAndSendFunctions(client, getSyncPoolInstruction(input)) }, pdas: { ammConfig: findAmmConfigPda, pool: findPoolPda, poolVault: findPoolVaultPda, poolLpMint: findPoolLpMintPda }, identifyAccount: identifyPinaAmmAccount, identifyInstruction: identifyPinaAmmInstruction, parseInstruction: parsePinaAmmInstruction } });
     };
 }

@@ -7,6 +7,7 @@ use super::common::with_pool_signer;
 use crate::ID;
 use crate::errors::AmmError;
 use crate::events::FeesCollected;
+use crate::events::PoolCreatorChanged;
 use crate::instructions::CollectCreatorFeesInstruction;
 use crate::instructions::CollectProtocolFeesInstruction;
 use crate::instructions::SetPoolCreatorInstruction;
@@ -228,11 +229,26 @@ impl<'a> ProcessAccountInfos<'a> for CollectCreatorFeesAccounts<'a> {
 impl<'a> ProcessAccountInfos<'a> for SetPoolCreatorAccounts<'a> {
 	fn process(self, data: &[u8]) -> ProgramResult {
 		let args = SetPoolCreatorInstruction::try_from_bytes(data)?;
-		let mut pool = self.pool.as_account_mut::<Pool>(&ID)?;
-		if &pool.creator != self.creator.address() {
-			return Err(AmmError::Unauthorized.into());
+		// The default address can never sign, so handing creator rights to it
+		// would make every later creator fee unclaimable forever.
+		if args.new_creator == Address::default() {
+			return Err(AmmError::DefaultCreator.into());
 		}
-		pool.creator = args.new_creator;
-		Ok(())
+		let pool_address = *self.pool.address();
+		let previous_creator;
+		{
+			let mut pool = self.pool.as_account_mut::<Pool>(&ID)?;
+			if &pool.creator != self.creator.address() {
+				return Err(AmmError::Unauthorized.into());
+			}
+			previous_creator = pool.creator;
+			pool.creator = args.new_creator;
+		}
+		PoolCreatorChanged::emit(|event| {
+			event.pool = pool_address;
+			event.previous_creator = previous_creator;
+			event.new_creator = args.new_creator;
+			Ok(())
+		})
 	}
 }

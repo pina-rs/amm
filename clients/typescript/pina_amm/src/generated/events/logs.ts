@@ -29,6 +29,21 @@ import {
 	getFeesCollectedEventDiscriminatorBytes,
 	type FeesCollectedEvent,
 } from "./feesCollected.js";
+import {
+	getPoolSyncedEventDecoder,
+	getPoolSyncedEventDiscriminatorBytes,
+	type PoolSyncedEvent,
+} from "./poolSynced.js";
+import {
+	getConfigUpdatedEventDecoder,
+	getConfigUpdatedEventDiscriminatorBytes,
+	type ConfigUpdatedEvent,
+} from "./configUpdated.js";
+import {
+	getPoolCreatorChangedEventDecoder,
+	getPoolCreatorChangedEventDiscriminatorBytes,
+	type PoolCreatorChangedEvent,
+} from "./poolCreatorChanged.js";
 
 /**
  * Decode one `poolCreated` record: only records carrying this event's migration version decode.
@@ -258,6 +273,177 @@ export function parseFeesCollectedEventFromLog(log: string): DecodedFeesCollecte
 	return decodeFeesCollectedEvent(bytes);
 }
 
+/**
+ * Decode one `poolSynced` record: only records carrying this event's migration version decode.
+ */
+export function decodePoolSyncedEvent(
+	data: ReadonlyUint8Array | Uint8Array,
+): DecodedPoolSyncedEvent {
+	const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+	const discriminatorBytes = getPoolSyncedEventDiscriminatorBytes();
+	if (bytes.length < 2) {
+		throw new RangeError(
+			`the provided data is too short for the "PoolSyncedEvent" event envelope`,
+		);
+	}
+	for (let index = 0; index < 1; index += 1) {
+		if (bytes[index] !== discriminatorBytes[index]) {
+			throw new RangeError(
+				'the provided data does not match the "PoolSyncedEvent" event discriminator.',
+			);
+		}
+	}
+	const sourceVersion = bytes[1];
+	if (sourceVersion !== 0) {
+		throw new RangeError(
+			`event migration version mismatch: expected 0, received ${sourceVersion} (decode it with the event for that version, or regenerate this client)`,
+		);
+	}
+	return { name: "poolSynced", data: getPoolSyncedEventDecoder().decode(bytes) };
+}
+
+/** One log entry that named this event. */
+export type DecodedPoolSyncedEvent = { name: "poolSynced"; data: PoolSyncedEvent };
+
+/**
+ * Decode a `Program data:` log line, or return `null` when the line is not
+ * this event.
+ */
+export function parsePoolSyncedEventFromLog(log: string): DecodedPoolSyncedEvent | null {
+	const prefix = "Program data: ";
+	if (!log.startsWith(prefix)) {
+		return null;
+	}
+	const bytes = getBase64Encoder().encode(log.slice(prefix.length));
+	if (bytes.length < 2) {
+		return null;
+	}
+	const discriminatorBytes = getPoolSyncedEventDiscriminatorBytes();
+	for (let index = 0; index < 1; index += 1) {
+		if (bytes[index] !== discriminatorBytes[index]) {
+			return null;
+		}
+	}
+	if (bytes[1] !== 0) {
+		return null;
+	}
+	return decodePoolSyncedEvent(bytes);
+}
+
+/**
+ * Decode one `configUpdated` record: only records carrying this event's migration version decode.
+ */
+export function decodeConfigUpdatedEvent(
+	data: ReadonlyUint8Array | Uint8Array,
+): DecodedConfigUpdatedEvent {
+	const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+	const discriminatorBytes = getConfigUpdatedEventDiscriminatorBytes();
+	if (bytes.length < 2) {
+		throw new RangeError(
+			`the provided data is too short for the "ConfigUpdatedEvent" event envelope`,
+		);
+	}
+	for (let index = 0; index < 1; index += 1) {
+		if (bytes[index] !== discriminatorBytes[index]) {
+			throw new RangeError(
+				'the provided data does not match the "ConfigUpdatedEvent" event discriminator.',
+			);
+		}
+	}
+	const sourceVersion = bytes[1];
+	if (sourceVersion !== 0) {
+		throw new RangeError(
+			`event migration version mismatch: expected 0, received ${sourceVersion} (decode it with the event for that version, or regenerate this client)`,
+		);
+	}
+	return { name: "configUpdated", data: getConfigUpdatedEventDecoder().decode(bytes) };
+}
+
+/** One log entry that named this event. */
+export type DecodedConfigUpdatedEvent = { name: "configUpdated"; data: ConfigUpdatedEvent };
+
+/**
+ * Decode a `Program data:` log line, or return `null` when the line is not
+ * this event.
+ */
+export function parseConfigUpdatedEventFromLog(log: string): DecodedConfigUpdatedEvent | null {
+	const prefix = "Program data: ";
+	if (!log.startsWith(prefix)) {
+		return null;
+	}
+	const bytes = getBase64Encoder().encode(log.slice(prefix.length));
+	if (bytes.length < 2) {
+		return null;
+	}
+	const discriminatorBytes = getConfigUpdatedEventDiscriminatorBytes();
+	for (let index = 0; index < 1; index += 1) {
+		if (bytes[index] !== discriminatorBytes[index]) {
+			return null;
+		}
+	}
+	if (bytes[1] !== 0) {
+		return null;
+	}
+	return decodeConfigUpdatedEvent(bytes);
+}
+
+/**
+ * Decode one `poolCreatorChanged` record: only records carrying this event's migration version decode.
+ */
+export function decodePoolCreatorChangedEvent(
+	data: ReadonlyUint8Array | Uint8Array,
+): DecodedPoolCreatorChangedEvent {
+	const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+	const discriminatorBytes = getPoolCreatorChangedEventDiscriminatorBytes();
+	if (bytes.length < 2) {
+		throw new RangeError(
+			`the provided data is too short for the "PoolCreatorChangedEvent" event envelope`,
+		);
+	}
+	for (let index = 0; index < 1; index += 1) {
+		if (bytes[index] !== discriminatorBytes[index]) {
+			throw new RangeError(
+				'the provided data does not match the "PoolCreatorChangedEvent" event discriminator.',
+			);
+		}
+	}
+	const sourceVersion = bytes[1];
+	if (sourceVersion !== 0) {
+		throw new RangeError(
+			`event migration version mismatch: expected 0, received ${sourceVersion} (decode it with the event for that version, or regenerate this client)`,
+		);
+	}
+	return { name: "poolCreatorChanged", data: getPoolCreatorChangedEventDecoder().decode(bytes) };
+}
+
+/** One log entry that named this event. */
+export type DecodedPoolCreatorChangedEvent = { name: "poolCreatorChanged"; data: PoolCreatorChangedEvent };
+
+/**
+ * Decode a `Program data:` log line, or return `null` when the line is not
+ * this event.
+ */
+export function parsePoolCreatorChangedEventFromLog(log: string): DecodedPoolCreatorChangedEvent | null {
+	const prefix = "Program data: ";
+	if (!log.startsWith(prefix)) {
+		return null;
+	}
+	const bytes = getBase64Encoder().encode(log.slice(prefix.length));
+	if (bytes.length < 2) {
+		return null;
+	}
+	const discriminatorBytes = getPoolCreatorChangedEventDiscriminatorBytes();
+	for (let index = 0; index < 1; index += 1) {
+		if (bytes[index] !== discriminatorBytes[index]) {
+			return null;
+		}
+	}
+	if (bytes[1] !== 0) {
+		return null;
+	}
+	return decodePoolCreatorChangedEvent(bytes);
+}
+
 
 /**
  * Explain a `Program data:` line that names a migration-aware event but that
@@ -289,6 +475,21 @@ function unrecognizedEventVersion(log: string): string | null {
 			? 'event "feesCollected" log is too short for its version envelope'
 			: `event "feesCollected" log carries migration version ${bytes[1]}, which this client cannot decode; regenerate it`;
 	}
+	if (bytes.length >= 1 && bytes[0] === 5) {
+		return bytes.length < 2
+			? 'event "poolSynced" log is too short for its version envelope'
+			: `event "poolSynced" log carries migration version ${bytes[1]}, which this client cannot decode; regenerate it`;
+	}
+	if (bytes.length >= 1 && bytes[0] === 6) {
+		return bytes.length < 2
+			? 'event "configUpdated" log is too short for its version envelope'
+			: `event "configUpdated" log carries migration version ${bytes[1]}, which this client cannot decode; regenerate it`;
+	}
+	if (bytes.length >= 1 && bytes[0] === 7) {
+		return bytes.length < 2
+			? 'event "poolCreatorChanged" log is too short for its version envelope'
+			: `event "poolCreatorChanged" log carries migration version ${bytes[1]}, which this client cannot decode; regenerate it`;
+	}
 	return null;
 }
 
@@ -297,7 +498,10 @@ export type DecodedPinaAmmEvent =
 	| DecodedPoolCreatedEvent
 	| DecodedSwappedEvent
 	| DecodedLiquidityChangedEvent
-	| DecodedFeesCollectedEvent;
+	| DecodedFeesCollectedEvent
+	| DecodedPoolSyncedEvent
+	| DecodedConfigUpdatedEvent
+	| DecodedPoolCreatorChangedEvent;
 
 /** The program whose invocation frames emit the events decoded here. */
 export const PINA_AMM_EVENT_SOURCE_ADDRESS = "pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV";
@@ -361,6 +565,21 @@ export function parsePinaAmmEventsFromLogs(
 		const feesCollected = parseFeesCollectedEventFromLog(log);
 		if (feesCollected !== null) {
 			discovered.push(feesCollected);
+			continue;
+		}
+		const poolSynced = parsePoolSyncedEventFromLog(log);
+		if (poolSynced !== null) {
+			discovered.push(poolSynced);
+			continue;
+		}
+		const configUpdated = parseConfigUpdatedEventFromLog(log);
+		if (configUpdated !== null) {
+			discovered.push(configUpdated);
+			continue;
+		}
+		const poolCreatorChanged = parsePoolCreatorChangedEventFromLog(log);
+		if (poolCreatorChanged !== null) {
+			discovered.push(poolCreatorChanged);
 			continue;
 		}
 		const unknownVersion = unrecognizedEventVersion(log);

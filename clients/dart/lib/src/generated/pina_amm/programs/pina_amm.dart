@@ -31,6 +31,7 @@ enum PinaAmmInstruction {
   collectProtocolFees,
   collectCreatorFees,
   setPoolCreator,
+  syncPool,
 }
 
 /// Identifies the type of a PinaAmm instruction.
@@ -64,6 +65,9 @@ PinaAmmInstruction identifyPinaAmmInstruction(Uint8List data) {
   }
   if (containsBytes(data, getU8Encoder().encode(9), 0)) {
     return PinaAmmInstruction.setPoolCreator;
+  }
+  if (containsBytes(data, getU8Encoder().encode(10), 0)) {
+    return PinaAmmInstruction.syncPool;
   }
 
   throw SolanaError(SolanaErrorCode.programClientsFailedToIdentifyInstruction, {
@@ -158,6 +162,14 @@ final class ParsedSetPoolCreator extends ParsedPinaAmmInstruction {
   final SetPoolCreatorInstructionData data;
 }
 
+/// A parsed SyncPool instruction.
+final class ParsedSyncPool extends ParsedPinaAmmInstruction {
+  const ParsedSyncPool({required this.data})
+    : super(PinaAmmInstruction.syncPool);
+
+  final SyncPoolInstructionData data;
+}
+
 /// Parses a PinaAmm instruction.
 ParsedPinaAmmInstruction parsePinaAmmInstruction(Instruction instruction) {
   return switch (identifyPinaAmmInstruction(instruction.data ?? Uint8List(0))) {
@@ -190,6 +202,9 @@ ParsedPinaAmmInstruction parsePinaAmmInstruction(Instruction instruction) {
     ),
     PinaAmmInstruction.setPoolCreator => ParsedSetPoolCreator(
       data: parseSetPoolCreatorInstruction(instruction),
+    ),
+    PinaAmmInstruction.syncPool => ParsedSyncPool(
+      data: parseSyncPoolInstruction(instruction),
     ),
   };
 }

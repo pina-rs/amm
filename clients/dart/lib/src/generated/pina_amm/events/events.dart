@@ -6,12 +6,18 @@ export 'pool_created.dart';
 export 'swapped.dart';
 export 'liquidity_changed.dart';
 export 'fees_collected.dart';
+export 'pool_synced.dart';
+export 'config_updated.dart';
+export 'pool_creator_changed.dart';
 
 import 'event_log.dart';
 import 'pool_created.dart';
 import 'swapped.dart';
 import 'liquidity_changed.dart';
 import 'fees_collected.dart';
+import 'pool_synced.dart';
+import 'config_updated.dart';
+import 'pool_creator_changed.dart';
 
 /// The program whose invocation frames emit the events decoded here.
 const pinaAmmEventSourceAddress = 'pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV';
@@ -76,6 +82,21 @@ List<PinaAmmEvent> parsePinaAmmEventsFromLogs(
       discovered.add(feesCollected);
       continue;
     }
+    final poolSynced = parsePoolSyncedEventFromLog(log);
+    if (poolSynced != null) {
+      discovered.add(poolSynced);
+      continue;
+    }
+    final configUpdated = parseConfigUpdatedEventFromLog(log);
+    if (configUpdated != null) {
+      discovered.add(configUpdated);
+      continue;
+    }
+    final poolCreatorChanged = parsePoolCreatorChangedEventFromLog(log);
+    if (poolCreatorChanged != null) {
+      discovered.add(poolCreatorChanged);
+      continue;
+    }
     final unknownVersion = _unrecognizedEventVersion(log);
     if (unknownVersion != null) {
       throw RangeError(unknownVersion);
@@ -110,6 +131,21 @@ String? _unrecognizedEventVersion(String log) {
     return bytes.length < 2
         ? 'event "feesCollected" log is too short for its version envelope'
         : 'event "feesCollected" log carries migration version ${bytes[1]}, which this client cannot decode; regenerate it';
+  }
+  if (bytes.length >= 1 && bytes[0] == 5) {
+    return bytes.length < 2
+        ? 'event "poolSynced" log is too short for its version envelope'
+        : 'event "poolSynced" log carries migration version ${bytes[1]}, which this client cannot decode; regenerate it';
+  }
+  if (bytes.length >= 1 && bytes[0] == 6) {
+    return bytes.length < 2
+        ? 'event "configUpdated" log is too short for its version envelope'
+        : 'event "configUpdated" log carries migration version ${bytes[1]}, which this client cannot decode; regenerate it';
+  }
+  if (bytes.length >= 1 && bytes[0] == 7) {
+    return bytes.length < 2
+        ? 'event "poolCreatorChanged" log is too short for its version envelope'
+        : 'event "poolCreatorChanged" log carries migration version ${bytes[1]}, which this client cannot decode; regenerate it';
   }
   return null;
 }

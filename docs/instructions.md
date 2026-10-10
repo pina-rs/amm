@@ -154,14 +154,31 @@ Errors: `Unauthorized`, `PoolAccountMismatch`. Emits `FeesCollected`.
 
 Accounts: `creator` (s), `pool` (w). Errors: `Unauthorized`.
 
+## `SyncPool`
+
+Advances a pool's time-weighted price accumulator to now, using the price in force since the last advance. Permissionless: anyone may sync any pool. Swaps advance the same accumulator with their pre-trade price, so `SyncPool` matters most after a donation or a quiet interval. See [math.md](math.md#time-weighted-average-price) for the sampling formula.
+
+| Account           | Type          | Signer | Writable | Note                      |
+| ----------------- | ------------- | ------ | -------- | ------------------------- |
+| `pool`            | Pool          |        | ✓        | The pool to sync          |
+| `vault_0`         | Token account |        |          | The pool's token 0 vault  |
+| `vault_1`         | Token account |        |          | The pool's token 1 vault  |
+| `token_program_0` | Program       |        |          | Program that owns token 0 |
+| `token_program_1` | Program       |        |          | Program that owns token 1 |
+
+Emits `PoolSynced`. Errors: the pool and vault mismatches from the other read paths.
+
 ## Events
 
-| Event              | Fields                                                                                                                                                    |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PoolCreated`      | `pool`, `amm_config`, `creator`, `mint_0`, `mint_1`, `lp_mint`, `amount_0`, `amount_1`, `lp_supply`                                                       |
-| `Swapped`          | `pool`, `trader`, `zero_for_one`, `amount_in`, `amount_out`, `trade_fee`, `protocol_fee`, `creator_fee`, `creator_fee_on_input`, `reserve_0`, `reserve_1` |
-| `LiquidityChanged` | `pool`, `owner`, `is_deposit`, `lp_amount`, `amount_0`, `amount_1`, `lp_supply`                                                                           |
-| `FeesCollected`    | `pool`, `collector`, `is_protocol`, `amount_0`, `amount_1`                                                                                                |
+| Event                | Fields                                                                                                                                                    |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PoolCreated`        | `pool`, `amm_config`, `creator`, `mint_0`, `mint_1`, `lp_mint`, `amount_0`, `amount_1`, `lp_supply`                                                       |
+| `Swapped`            | `pool`, `trader`, `zero_for_one`, `amount_in`, `amount_out`, `trade_fee`, `protocol_fee`, `creator_fee`, `creator_fee_on_input`, `reserve_0`, `reserve_1` |
+| `LiquidityChanged`   | `pool`, `owner`, `is_deposit`, `lp_amount`, `amount_0`, `amount_1`, `lp_supply`                                                                           |
+| `FeesCollected`      | `pool`, `collector`, `is_protocol`, `amount_0`, `amount_1`                                                                                                |
+| `PoolSynced`         | `pool`, `reserve_0`, `reserve_1`, `price_0_cumulative_last`, `last_update_timestamp`                                                                      |
+| `ConfigUpdated`      | `amm_config`, `new_authority`, `trade_fee_rate`, `protocol_fee_rate`, `creator_fee_rate`                                                                  |
+| `PoolCreatorChanged` | `pool`, `previous_creator`, `new_creator`                                                                                                                 |
 
 Flags are `u8`: `1` for true and `0` for false. Decode them with the generated `parsePinaAmmEventsFromLogs` (TypeScript and Dart), which only attributes records the AMM itself emitted.
 
@@ -184,5 +201,6 @@ Flags are `u8`: `1` for true and `0` for false. Decode them with the generated `
 | 12   | `InvariantViolation`           | The constant product would decrease                                 |
 | 13   | `VaultAccountingMismatch`      | A vault holds less than its accrued fees                            |
 | 14   | `PoolCreatorNotAuthorized`     | The tier restricts pool creation to another signer                  |
+| 15   | `DefaultCreator`               | The pool creator is the default address, which can never sign       |
 
 Pina's own framework errors use codes `0xFFFF0000` and above, for example `DuplicateMutableAccount` when the same writable account appears twice.

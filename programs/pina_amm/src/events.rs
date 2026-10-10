@@ -24,6 +24,12 @@ pub enum AmmEvent {
 	LiquidityChanged = 3,
 	/// Accrued fees were paid out. See `FeesCollected`.
 	FeesCollected = 4,
+	/// A pool's price accumulator advanced. See `PoolSynced`.
+	PoolSynced = 5,
+	/// A fee tier was updated. See `ConfigUpdated`.
+	ConfigUpdated = 6,
+	/// A pool's creator-fee rights moved. See `PoolCreatorChanged`.
+	PoolCreatorChanged = 7,
 }
 
 /// Emitted by `CreatePool`.
@@ -110,4 +116,47 @@ pub struct FeesCollected {
 	pub amount_0: u64,
 	/// Token 1 paid out.
 	pub amount_1: u64,
+}
+
+/// Emitted by `SyncPool`. Swaps advance the same accumulator and report
+/// their reserves through `Swapped`.
+#[event(discriminator = AmmEvent)]
+pub struct PoolSynced {
+	/// The pool whose accumulator advanced.
+	pub pool: Address,
+	/// Token 0 reserve at the advance.
+	pub reserve_0: u64,
+	/// Token 1 reserve at the advance.
+	pub reserve_1: u64,
+	/// The accumulator after the advance: Q64.64 price of token 1 in token 0,
+	/// summed over seconds.
+	pub price_0_cumulative_last: u128,
+	/// Unix second of the advance.
+	pub last_update_timestamp: u64,
+}
+
+/// Emitted by `UpdateConfig`.
+#[event(discriminator = AmmEvent)]
+pub struct ConfigUpdated {
+	/// The tier that was updated.
+	pub amm_config: Address,
+	/// The tier's new authority.
+	pub new_authority: Address,
+	/// Trade fee future pools snapshot, in parts per million.
+	pub trade_fee_rate: u32,
+	/// Protocol share future pools snapshot, in parts per million.
+	pub protocol_fee_rate: u32,
+	/// Creator fee future pools snapshot, in parts per million.
+	pub creator_fee_rate: u32,
+}
+
+/// Emitted by `SetPoolCreator`.
+#[event(discriminator = AmmEvent)]
+pub struct PoolCreatorChanged {
+	/// The pool whose creator-fee rights moved.
+	pub pool: Address,
+	/// The previous creator.
+	pub previous_creator: Address,
+	/// The new creator.
+	pub new_creator: Address,
 }
