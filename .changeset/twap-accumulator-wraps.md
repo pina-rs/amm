@@ -1,5 +1,5 @@
 ---
-amm: fix
+amm: breaking
 ---
 
 # Wrap the price accumulator instead of halting the pool
