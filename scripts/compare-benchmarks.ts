@@ -78,6 +78,25 @@ function formatPercent(value: number): string {
 	return `${sign}${value.toFixed(2)}%`;
 }
 
+function formatCount(value: number): string {
+	return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+function formatStatus(row: Row, threshold: number): string {
+	switch (row.status) {
+		case "worse":
+			return `❌ **regression (> ${threshold.toString()}%)**`;
+		case "missing":
+			return "🚩 **missing measurement**";
+		case "new":
+			return "✨ new baseline";
+		case "improved":
+			return "✅ improved";
+		default:
+			return "➖ ok";
+	}
+}
+
 function main(): void {
 	const args = parseArguments();
 	const policy = JSON.parse(readFileSync(args.policy, "utf8")) as Policy;
@@ -132,42 +151,33 @@ function main(): void {
 		row.status === "worse" || row.status === "missing"
 	);
 
+	const sizeChange = deltaPercent(base.binaryBytes, head.binaryBytes);
+	const sizeMarker = sizeDelta < 0 ? "✅" : sizeDelta > 0 ? "❌" : "➖";
 	const lines: string[] = [
 		"## Performance",
 		"",
-		`Deployed binary: **${String(base.binaryBytes)} → ${
-			String(head.binaryBytes)
-		} bytes** (${
-			formatPercent(deltaPercent(base.binaryBytes, head.binaryBytes))
-		})`,
+		`Deployed binary: ${sizeMarker} **${formatCount(base.binaryBytes)} → ${
+			formatCount(head.binaryBytes)
+		} bytes** (${formatPercent(sizeChange)})`,
 		"",
 		"| Instruction | Base CU | Head CU | Change | Status |",
 		"| --- | --- | --- | --- | --- |",
 	];
 	for (const row of rows) {
-		const status = row.status === "worse"
-			? `**regression (> ${threshold.toString()}%)**`
-			: row.status === "missing"
-			? "**missing measurement**"
-			: row.status === "new"
-			? "new baseline"
-			: row.status === "improved"
-			? "improved"
-			: "ok";
 		lines.push(
-			`| ${row.name} | ${row.base === undefined ? "—" : String(row.base)} | ${
-				row.head === undefined ? "—" : String(row.head)
-			} | ${
+			`| ${row.name} | ${
+				row.base === undefined ? "—" : formatCount(row.base)
+			} | ${row.head === undefined ? "—" : formatCount(row.head)} | ${
 				row.deltaPercent === undefined ? "—" : formatPercent(row.deltaPercent)
-			} | ${status} |`,
+			} | ${formatStatus(row, threshold)} |`,
 		);
 	}
 	lines.push("");
 	if (sizeViolated) {
 		lines.push(
 			`- 🚩 The deployed binary grew by ${
-				String(sizeDelta)
-			} bytes; the policy allows at most ${String(maxIncreaseBytes)}.`,
+				formatCount(sizeDelta)
+			} bytes; the policy allows at most ${formatCount(maxIncreaseBytes)}.`,
 		);
 	}
 	if (violations.length > 0) {
