@@ -5,6 +5,71 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0](https://github.com/pina-rs/amm/releases/tag/v0.2.0) (2026-10-12)
+
+Grouped release for `amm`.
+
+### Breaking changes
+
+#### Deploy under the mainnet program identity
+
+_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #19](https://github.com/pina-rs/amm/pull/19)
+
+The program's address moves from `pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV` to `pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi` before its first mainnet deployment.
+
+- `declare_id!` was synced with `pina keys sync`, and `pina migrations create` rebound the unpublished migration history (no publication receipts existed) to the new ID.
+- The TypeScript, Dart, Rust, and CPI clients were regenerated: `PINA_AMM_PROGRAM_ADDRESS`, `PINA_AMM_ID`, the event source address, and every PDA helper's default program address now name the new ID, so every config, pool, LP mint, and vault PDA changes with it.
+- Integrators that hard-code the old ID, or CPI callers that pin an older `pina_amm_cpi`, must update before calling the deployed program.
+
+#### Reject the default address as a pool creator
+
+_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #9](https://github.com/pina-rs/amm/pull/9)
+
+`CreatePool` and `SetPoolCreator` reject the default address with the new `DefaultCreator` error. Creator fees accrued to the default address could never be collected, yet they still reduce the reserves every withdrawal pays from.
+
+#### Time-weighted price accumulator and admin events
+
+_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #10](https://github.com/pina-rs/amm/pull/10) · _Related issues:_ [#9](https://github.com/pina-rs/amm/issues/9)
+
+- Every pool now sums its price over time: `price_0_cumulative_last` (Q64.64 price of token 1 in token 0, times seconds) advances on every swap with the pre-trade price and on the new permissionless `SyncPool` instruction. Sample it twice and divide by the elapsed time for a manipulation-resistant average, exactly like Uniswap V2; see `docs/math.md`.
+- `UpdateConfig` emits `ConfigUpdated` and `SetPoolCreator` emits `PoolCreatorChanged`, so indexers can follow tier-rate and fee-recipient changes without polling accounts.
+- `SyncPool` emits `PoolSynced` with the reserves and the accumulator after the advance.
+- `Pool` grows two fields; `pina migrations create` recorded the automatic transition and the generated clients, IDL, and ABI layout test are regenerated.
+
+#### Wrap the price accumulator instead of halting the pool
+
+_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #16](https://github.com/pina-rs/amm/pull/16)
+
+`advance_price_accumulator` now wraps modulo `2^128`, like Uniswap V2, instead of failing with `MathOverflow`. The accumulator only ever grows, so a checked sum would have failed every swap and `SyncPool` permanently once a pool with an extreme price ratio had accumulated enough time, with no way to recover short of a program upgrade. Integrators must subtract samples with wrapping arithmetic; `docs/math.md` shows how. The function no longer returns a `Result`.
+
+#### Price the accumulator with stored reserves so donations cannot reprice the past
+
+_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #18](https://github.com/pina-rs/amm/pull/18) · _Related issues:_ [#16](https://github.com/pina-rs/amm/issues/16)
+
+The time-weighted price accumulator priced the whole interval since `last_update_timestamp` with the reserves read from the vaults _now_. Reserves are vault balances, so a donation straight to a vault followed by `SyncPool` or a swap in the same transaction repriced time that had already passed; with flash-deposited liquidity (deposits and withdrawals are feeless) the attacker recovered nearly all of the donation.
+
+- `Pool` gains `reserve_0_last` and `reserve_1_last`, the reserves at the last observation. `CreatePool`, both swaps, `Deposit`, `Withdraw`, and `SyncPool` now accrue the elapsed interval with those stored reserves first, then store their own post-instruction reserves, exactly like Uniswap V2's `_update`. Deposits and withdrawals now advance the accumulator too.
+- The new pure `PriceOracle::observe` holds the logic; property tests prove the accumulator equals the per-second integral of the observed reserves across mixed swaps, deposits, withdrawals, donations, and syncs.
+- `docs/math.md` and `docs/security.md` describe the sampling rules and the remaining limits honestly: the average resists single-transaction manipulation, not a price held across seconds.
+- `CreateConfig` emits the new `ConfigCreated` event with the tier's index, rates, authority, and pool-creator restriction.
+- The deployed binary embeds a `security.txt` pointing at `SECURITY.md` and the private advisory form.
+
+### Features
+
+#### Client journeys and a performance gate
+
+_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #11](https://github.com/pina-rs/amm/pull/11) · _Related issues:_ [#10](https://github.com/pina-rs/amm/issues/10), [#9](https://github.com/pina-rs/amm/issues/9)
+
+- Every instruction now has one ordered journey on a live Surfnet through the generated Rust client (`every_instruction_runs_in_one_journey`) and through the generated TypeScript client (`typescript_client_runs_every_instruction`), which the Rust side drives with funded fixtures and then checks the resulting on-chain state. The TypeScript journey asserts the client's PDA helpers reproduce the Rust-derived addresses before sending anything.
+- The journey's keypairs are seeded, so identical binaries measure identical compute units.
+- A `performance` workflow benchmarks the pull request against its base: deployed binary size plus every instruction's compute units (median of three journey runs), posted as one consolidated PR comment. The policy fails the check on any binary-size increase or a compute-unit regression above 2%, unless the pull request carries `performance-approved`. `scripts/benchmark.ts` and `scripts/compare-benchmarks.ts` run the same pipeline locally.
+- `docs/performance.md` documents the pipeline and the policy.
+
+### Fixes
+
+- **Trim the deployed program and every instruction's compute.** Compiles the pool PDA's signer-seed builder once instead of a copy per call site: the deployed binary shrinks by 520 bytes and swaps, deposits, and withdrawals each get slightly cheaper. No account, instruction, event, or wire format changes.
+  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #15](https://github.com/pina-rs/amm/pull/15)
+
 ## [0.1.0](https://github.com/pina-rs/amm/releases/tag/v0.1.0) (2026-10-08)
 
 Grouped release for `amm`.
