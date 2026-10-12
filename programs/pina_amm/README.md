@@ -1,6 +1,6 @@
 # `pina_amm`
 
-The on-chain Pina AMM program: a permissionless constant-product market maker with curated fee tiers and built-in creator fees. Its program address is `pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV`; it ships through `pina deploy`, never through a package registry.
+The on-chain Pina AMM program: a permissionless constant-product market maker with curated fee tiers and built-in creator fees. Its program address is `pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi`; it ships through `pina deploy`, never through a package registry.
 
 | Path                  | Contents                                                 |
 | --------------------- | -------------------------------------------------------- |

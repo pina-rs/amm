@@ -9,7 +9,7 @@ void main() {
   test('exports the deployed program address', () {
     expect(
       pinaAmmProgramAddress,
-      const Address('pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV'),
+      const Address('pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi'),
     );
   });
 

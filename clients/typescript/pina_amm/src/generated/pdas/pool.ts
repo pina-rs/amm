@@ -15,6 +15,6 @@ mint1: Address;
 };
 
 export async function findPoolPda(seeds: PoolSeeds, config: { programAddress?: Address | undefined } = {}): Promise<ProgramDerivedAddress> {
-  const { programAddress = 'pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV' as Address<'pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV'> } = config;
+  const { programAddress = 'pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi' as Address<'pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi'> } = config;
   return await getProgramDerivedAddress({ programAddress, seeds: [getUtf8Encoder().encode("pool"), getAddressEncoder().encode(seeds.ammConfig), getAddressEncoder().encode(seeds.mint0), getAddressEncoder().encode(seeds.mint1)]});
 }

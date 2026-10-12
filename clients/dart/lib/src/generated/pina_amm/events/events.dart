@@ -22,7 +22,7 @@ import 'config_updated.dart';
 import 'pool_creator_changed.dart';
 
 /// The program whose invocation frames emit the events decoded here.
-const pinaAmmEventSourceAddress = 'pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV';
+const pinaAmmEventSourceAddress = 'pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi';
 
 final _programInvokeLog = RegExp(r'^Program (\S+) invoke \[\d+\]$');
 final _programExitLog = RegExp(r'^Program (\S+) (?:success|failed: .*)$');

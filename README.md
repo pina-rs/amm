@@ -7,7 +7,7 @@ A permissionless constant-product market maker for Solana, built with [Pina](htt
 Anyone can create a pool for any two tokens, trade against it, and provide liquidity. Fee tiers are curated by the program's upgrade authority, so traders and liquidity providers choose between a small set of well-known fee levels instead of reading every pool's terms. A tier can also be reserved for one pool creator — such as a launchpad program — so that program's pools cannot be front-run.
 
 ```text
-Program ID  pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV
+Program ID  pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi
 ```
 
 > **Status:** pre-release. The program has not been deployed or audited, and the interface may still change before the first `v*` tag. See [SECURITY.md](SECURITY.md).

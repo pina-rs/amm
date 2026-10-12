@@ -14,7 +14,7 @@ import { getMigrateInstruction, type MigrateInput } from "../instructions";
 
 import { findAmmConfigPda, findPoolLpMintPda, findPoolPda, findPoolVaultPda } from '../pdas';
 
-export const PINA_AMM_PROGRAM_ADDRESS = 'pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV' as Address<'pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV'>;
+export const PINA_AMM_PROGRAM_ADDRESS = 'pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi' as Address<'pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi'>;
 
 export enum PinaAmmAccount { AmmConfig, Pool }
 
@@ -58,7 +58,7 @@ if (containsBytes(data, getU8Encoder().encode(10), 0)) { return PinaAmmInstructi
     throw new SolanaError(SOLANA_ERROR__PROGRAM_CLIENTS__FAILED_TO_IDENTIFY_INSTRUCTION, { instructionData: data, programName: "pinaAmm" });
 }
 
-export type ParsedPinaAmmInstruction<TProgram extends string = 'pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV'> =
+export type ParsedPinaAmmInstruction<TProgram extends string = 'pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi'> =
 | { instructionType: PinaAmmInstruction.CreateConfig } & ParsedCreateConfigInstruction<TProgram>
 | { instructionType: PinaAmmInstruction.UpdateConfig } & ParsedUpdateConfigInstruction<TProgram>
 | { instructionType: PinaAmmInstruction.CreatePool } & ParsedCreatePoolInstruction<TProgram>

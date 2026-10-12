@@ -93,4 +93,4 @@ self.pool.assert_owner(&pina_amm_cpi::PINA_AMM_ID)?;
 
 ## Keeping the client in sync
 
-The CPI crate is generated from the AMM's IDL. If you vendor it instead of depending on the published crate, regenerate it from the IDL of the AMM version you target with `pina import pina_amm --program-id pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV --idl <idl.json>`, which records the IDL hash it was built from.
+The CPI crate is generated from the AMM's IDL. If you vendor it instead of depending on the published crate, regenerate it from the IDL of the AMM version you target with `pina import pina_amm --program-id pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi --idl <idl.json>`, which records the IDL hash it was built from.

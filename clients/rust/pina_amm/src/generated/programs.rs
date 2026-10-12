@@ -10,4 +10,4 @@
 
 use solana_pubkey::{pubkey, Pubkey};
 
-pub const PINA_AMM_ID: Pubkey = pubkey!("pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV");
+pub const PINA_AMM_ID: Pubkey = pubkey!("pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi");
