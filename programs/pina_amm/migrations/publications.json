@@ -1,4 +1,116 @@
 {
 	"abiVersion": "0.21",
-	"receipts": []
+	"receipts": [
+		{
+			"rpcUrl": "https://api.devnet.solana.com",
+			"executableSha256": "846dd03765949402f3e5eb917ca13c6da18946f0d4c2c695203fb4a36df0b862",
+			"versions": {
+				"account:1:01": [
+					{
+						"schemaSha256": "c4662bd7da986a8574e958848772303c91c3191aec94bc8a45831623b2fc60b6"
+					}
+				],
+				"account:1:02": [
+					{
+						"schemaSha256": "4f4a9b9fb7612348b205451075b85d774ca08bfdd5779b6617b784fa7612b855"
+					}
+				],
+				"event:1:01": [
+					{
+						"schemaSha256": "eaf7a6486a275cb34b0b0fdf2de38243e0c7c10441b902d6825d51f1b3c67998"
+					}
+				],
+				"event:1:02": [
+					{
+						"schemaSha256": "06fa8694da15b617c00a38ef963590a015233438a507818b54be6f6c03b61913"
+					}
+				],
+				"event:1:03": [
+					{
+						"schemaSha256": "bae981de1dd0b7f03bc0989f3ce6e2491b49e92084db0428979822c8eb770bfd"
+					}
+				],
+				"event:1:04": [
+					{
+						"schemaSha256": "289f984edbe0c827908926ec4cf5059249ca4de5da155802328fc36234a130e5"
+					}
+				],
+				"event:1:05": [
+					{
+						"schemaSha256": "50f7f80060b3271e6ea1a1b6b59df1e06453c747537531cd026b76013c4ed0b1"
+					}
+				],
+				"event:1:06": [
+					{
+						"schemaSha256": "126c71d91c7dfa5439e725e7a7c7c124a250b87bd6fdeec63b1755267d441109"
+					}
+				],
+				"event:1:07": [
+					{
+						"schemaSha256": "f0e71ec8b9b204c3c5b2cdecbb1432ca1192a17ab0f27b668ff4f75309e13298"
+					}
+				],
+				"event:1:08": [
+					{
+						"schemaSha256": "4ca657269746ee3c239a668858e3d9e664d93524e7d006331cb9a5965aefbfdf"
+					}
+				],
+				"instruction:1:00": [
+					{
+						"schemaSha256": "9dedacb703e2b0775c3ccc60702ab4f5a768d6392302b418069c1e8846b5dcf3"
+					}
+				],
+				"instruction:1:01": [
+					{
+						"schemaSha256": "ddcacee7cd3f3705dd4714824d75df6fd2d043df684c5a202b748c9419ba437c"
+					}
+				],
+				"instruction:1:02": [
+					{
+						"schemaSha256": "66b369346cedc65c7ff9ba4e3726123f50eab0ae4142f9d66962c56d9efa2a73"
+					}
+				],
+				"instruction:1:03": [
+					{
+						"schemaSha256": "83aa7201e807f036862cd446e72495a5ea96a477dc96e79da1e068bcc8e58eb3"
+					}
+				],
+				"instruction:1:04": [
+					{
+						"schemaSha256": "aff62d6f11058a9f387bedb82841667be8a75c6de077be36ae92b0999670e8b0"
+					}
+				],
+				"instruction:1:05": [
+					{
+						"schemaSha256": "aad9be16a641f0aadb7f25340c38891c8adb4f7162d5badb9d07c75092bd5f78"
+					}
+				],
+				"instruction:1:06": [
+					{
+						"schemaSha256": "46f4c966d40a43194badf5f0256422b3f85f6e00770da385e98ff658626fa8d4"
+					}
+				],
+				"instruction:1:07": [
+					{
+						"schemaSha256": "1c81938e36269b716e28ffc2ffbbb9ec1bdde3c27006e579bc635186c47534cf"
+					}
+				],
+				"instruction:1:08": [
+					{
+						"schemaSha256": "1c81938e36269b716e28ffc2ffbbb9ec1bdde3c27006e579bc635186c47534cf"
+					}
+				],
+				"instruction:1:09": [
+					{
+						"schemaSha256": "9b9c5ef5e5266080f0261fd34ef26aa5f6241805a705d856e6ac34aee990320f"
+					}
+				],
+				"instruction:1:0a": [
+					{
+						"schemaSha256": "4d30c5a987a69cde3f10c23b93498ead2a16de2576027c1cf287e3813769bdc3"
+					}
+				]
+			}
+		}
+	]
 }
