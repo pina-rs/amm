@@ -4,6 +4,7 @@ use pina::*;
 
 use crate::ID;
 use crate::errors::AmmError;
+use crate::events::ConfigCreated;
 use crate::events::ConfigUpdated;
 use crate::instructions::CreateConfigInstruction;
 use crate::instructions::UpdateConfigInstruction;
@@ -47,6 +48,7 @@ impl<'a> ProcessAccountInfos<'a> for CreateConfigAccounts<'a> {
 			return Err(AmmError::Unauthorized.into());
 		}
 
+		let config_address = *self.amm_config.address();
 		CreateProgramAccount {
 			account: self.amm_config,
 			payer: self.payer,
@@ -63,7 +65,16 @@ impl<'a> ProcessAccountInfos<'a> for CreateConfigAccounts<'a> {
 			config.bump = bump;
 			Ok(())
 		})?;
-		Ok(())
+		ConfigCreated::emit(|event| {
+			event.amm_config = config_address;
+			event.authority = authority;
+			event.pool_creator_authority = pool_creator_authority;
+			event.trade_fee_rate.set(rates.trade);
+			event.protocol_fee_rate.set(rates.protocol);
+			event.creator_fee_rate.set(rates.creator);
+			event.index.set(index);
+			Ok(())
+		})
 	}
 }
 

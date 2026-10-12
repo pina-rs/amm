@@ -1,15 +1,13 @@
 //! `SyncPool`.
 
-use pina::sysvars::Sysvar;
-use pina::sysvars::clock::Clock;
 use pina::*;
 
 use super::common::PoolSnapshot;
+use super::common::store_oracle;
+use super::common::unix_now;
 use crate::ID;
-use crate::errors::AmmError;
 use crate::events::PoolSynced;
 use crate::instructions::SyncPoolInstruction;
-use crate::math::advance_price_accumulator;
 use crate::state::Pool;
 
 /// Accounts for `SyncPool`.
@@ -38,26 +36,17 @@ impl<'a> ProcessAccountInfos<'a> for SyncPoolAccounts<'a> {
 			self.token_program_0,
 			self.token_program_1,
 		)?;
-		let now =
-			u64::try_from(Clock::get()?.unix_timestamp).map_err(|_| AmmError::MathOverflow)?;
-		let (price_0_cumulative_last, last_update_timestamp) = advance_price_accumulator(
-			reserve_0,
-			reserve_1,
-			snapshot.price_0_cumulative_last,
-			snapshot.last_update_timestamp,
-			now,
-		);
-		{
-			let mut pool = self.pool.as_account_mut::<Pool>(&ID)?;
-			pool.price_0_cumulative_last.set(price_0_cumulative_last);
-			pool.last_update_timestamp.set(last_update_timestamp);
-		}
+		// The interval since the last observation is priced with the reserves
+		// stored then. The live reserves, including any donation since, only
+		// price the interval that starts now.
+		let oracle = snapshot.oracle.observe(unix_now()?, reserve_0, reserve_1);
+		store_oracle(&mut *self.pool.as_account_mut::<Pool>(&ID)?, oracle);
 		PoolSynced::emit(|event| {
 			event.pool = *self.pool.address();
 			event.reserve_0.set(reserve_0);
 			event.reserve_1.set(reserve_1);
-			event.price_0_cumulative_last.set(price_0_cumulative_last);
-			event.last_update_timestamp.set(last_update_timestamp);
+			event.price_0_cumulative_last.set(oracle.price_0_cumulative);
+			event.last_update_timestamp.set(oracle.last_update);
 			Ok(())
 		})
 	}

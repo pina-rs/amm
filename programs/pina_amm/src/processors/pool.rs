@@ -1,9 +1,8 @@
 //! `CreatePool`.
 
-use pina::sysvars::Sysvar;
-use pina::sysvars::clock::Clock;
 use pina::*;
 
+use super::common::unix_now;
 use crate::ID;
 use crate::errors::AmmError;
 use crate::events::PoolCreated;
@@ -129,8 +128,7 @@ impl<'a> ProcessAccountInfos<'a> for CreatePoolAccounts<'a> {
 			return Err(AmmError::PoolAccountMismatch.into());
 		}
 
-		let activation_timestamp =
-			u64::try_from(Clock::get()?.unix_timestamp).map_err(|_| AmmError::MathOverflow)?;
+		let activation_timestamp = unix_now()?;
 		let liquidity = initial_liquidity(amount_0, amount_1)?;
 		let (_, pool_bump) = CreateProgramAccount {
 			account: self.pool,
@@ -154,6 +152,9 @@ impl<'a> ProcessAccountInfos<'a> for CreatePoolAccounts<'a> {
 			pool.bump = bump;
 			pool.price_0_cumulative_last.set(0);
 			pool.last_update_timestamp.set(activation_timestamp);
+			// The opening deposit is the first observed price.
+			pool.reserve_0_last.set(amount_0);
+			pool.reserve_1_last.set(amount_1);
 			Ok(())
 		})?;
 

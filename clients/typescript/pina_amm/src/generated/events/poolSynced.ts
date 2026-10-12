@@ -18,15 +18,16 @@ export const POOL_SYNCED_EVENT_DISCRIMINATOR2 = 0;
 export function getPoolSyncedEventDiscriminator2Bytes(): ReadonlyUint8Array { return getU8Encoder().encode(POOL_SYNCED_EVENT_DISCRIMINATOR2); }
 
 /**
- * Emitted by `SyncPool`. Swaps advance the same accumulator and report
- * their reserves through `Swapped`.
+ * Emitted by `SyncPool`. Swaps, deposits, and withdrawals advance the same
+ * accumulator and report their effect through `Swapped` and
+ * `LiquidityChanged`.
  */
 export type PoolSyncedEvent = { discriminator: number; migrationVersion: number; 
 /** The pool whose accumulator advanced. */
 pool: Address; 
-/** Token 0 reserve at the advance. */
+/** Token 0 reserve recorded at the advance; it prices the next interval. */
 reserve0: bigint; 
-/** Token 1 reserve at the advance. */
+/** Token 1 reserve recorded at the advance; it prices the next interval. */
 reserve1: bigint; 
 /**
  * The accumulator after the advance: Q64.64 price of token 1 in token 0,
@@ -39,9 +40,9 @@ lastUpdateTimestamp: bigint;  };
 export type PoolSyncedEventArgs = { 
 /** The pool whose accumulator advanced. */
 pool: Address; 
-/** Token 0 reserve at the advance. */
+/** Token 0 reserve recorded at the advance; it prices the next interval. */
 reserve0: number | bigint; 
-/** Token 1 reserve at the advance. */
+/** Token 1 reserve recorded at the advance; it prices the next interval. */
 reserve1: number | bigint; 
 /**
  * The accumulator after the advance: Q64.64 price of token 1 in token 0,

@@ -7,6 +7,7 @@
  */
 
 export * from "./logs";
+export * from './configCreated';
 export * from './configUpdated';
 export * from './feesCollected';
 export * from './liquidityChanged';

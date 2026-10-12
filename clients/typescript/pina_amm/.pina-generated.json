@@ -6,6 +6,7 @@
     "src/generated/accounts/pool.ts",
     "src/generated/errors/index.ts",
     "src/generated/errors/pinaAmm.ts",
+    "src/generated/events/configCreated.ts",
     "src/generated/events/configUpdated.ts",
     "src/generated/events/feesCollected.ts",
     "src/generated/events/index.ts",

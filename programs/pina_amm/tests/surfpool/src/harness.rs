@@ -28,6 +28,10 @@ use surfpool_sdk::Surfnet;
 use surfpool_sdk::cheatcodes::builders::CheatcodeBuilder;
 use surfpool_sdk::cheatcodes::builders::DeployProgram;
 
+/// Why a simulated transaction failed: its error, when it reached the
+/// runtime, and its logs.
+pub type SimulationFailure = (Option<TransactionError>, Vec<String>);
+
 /// The original SPL Token program.
 pub const TOKEN_PROGRAM: Pubkey =
 	Pubkey::from_str_const("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
@@ -225,7 +229,18 @@ impl Harness {
 		&self,
 		instructions: &[Instruction],
 		signers: &[&dyn Signer],
-	) -> Result<u64, (Option<TransactionError>, Vec<String>)> {
+	) -> Result<u64, SimulationFailure> {
+		self.simulate_with_logs(instructions, signers)
+			.map(|(units, _)| units)
+	}
+
+	/// Simulate a transaction and return its compute units and logs, or its
+	/// error and logs when it fails.
+	pub fn simulate_with_logs(
+		&self,
+		instructions: &[Instruction],
+		signers: &[&dyn Signer],
+	) -> Result<(u64, Vec<String>), SimulationFailure> {
 		let transaction = self
 			.signed_transaction(instructions, signers)
 			.map_err(|error| (None, vec![error]))?;
@@ -244,7 +259,7 @@ impl Harness {
 		let logs = result.logs.unwrap_or_default();
 		match result.err {
 			Some(error) => Err((Some(error.into()), logs)),
-			None => Ok(result.units_consumed.unwrap_or_default()),
+			None => Ok((result.units_consumed.unwrap_or_default(), logs)),
 		}
 	}
 

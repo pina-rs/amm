@@ -35,7 +35,7 @@ Every instruction's data is a one-byte discriminator followed by its fields, pac
 | 3 | `amm_config`        | w    | `[b"amm_config", index]`, created           |
 | 4 | `system_program`    |      |                                             |
 
-Errors: `Unauthorized`, `InvalidProgramData`, `InvalidFeeRates`.
+Errors: `Unauthorized`, `InvalidProgramData`, `InvalidFeeRates`. Emits `ConfigCreated`.
 
 ## `UpdateConfig`
 
@@ -156,7 +156,7 @@ Accounts: `creator` (s), `pool` (w). Errors: `Unauthorized`.
 
 ## `SyncPool`
 
-Advances a pool's time-weighted price accumulator to now, using the price in force since the last advance. Permissionless: anyone may sync any pool. Swaps advance the same accumulator with their pre-trade price, so `SyncPool` matters most after a donation or a quiet interval. See [math.md](math.md#time-weighted-average-price) for the sampling formula.
+Advances a pool's time-weighted price accumulator to now with the reserves recorded at the last advance, then records the pool's current reserves as the price of the next interval. Permissionless: anyone may sync any pool. Swaps, deposits, and withdrawals do the same thing on their way through, so `SyncPool` is only needed to fold a donation into the price or to take a fresh sample of a quiet pool. A donation never reprices time that has already passed. See [math.md](math.md#time-weighted-average-price) for the sampling formula.
 
 | Account           | Type          | Signer | Writable | Note                      |
 | ----------------- | ------------- | ------ | -------- | ------------------------- |
@@ -177,6 +177,7 @@ Emits `PoolSynced`. Errors: the pool and vault mismatches from the other read pa
 | `LiquidityChanged`   | `pool`, `owner`, `is_deposit`, `lp_amount`, `amount_0`, `amount_1`, `lp_supply`                                                                           |
 | `FeesCollected`      | `pool`, `collector`, `is_protocol`, `amount_0`, `amount_1`                                                                                                |
 | `PoolSynced`         | `pool`, `reserve_0`, `reserve_1`, `price_0_cumulative_last`, `last_update_timestamp`                                                                      |
+| `ConfigCreated`      | `amm_config`, `authority`, `pool_creator_authority`, `trade_fee_rate`, `protocol_fee_rate`, `creator_fee_rate`, `index`                                   |
 | `ConfigUpdated`      | `amm_config`, `new_authority`, `trade_fee_rate`, `protocol_fee_rate`, `creator_fee_rate`                                                                  |
 | `PoolCreatorChanged` | `pool`, `previous_creator`, `new_creator`                                                                                                                 |
 

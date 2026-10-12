@@ -1,19 +1,19 @@
 //! `SwapExactIn` and `SwapExactOut`.
 
-use pina::sysvars::Sysvar;
-use pina::sysvars::clock::Clock;
 use pina::*;
 
 use super::common::PoolSnapshot;
 use super::common::pool_signer_seeds;
+use super::common::store_oracle;
+use super::common::unix_now;
 use crate::ID;
 use crate::errors::AmmError;
 use crate::events::Swapped;
 use crate::instructions::SwapExactInInstruction;
 use crate::instructions::SwapExactOutInstruction;
+use crate::math::PriceOracle;
 use crate::math::SwapQuote;
 use crate::math::SwapReserves;
-use crate::math::advance_price_accumulator;
 use crate::math::assert_constant_product;
 use crate::math::swap_exact_in;
 use crate::math::swap_exact_out;
@@ -99,18 +99,6 @@ impl SwapAccounts<'_> {
 			}
 		};
 
-		// The price in force for the interval since the last update is the
-		// pre-trade price, so the accumulator advances before this swap moves
-		// the reserves.
-		let now =
-			u64::try_from(Clock::get()?.unix_timestamp).map_err(|_| AmmError::MathOverflow)?;
-		let (price_0_cumulative_last, last_update_timestamp) = advance_price_accumulator(
-			reserve_0,
-			reserve_1,
-			snapshot.price_0_cumulative_last,
-			snapshot.last_update_timestamp,
-			now,
-		);
 		let creator_fee_on_input = snapshot.creator_fee_mode.is_on_input(zero_for_one);
 		let quote = match request {
 			SwapRequest::ExactIn {
@@ -138,13 +126,18 @@ impl SwapAccounts<'_> {
 		};
 		let after = quote.reserves_after(reserves)?;
 		assert_constant_product(reserves, after)?;
+		let (after_0, after_1) = if zero_for_one {
+			(after.input, after.output)
+		} else {
+			(after.output, after.input)
+		};
+		// The interval since the last observation is priced with the reserves
+		// stored then, never with the live balances this swap read, so a
+		// donation since then cannot reprice time that has already passed.
+		// The post-swap reserves price the interval that starts now.
+		let oracle = snapshot.oracle.observe(unix_now()?, after_0, after_1);
 
-		self.accrue_fees(
-			&quote,
-			zero_for_one,
-			price_0_cumulative_last,
-			last_update_timestamp,
-		)?;
+		self.accrue_fees(&quote, zero_for_one, oracle)?;
 
 		transfer(
 			self.input_token,
@@ -164,11 +157,6 @@ impl SwapAccounts<'_> {
 			&signer.as_signer(),
 		)?;
 
-		let (reserve_0, reserve_1) = if zero_for_one {
-			(after.input, after.output)
-		} else {
-			(after.output, after.input)
-		};
 		Swapped::emit(|event| {
 			event.pool = *self.pool.address();
 			event.trader = *self.trader.address();
@@ -179,23 +167,22 @@ impl SwapAccounts<'_> {
 			event.protocol_fee.set(quote.protocol_fee);
 			event.creator_fee.set(quote.creator_fee);
 			event.creator_fee_on_input = u8::from(creator_fee_on_input);
-			event.reserve_0.set(reserve_0);
-			event.reserve_1.set(reserve_1);
+			event.reserve_0.set(after_0);
+			event.reserve_1.set(after_1);
 			Ok(())
 		})
 	}
 
-	/// Record the protocol and creator fees this swap leaves in the vaults.
+	/// Record the protocol and creator fees this swap leaves in the vaults,
+	/// and the pool's advanced price oracle.
 	fn accrue_fees(
 		&mut self,
 		quote: &SwapQuote,
 		zero_for_one: bool,
-		price_0_cumulative_last: u128,
-		last_update_timestamp: u64,
+		oracle: PriceOracle,
 	) -> ProgramResult {
 		let mut pool = self.pool.as_account_mut::<Pool>(&ID)?;
-		pool.price_0_cumulative_last.set(price_0_cumulative_last);
-		pool.last_update_timestamp.set(last_update_timestamp);
+		store_oracle(&mut pool, oracle);
 		let (protocol_input, creator_input, creator_output) = if quote.creator_fee_on_input {
 			(quote.protocol_fee, quote.creator_fee, 0)
 		} else {

@@ -25,7 +25,7 @@ if (containsBytes(data, getU8Encoder().encode(2), 0) && containsBytes(data, getU
     throw new SolanaError(SOLANA_ERROR__PROGRAM_CLIENTS__FAILED_TO_IDENTIFY_ACCOUNT, { accountData: data, programName: "pinaAmm" });
 }
 
-export enum PinaAmmEvent { PoolCreated, Swapped, LiquidityChanged, FeesCollected, PoolSynced, ConfigUpdated, PoolCreatorChanged }
+export enum PinaAmmEvent { PoolCreated, Swapped, LiquidityChanged, FeesCollected, PoolSynced, ConfigCreated, ConfigUpdated, PoolCreatorChanged }
 
 export function identifyPinaAmmEvent(event: { data: ReadonlyUint8Array } | ReadonlyUint8Array): PinaAmmEvent {
     const data = 'data' in event ? event.data : event;
@@ -34,6 +34,7 @@ if (containsBytes(data, getU8Encoder().encode(2), 0) && containsBytes(data, getU
 if (containsBytes(data, getU8Encoder().encode(3), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) { return PinaAmmEvent.LiquidityChanged; }
 if (containsBytes(data, getU8Encoder().encode(4), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) { return PinaAmmEvent.FeesCollected; }
 if (containsBytes(data, getU8Encoder().encode(5), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) { return PinaAmmEvent.PoolSynced; }
+if (containsBytes(data, getU8Encoder().encode(8), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) { return PinaAmmEvent.ConfigCreated; }
 if (containsBytes(data, getU8Encoder().encode(6), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) { return PinaAmmEvent.ConfigUpdated; }
 if (containsBytes(data, getU8Encoder().encode(7), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) { return PinaAmmEvent.PoolCreatorChanged; }
     throw new Error('The provided event could not be identified as a pinaAmm event.');
