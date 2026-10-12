@@ -362,33 +362,30 @@ pub const Q64: u128 = 1 << 64;
 /// at two times and divides the difference by the time difference. A pool
 /// with an empty side records no price, and a zero `last_update` only
 /// anchors the clock, so a first sample after a migration adds nothing.
+///
+/// The accumulator wraps modulo `2^128` by design, as Uniswap V2's does.
+/// Only differences between two samples carry meaning, and a wrapping
+/// subtraction recovers them exactly. A checked sum would instead fail every
+/// swap and `SyncPool` forever once a pool with an extreme price ratio
+/// had accumulated enough time, because nothing can lower the accumulator.
+#[must_use]
 pub fn advance_price_accumulator(
 	reserve_0: u64,
 	reserve_1: u64,
 	cumulative: u128,
 	last_update: u64,
 	now: u64,
-) -> Result<(u128, u64), ProgramError> {
+) -> (u128, u64) {
 	if now <= last_update {
-		return Ok((cumulative, last_update));
+		return (cumulative, last_update);
 	}
-	let advanced = if last_update == 0 || reserve_0 == 0 || reserve_1 == 0 {
-		cumulative
-	} else {
-		let price_0 = u128::from(reserve_1)
-			.checked_mul(Q64)
-			.ok_or(AmmError::MathOverflow)?
-			/ u128::from(reserve_0);
-		let elapsed = now - last_update;
-		cumulative
-			.checked_add(
-				price_0
-					.checked_mul(u128::from(elapsed))
-					.ok_or(AmmError::MathOverflow)?,
-			)
-			.ok_or(AmmError::MathOverflow)?
-	};
-	Ok((advanced, now))
+	if last_update == 0 || reserve_0 == 0 || reserve_1 == 0 {
+		return (cumulative, now);
+	}
+	// `reserve_1 < 2^64`, so the Q64.64 numerator always fits in `u128`.
+	let price_0 = (u128::from(reserve_1) << 64) / u128::from(reserve_0);
+	let elapsed = u128::from(now - last_update);
+	(cumulative.wrapping_add(price_0.wrapping_mul(elapsed)), now)
 }
 
 /// LP issued by a new pool and the part minted to its first depositor.
@@ -659,26 +656,50 @@ mod tests {
 	fn the_accumulator_sums_price_times_time() {
 		let price = |r0: u64, r1: u64| u128::from(r1) * Q64 / u128::from(r0);
 		// Ten seconds at 2:1, then ten at 4:1.
-		let (cumulative, _) =
-			advance_price_accumulator(100, 200, 0, 1_000, 1_010).expect("advance");
+		let (cumulative, _) = advance_price_accumulator(100, 200, 0, 1_000, 1_010);
 		assert_eq!(cumulative, price(100, 200) * 10);
-		let (cumulative, _) =
-			advance_price_accumulator(100, 400, cumulative, 1_010, 1_020).expect("advance");
+		let (cumulative, _) = advance_price_accumulator(100, 400, cumulative, 1_010, 1_020);
 		assert_eq!(cumulative, price(100, 200) * 10 + price(100, 400) * 10);
 		// A zero start or an empty side anchors the clock without a price.
-		assert_eq!(
-			advance_price_accumulator(100, 200, 0, 0, 500).expect("anchor"),
-			(0, 500)
-		);
-		assert_eq!(
-			advance_price_accumulator(0, 200, 7, 500, 600).expect("empty"),
-			(7, 600)
-		);
+		assert_eq!(advance_price_accumulator(100, 200, 0, 0, 500), (0, 500));
+		assert_eq!(advance_price_accumulator(0, 200, 7, 500, 600), (7, 600));
 		// Time moving backwards or standing still changes nothing.
-		assert_eq!(
-			advance_price_accumulator(100, 200, 7, 600, 599).expect("backwards"),
-			(7, 600)
-		);
+		assert_eq!(advance_price_accumulator(100, 200, 7, 600, 599), (7, 600));
+	}
+
+	#[test]
+	fn the_accumulator_wraps_instead_of_halting_the_pool() {
+		// The most extreme price a pool can hold, sampled just below the top
+		// of the accumulator's range. A checked sum would fail this advance,
+		// and every later swap and sync with it, forever.
+		let price = u128::from(u64::MAX) << 64;
+		let start = u128::MAX - 5;
+		let (cumulative, timestamp) = advance_price_accumulator(1, u64::MAX, start, 1_000, 1_002);
+		assert_eq!(timestamp, 1_002);
+		assert_eq!(cumulative, start.wrapping_add(price.wrapping_mul(2)));
+		// Integrators recover the elapsed price sum with a wrapping difference.
+		assert_eq!(cumulative.wrapping_sub(start), price.wrapping_mul(2));
+	}
+
+	proptest! {
+		#[test]
+		fn accumulator_differences_survive_wrapping(
+			reserve_0 in 1u64..,
+			reserve_1 in 1u64..,
+			start in any::<u128>(),
+			last_update in 1u64..u64::MAX / 2,
+			elapsed in 1u64..1_000_000,
+		) {
+			let now = last_update + elapsed;
+			let (cumulative, timestamp) =
+				advance_price_accumulator(reserve_0, reserve_1, start, last_update, now);
+			let price = (u128::from(reserve_1) << 64) / u128::from(reserve_0);
+			prop_assert_eq!(timestamp, now);
+			prop_assert_eq!(
+				cumulative.wrapping_sub(start),
+				price.wrapping_mul(u128::from(elapsed))
+			);
+		}
 	}
 
 	#[test]

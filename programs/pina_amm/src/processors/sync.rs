@@ -46,7 +46,7 @@ impl<'a> ProcessAccountInfos<'a> for SyncPoolAccounts<'a> {
 			snapshot.price_0_cumulative_last,
 			snapshot.last_update_timestamp,
 			now,
-		)?;
+		);
 		{
 			let mut pool = self.pool.as_account_mut::<Pool>(&ID)?;
 			pool.price_0_cumulative_last.set(price_0_cumulative_last);

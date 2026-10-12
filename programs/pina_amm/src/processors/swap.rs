@@ -110,7 +110,7 @@ impl SwapAccounts<'_> {
 			snapshot.price_0_cumulative_last,
 			snapshot.last_update_timestamp,
 			now,
-		)?;
+		);
 		let creator_fee_on_input = snapshot.creator_fee_mode.is_on_input(zero_for_one);
 		let quote = match request {
 			SwapRequest::ExactIn {
