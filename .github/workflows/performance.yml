@@ -38,8 +38,6 @@ jobs:
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'release') }}
     timeout-minutes: 45
     runs-on: ubuntu-24.04
-    env:
-      CARGO_TARGET_DIR: ${{ github.workspace }}/target/perf
     outputs:
       status: ${{ steps.compare.outputs.status }}
       report: ${{ steps.report.outputs.report }}
@@ -78,27 +76,31 @@ jobs:
         run: git worktree add --detach ../performance-base "${{ github.event.pull_request.base.sha }}"
 
       - name: Benchmark base
-        run: pnpm exec tsx ./scripts/benchmark.ts --build-root ../performance-base --out ./target/perf/base
-        shell: devenv shell -c -- bash -e {0}
+        run: devenv shell -- pnpm exec tsx ./scripts/benchmark.ts --build-root ../performance-base --out ./target/perf/base
 
       - name: Benchmark head
-        run: pnpm exec tsx ./scripts/benchmark.ts --out ./target/perf/head
-        shell: devenv shell -c -- bash -e {0}
+        run: devenv shell -- pnpm exec tsx ./scripts/benchmark.ts --out ./target/perf/head
 
+      # The comparator exits nonzero when the policy trips; that must not
+      # stop the job, so it runs on error and the next step reads the result.
       - name: Compare benchmarks
         id: compare
+        continue-on-error: true
+        run: devenv shell -- pnpm exec tsx ./scripts/compare-benchmarks.ts --base ./target/perf/base --head ./target/perf/head --markdown ./target/perf/report.md --json ./target/perf/report.json
+
+      - name: Record the comparison
+        id: record
+        if: always()
         run: |
-          set +e
-          pnpm exec tsx ./scripts/compare-benchmarks.ts \
-            --base ./target/perf/base \
-            --head ./target/perf/head \
-            --markdown ./target/perf/report.md \
-            --json ./target/perf/report.json
-          status=$?
-          set -e
+          status="0"
+          if [ "${{ steps.compare.conclusion }}" != "success" ]; then
+            status="1"
+          fi
           echo "status=$status" >> "$GITHUB_OUTPUT"
-          cat ./target/perf/report.md >> "$GITHUB_STEP_SUMMARY"
-        shell: devenv shell -c -- bash -e {0}
+          if [ -f ./target/perf/report.md ]; then
+            cat ./target/perf/report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+        shell: bash
 
       - name: Upload report
         if: always()
@@ -113,14 +115,14 @@ jobs:
         if: always()
         run: |
           {
-            echo 'report<<EOF'
-            cat ./target/perf/report.md
-            echo 'EOF'
+            echo 'report<<PINA_PERFORMANCE_EOF'
+            cat ./target/perf/report.md 2>/dev/null || echo 'The benchmark did not finish. See the job log.'
+            echo 'PINA_PERFORMANCE_EOF'
           } >> "$GITHUB_OUTPUT"
         shell: bash
 
       - name: Enforce the performance policy
-        if: ${{ steps.compare.outputs.status != '0' && !contains(github.event.pull_request.labels.*.name, 'performance-approved') }}
+        if: ${{ steps.record.outputs.status != '0' && !contains(github.event.pull_request.labels.*.name, 'performance-approved') }}
         run: |
           echo "::error::The performance policy tripped (binary size or compute units). Label the pull request 'performance-approved' to accept the regression."
           exit 1
@@ -128,14 +130,14 @@ jobs:
   comment:
     name: performance report
     needs: benchmark
-    if: ${{ always() && needs.benchmark.result != 'skipped' }}
+    if: ${{ !cancelled() && needs.benchmark.result != 'skipped' }}
     runs-on: ubuntu-24.04
     permissions:
       pull-requests: write
     steps:
       - name: Find the performance comment
         id: find
-        uses: actions/github-script@ed597811beb4b8065f0d58605f5593d7d432507d # v8.0.0
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           script: |
             const marker = '<!-- performance-report -->';
@@ -148,11 +150,16 @@ jobs:
             core.setOutput('id', existing ? existing.id : '');
 
       - name: Create or update the performance comment
-        uses: actions/github-script@ed597811beb4b8065f0d5593d7d432507d # v8.0.0
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        env:
+          # The report carries markdown backticks, so it moves through the
+          # environment instead of an inline `${{ }}`, which would splice it
+          # into the script's own template literal.
+          REPORT: ${{ needs.benchmark.outputs.report }}
         with:
           script: |
             const marker = '<!-- performance-report -->';
-            const body = `${marker}\n${{ needs.benchmark.outputs.report }}`;
+            const body = `${marker}\n${process.env.REPORT}`;
             const id = '${{ steps.find.outputs.id }}';
             if (id === '') {
               await github.rest.issues.createComment({
