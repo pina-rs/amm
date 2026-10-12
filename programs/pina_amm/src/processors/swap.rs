@@ -3,7 +3,7 @@
 use pina::*;
 
 use super::common::PoolSnapshot;
-use super::common::with_pool_signer;
+use super::common::pool_signer_seeds;
 use crate::ID;
 use crate::errors::AmmError;
 use crate::events::Swapped;
@@ -133,16 +133,16 @@ impl SwapAccounts<'_> {
 			self.input_token_program,
 			quote.amount_in,
 		)?;
-		with_pool_signer(&snapshot, |signer| {
-			transfer_signed(
-				self.output_vault,
-				self.output_token,
-				self.pool,
-				self.output_token_program,
-				quote.amount_out,
-				signer,
-			)
-		})?;
+		let seeds = pool_signer_seeds(&snapshot);
+		let signer = seeds.to_signer();
+		transfer_signed(
+			self.output_vault,
+			self.output_token,
+			self.pool,
+			self.output_token_program,
+			quote.amount_out,
+			&signer.as_signer(),
+		)?;
 
 		let (reserve_0, reserve_1) = if zero_for_one {
 			(after.input, after.output)

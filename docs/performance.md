@@ -8,23 +8,23 @@ Measured on the real SBF artifact by the end-to-end suite (`compute_units_stay_w
 
 | Instruction    | Compute units | CPIs                | CI ceiling |
 | -------------- | ------------- | ------------------- | ---------- |
-| `SwapExactIn`  | ~4,700        | 2 transfers         | 6,000      |
-| `SwapExactOut` | ~4,800        | 2 transfers         | 6,000      |
-| `Deposit`      | ~5,500        | 2 transfers, 1 mint | 6,500      |
-| `Withdraw`     | ~5,300        | 1 burn, 2 transfers | 6,500      |
+| `SwapExactIn`  | ~4,670        | 2 transfers         | 6,000      |
+| `SwapExactOut` | ~4,780        | 2 transfers         | 6,000      |
+| `Deposit`      | ~5,440        | 2 transfers, 1 mint | 6,500      |
+| `Withdraw`     | ~5,340        | 1 burn, 2 transfers | 6,500      |
 | `CreatePool`   | 38,000–45,000 | creates 5 accounts  | 60,000     |
 
 The suite fails if any instruction exceeds its ceiling, so a regression is caught in the pull request that introduces it. `CreatePool`'s cost varies because it searches for four canonical PDA bumps whose cost depends on the addresses.
 
 ## Program size
 
-About **81 KB** for the deployed `pina_amm.so`, built with fat LTO, one codegen unit, and `opt-level = 3`. Rent for the program-data account scales with this size.
+About **80 KB** for the deployed `pina_amm.so`, built with fat LTO, one codegen unit, and `opt-level = 3`. Rent for the program-data account scales with this size.
 
 The size-optimised profiles were measured and rejected:
 
 | Profile           | Size  | `SwapExactIn`    | Result                                        |
 | ----------------- | ----- | ---------------- | --------------------------------------------- |
-| `opt-level = 3`   | 81 KB | ~4,700 CU        | Used                                          |
+| `opt-level = 3`   | 80 KB | ~4,670 CU        | Used                                          |
 | `opt-level = "s"` | 86 KB | —                | Larger than the speed profile                 |
 | `opt-level = "z"` | 77 KB | ~6,000 CU (+27%) | Every swap pays for a 6% one-time rent saving |
 

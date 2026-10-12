@@ -7,6 +7,7 @@ use crate::errors::AmmError;
 use crate::math::FeeRates;
 use crate::state::CreatorFeeMode;
 use crate::state::Pool;
+use crate::state::PoolSeedsWithBump;
 use crate::token::vault_amount;
 
 /// A copy of a pool's state, taken so the account borrow can be released
@@ -89,13 +90,10 @@ impl PoolSnapshot {
 	}
 }
 
-/// Run `body` with the pool's PDA signer.
-pub(crate) fn with_pool_signer<R>(
-	snapshot: &PoolSnapshot,
-	body: impl FnOnce(&Signer<'_, '_>) -> Result<R, ProgramError>,
-) -> Result<R, ProgramError> {
-	let seeds = Pool::seeds(&snapshot.amm_config, &snapshot.mint_0, &snapshot.mint_1)
-		.with_bump(snapshot.bump);
-	let signer = seeds.to_signer();
-	body(&signer.as_signer())
+/// The pool PDA's canonical signer seeds.
+///
+/// A helper rather than a closure wrapper so every processor shares one copy
+/// of the seed-building code instead of a monomorphized copy per call site.
+pub(crate) fn pool_signer_seeds(snapshot: &PoolSnapshot) -> PoolSeedsWithBump<'_> {
+	Pool::seeds(&snapshot.amm_config, &snapshot.mint_0, &snapshot.mint_1).with_bump(snapshot.bump)
 }
