@@ -121,11 +121,19 @@ jobs:
           } >> "$GITHUB_OUTPUT"
         shell: bash
 
+      # A re-run of this job replays the original pull-request event, whose
+      # label snapshot predates any label added afterwards, so the label is
+      # read live from the API rather than from the event.
       - name: Enforce the performance policy
-        if: ${{ steps.record.outputs.status != '0' && !contains(github.event.pull_request.labels.*.name, 'performance-approved') }}
+        if: ${{ steps.record.outputs.status != '0' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "::error::The performance policy tripped (binary size or compute units). Label the pull request 'performance-approved' to accept the regression."
-          exit 1
+          labeled="$(gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels" --jq '[.[].name] | contains(["performance-approved"])')"
+          if [ "$labeled" != "true" ]; then
+            echo "::error::The performance policy tripped (binary size or compute units). Label the pull request 'performance-approved' to accept the regression."
+            exit 1
+          fi
 
   comment:
     name: performance report
