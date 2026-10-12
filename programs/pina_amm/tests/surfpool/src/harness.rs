@@ -154,11 +154,40 @@ impl Harness {
 	}
 
 	/// Submit and confirm a transaction paid for by the harness payer.
+	///
+	/// When `PINA_CU_RECORD_FILE` names an output file, a transaction whose
+	/// only instruction targets this program is first simulated and its
+	/// compute units appended there as one JSON line, exactly like the
+	/// benchmark recorder inside `pina_test`, so the performance harness can
+	/// measure every instruction the journeys send.
 	pub fn send(
 		&self,
 		instructions: &[Instruction],
 		signers: &[&dyn Signer],
 	) -> Result<(), String> {
+		use std::io::Write as _;
+		if let Some(record) = std::env::var_os("PINA_CU_RECORD_FILE")
+			&& let [instruction] = instructions
+			&& instruction.program_id == PINA_AMM_ID
+		{
+			let units = self
+				.simulate(instructions, signers)
+				.map_err(|(error, logs)| {
+					format!("record compute units: {error:?}\n{}", logs.join("\n"))
+				})?;
+			let sample = serde_json::json!({
+				"program": "pina_amm",
+				"discriminator": instruction.data.first().copied().unwrap_or_default(),
+				"computeUnits": units,
+			});
+			let mut file = std::fs::OpenOptions::new()
+				.create(true)
+				.append(true)
+				.open(&record)
+				.map_err(|error| format!("open compute-unit record: {error}"))?;
+			writeln!(file, "{sample}")
+				.map_err(|error| format!("write compute-unit record: {error}"))?;
+		}
 		let transaction = self.signed_transaction(instructions, signers)?;
 		self.surfnet
 			.rpc_client()
@@ -257,7 +286,19 @@ impl Harness {
 		decimals: u8,
 		extensions: &[MintExtension],
 	) -> Result<Pubkey, String> {
-		let mint = Keypair::new();
+		self.create_mint_with_key(&Keypair::new(), token_program, decimals, extensions)
+	}
+
+	/// Create a mint from a fixed keypair, so benchmark journeys can keep
+	/// every derived address — and therefore every compute-unit figure —
+	/// deterministic across runs.
+	pub fn create_mint_with_key(
+		&self,
+		mint: &Keypair,
+		token_program: &Pubkey,
+		decimals: u8,
+		extensions: &[MintExtension],
+	) -> Result<Pubkey, String> {
 		let payer = self.payer().pubkey();
 		let extension_types = extensions
 			.iter()
