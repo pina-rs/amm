@@ -11,9 +11,11 @@ mod fees;
 mod liquidity;
 mod pool;
 mod swap;
+mod sync;
 
 pub use config::*;
 pub use fees::*;
 pub use liquidity::*;
 pub use pool::*;
 pub use swap::*;
+pub use sync::*;

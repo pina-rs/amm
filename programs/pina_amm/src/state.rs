@@ -164,6 +164,11 @@ pub struct Pool {
 	pub creator_fee_mode: u8,
 	/// Canonical bump of this pool's PDA.
 	pub bump: u8,
+	/// Time-weighted price of token 1 in token 0, summed as Q64.64 price
+	/// times seconds. `SyncPool` and every swap advance it.
+	pub price_0_cumulative_last: u128,
+	/// Unix second of the last accumulator advance; zero before the first.
+	pub last_update_timestamp: u64,
 }
 
 /// Data-free PDA seeds for a pool's vault for one mint.

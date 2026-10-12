@@ -48,6 +48,7 @@ import {
 	getSetPoolCreatorInstruction,
 	getSwapExactInInstruction,
 	getSwapExactOutInstruction,
+	getSyncPoolInstruction,
 	getUpdateConfigInstruction,
 	getWithdrawInstruction,
 } from "../src/index.js";
@@ -330,7 +331,21 @@ async function main(): Promise<void> {
 		],
 	);
 
-	// 7. CollectCreatorFees — the creator empties its accrued fees.
+	// 7. SyncPool — advance the time-weighted accumulator outside a trade.
+	await sendAll(
+		owner,
+		[
+			getSyncPoolInstruction({
+				pool,
+				vault0,
+				vault1,
+				tokenProgram0: tokenProgram,
+				tokenProgram1: tokenProgram,
+			}),
+		],
+	);
+
+	// 8. CollectCreatorFees — the creator empties its accrued fees.
 	await sendAll(
 		owner,
 		[
@@ -349,7 +364,7 @@ async function main(): Promise<void> {
 		],
 	);
 
-	// 8. SetPoolCreator — hand the creator-fee rights to a fresh wallet.
+	// 10. SetPoolCreator — hand the creator-fee rights to a fresh wallet.
 	const successor = await generateKeyPairSigner();
 	await sendAll(
 		owner,
@@ -382,7 +397,7 @@ async function main(): Promise<void> {
 		],
 	);
 
-	// 10. Withdraw — take the deposited liquidity back out.
+	// 11. Withdraw — take the deposited liquidity back out.
 	await sendAll(
 		owner,
 		[

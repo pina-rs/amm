@@ -52,6 +52,9 @@ pub enum AmmInstruction {
 	CollectCreatorFees = 8,
 	/// Hand a pool's creator-fee rights to another address.
 	SetPoolCreator = 9,
+	/// Advance a pool's time-weighted price accumulator to now.
+	#[dispatch(accounts = SyncPoolAccounts)]
+	SyncPool = 10,
 }
 
 /// Data for `AmmInstruction::CreateConfig`.
@@ -162,6 +165,10 @@ pub struct CollectCreatorFeesInstruction {
 	/// Most token 1 to collect; `u64::MAX` collects everything accrued.
 	pub maximum_amount_1: u64,
 }
+
+/// Data for `AmmInstruction::SyncPool`.
+#[instruction(discriminator = AmmInstruction::SyncPool)]
+pub struct SyncPoolInstruction {}
 
 /// Data for `AmmInstruction::SetPoolCreator`.
 #[instruction(discriminator = AmmInstruction::SetPoolCreator)]

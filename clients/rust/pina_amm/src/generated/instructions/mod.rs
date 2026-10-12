@@ -18,6 +18,7 @@ pub(crate) mod r#swap_exact_out;
 pub(crate) mod r#collect_protocol_fees;
 pub(crate) mod r#collect_creator_fees;
 pub(crate) mod r#set_pool_creator;
+pub(crate) mod r#sync_pool;
 pub(crate) mod r#migrate;
 
 pub use self::r#create_config::*;
@@ -30,4 +31,5 @@ pub use self::r#swap_exact_out::*;
 pub use self::r#collect_protocol_fees::*;
 pub use self::r#collect_creator_fees::*;
 pub use self::r#set_pool_creator::*;
+pub use self::r#sync_pool::*;
 pub use self::r#migrate::*;

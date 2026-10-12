@@ -15,5 +15,6 @@ export * from './deposit';
 export * from './setPoolCreator';
 export * from './swapExactIn';
 export * from './swapExactOut';
+export * from './syncPool';
 export * from './updateConfig';
 export * from './withdraw';

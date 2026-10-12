@@ -43,6 +43,8 @@ PDA: [b"pool", amm_config, mint_0, mint_1]   (mint_0 < mint_1, compared byte by 
 | `trade_fee_rate`, `protocol_fee_rate`, `creator_fee_rate` | `u32`     | Rates snapshotted from the tier at creation                           |
 | `creator_fee_mode`                                        | `u8`      | Which token pays the creator fee: `0` input, `1` token 0, `2` token 1 |
 | `bump`                                                    | `u8`      | Canonical PDA bump                                                    |
+| `price_0_cumulative_last`                                 | `u128`    | Time-weighted price of token 1 in token 0, Q64.64 price times seconds |
+| `last_update_timestamp`                                   | `u64`     | Unix second the accumulator last advanced                             |
 
 Sorting the mints gives every pair exactly one canonical pool per tier, so liquidity for a pair concentrates instead of fragmenting across duplicates.
 

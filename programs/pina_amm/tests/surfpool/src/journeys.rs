@@ -1,7 +1,7 @@
 //! Every instruction, in one ordered journey, through every client that can
 //! talk to a live Surfnet.
 //!
-//! The Rust journey drives all ten instructions through the generated Rust
+//! The Rust journey drives all eleven instructions through the generated Rust
 //! client in a single lifecycle, which also gives the performance benchmark
 //! one deterministic sample per instruction. The TypeScript journey drives
 //! the same lifecycle through the generated `@pina-rs/amm` client: the Rust
@@ -23,6 +23,8 @@ use pina_amm_client::instructions::CollectProtocolFees;
 use pina_amm_client::instructions::CollectProtocolFeesInstructionData;
 use pina_amm_client::instructions::SetPoolCreator;
 use pina_amm_client::instructions::SetPoolCreatorInstructionData;
+use pina_amm_client::instructions::SyncPool;
+use pina_amm_client::instructions::SyncPoolInstructionData;
 use pina_amm_client::instructions::UpdateConfig;
 use pina_amm_client::instructions::UpdateConfigInstructionData;
 use pina_test::Keypair;
@@ -157,7 +159,25 @@ fn every_instruction_runs_in_one_journey() {
 			&[&trader],
 		)
 		.expect("swap exact out");
+
+		// SyncPool advances the accumulator outside a trade.
+		h.send(
+			&[SyncPool::new(
+				fixture.pool,
+				fixture.vault_0,
+				fixture.vault_1,
+				fixture.program_0,
+				fixture.program_1,
+			)
+			.instruction(SyncPoolInstructionData::new(|_| {}).expect("sync data"))],
+			&[],
+		)
+		.expect("sync");
 		let pool = pool_state(&h, &fixture.pool);
+		assert!(
+			pool.price0_cumulative_last > 0,
+			"the journey advanced the price accumulator"
+		);
 		assert!(pool.protocol_fees0 > 0, "swaps must accrue fees");
 
 		let (recipient_0, recipient_1, _) = liquidity_accounts(&fixture, &owner.pubkey());
