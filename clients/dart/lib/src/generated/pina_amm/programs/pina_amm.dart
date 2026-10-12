@@ -13,7 +13,7 @@ import '../instructions/instructions.dart';
 
 /// The address of the PinaAmm program.
 const pinaAmmProgramAddress = Address(
-  'pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV',
+  'pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi',
 );
 
 /// Known accounts for the PinaAmm program.

@@ -13,6 +13,6 @@ index: number;
 };
 
 export async function findAmmConfigPda(seeds: AmmConfigSeeds, config: { programAddress?: Address | undefined } = {}): Promise<ProgramDerivedAddress> {
-  const { programAddress = 'pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV' as Address<'pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV'> } = config;
+  const { programAddress = 'pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi' as Address<'pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi'> } = config;
   return await getProgramDerivedAddress({ programAddress, seeds: [getUtf8Encoder().encode("amm_config"), getU16Encoder().encode(seeds.index)]});
 }

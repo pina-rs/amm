@@ -73,4 +73,4 @@ use pina::*;
 pub use processors::*;
 pub use state::*;
 
-declare_id!("pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV");
+declare_id!("pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi");

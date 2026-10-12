@@ -11,7 +11,7 @@ import {
 test("exports the deployed program address", () => {
 	assert.equal(
 		PINA_AMM_PROGRAM_ADDRESS,
-		"pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV",
+		"pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi",
 	);
 });
 

@@ -572,7 +572,7 @@ export type DecodedPinaAmmEvent =
 	| DecodedPoolCreatorChangedEvent;
 
 /** The program whose invocation frames emit the events decoded here. */
-export const PINA_AMM_EVENT_SOURCE_ADDRESS = "pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV";
+export const PINA_AMM_EVENT_SOURCE_ADDRESS = "pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi";
 
 const PROGRAM_INVOKE_LOG = /^Program (\S+) invoke \[\d+\]$/;
 const PROGRAM_EXIT_LOG = /^Program (\S+) (?:success|failed: .*)$/;

@@ -6,7 +6,7 @@ This is the runbook for deploying the program and creating its fee tiers. Deploy
 
 | Key               | Purpose                                                              | Where it lives                                                                 |
 | ----------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| Program keypair   | The program's address, `pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV` | Offline backup; locally at `target/deploy/pina_amm-keypair.json` (git-ignored) |
+| Program keypair   | The program's address, `pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi` | Offline backup; locally at `target/deploy/pina_amm-keypair.json` (git-ignored) |
 | Upgrade authority | Upgrades the program and creates fee tiers                           | A hardware wallet or multisig                                                  |
 | Fee payer         | Pays deployment rent and fees                                        | Any funded wallet                                                              |
 
@@ -56,6 +56,8 @@ pina-amm -u mainnet -k ~/secure/upgrade-authority.json \
   --creator-fee-rate 5000 --pool-creator-authority ALk5JUXnbaYwVeHG4ymAVVfPKW1xaUTCrSyrvKiq7CGZ \
   --authority <TIER_MULTISIG>
 ```
+
+The curve derives this PDA from its own program ID, not the AMM's. The bonding curve will move to a new mainnet identity before its first deployment, so this address changes with it: derive it again from the curve's deployed ID (`solana find-program-derived-address <CURVE_PROGRAM_ID> string:amm_authority`) before creating the tier.
 
 Launchpad operators then pass tier 100's address (printed by `pina-amm config show --index 100`) as `--amm-config` when they create a curve configuration.
 

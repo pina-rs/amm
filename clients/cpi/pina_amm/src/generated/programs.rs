@@ -11,7 +11,7 @@ use pina::Address;
 use pina::CpiProgramId;
 use pina::Program;
 
-pub const PINA_AMM_ID: Address = pina::address!("pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV");
+pub const PINA_AMM_ID: Address = pina::address!("pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi");
 
 /// Marker for the `pinaAmm` program used by generated CPI builders.
 #[derive(Clone, Copy, Debug)]
@@ -45,7 +45,7 @@ mod tests {
 	/// full rather than only through the constant.
 	#[test]
 	fn binds_the_expected_program_id() {
-		assert_eq!(PINA_AMM_ID, pina::address!("pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV"));
+		assert_eq!(PINA_AMM_ID, pina::address!("pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi"));
 		assert_eq!(PinaAmm::ID, PINA_AMM_ID);
 		assert!(is_expected_program(&PINA_AMM_ID));
 	}

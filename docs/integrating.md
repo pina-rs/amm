@@ -16,7 +16,7 @@ All clients are generated from the same IDL, so names match across languages (`s
 
 | Address        | How to get it                                                                      |
 | -------------- | ---------------------------------------------------------------------------------- |
-| Program        | `pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV`, exported by every client            |
+| Program        | `pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi`, exported by every client            |
 | Fee tier       | `findAmmConfigPda({ index })`                                                      |
 | Pool           | `findPoolPda({ ammConfig, mint0, mint1 })`, with the mints sorted by their bytes   |
 | Vaults         | stored on the pool as `vault0` and `vault1`, or `findPoolVaultPda({ pool, mint })` |

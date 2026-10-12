@@ -12,7 +12,7 @@ export const site = {
 		"A permissionless constant-product market maker for Solana, built with Pina. Fees lock when a pool is created, and a swap costs about 4,700 compute units.",
 	repository: "https://github.com/pina-rs/amm",
 	branch: "main",
-	programId: "pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV",
+	programId: "pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi",
 	pina: "https://github.com/pina-rs/pina",
 	/** The other Pina product, linked from the footer. */
 	sibling: {
