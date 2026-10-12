@@ -228,6 +228,11 @@ impl<'a> ProcessAccountInfos<'a> for CollectCreatorFeesAccounts<'a> {
 impl<'a> ProcessAccountInfos<'a> for SetPoolCreatorAccounts<'a> {
 	fn process(self, data: &[u8]) -> ProgramResult {
 		let args = SetPoolCreatorInstruction::try_from_bytes(data)?;
+		// The default address can never sign, so handing creator rights to it
+		// would make every later creator fee unclaimable forever.
+		if args.new_creator == Address::default() {
+			return Err(AmmError::DefaultCreator.into());
+		}
 		let mut pool = self.pool.as_account_mut::<Pool>(&ID)?;
 		if &pool.creator != self.creator.address() {
 			return Err(AmmError::Unauthorized.into());

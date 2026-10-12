@@ -78,6 +78,12 @@ impl<'a> ProcessAccountInfos<'a> for CreatePoolAccounts<'a> {
 		let amount_1 = args.amount_1.get();
 		let creator = args.creator;
 		let creator_fee_mode = args.creator_fee_mode;
+		// The default address can never sign, so creator fees accrued to it
+		// would be unclaimable forever while still reducing the reserves every
+		// withdrawal pays from.
+		if creator == Address::default() {
+			return Err(AmmError::DefaultCreator.into());
+		}
 
 		let config_address = *self.amm_config.address();
 		let (pool_creator_authority, trade_fee_rate, protocol_fee_rate, creator_fee_rate) = {

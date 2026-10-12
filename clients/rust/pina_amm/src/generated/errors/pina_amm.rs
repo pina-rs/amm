@@ -73,6 +73,10 @@ pub enum PinaAmmError {
 	/// 14 - This fee tier only lets its pool-creator authority create pools.
 	#[error("This fee tier only lets its pool-creator authority create pools.")]
 	PoolCreatorNotAuthorized = 0xE,
+	/// The pool creator may not be the default address, which can never sign or collect.
+	/// 15 - The pool creator may not be the default address, which can never sign or collect.
+	#[error("The pool creator may not be the default address, which can never sign or collect.")]
+	DefaultCreator = 0xF,
 }
 
 impl From<PinaAmmError> for solana_program_error::ProgramError {
