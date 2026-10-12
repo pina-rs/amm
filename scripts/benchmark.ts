@@ -122,13 +122,17 @@ function main(): void {
 	// regression behind averaging.
 	const RUNS = 3;
 	const samplesPath = resolve(out, "samples.jsonl");
+	// The base is measured through its own journey harness: the head's test
+	// crate can only decode accounts the head's program writes, so a layout
+	// change would otherwise break the base benchmark instead of reporting.
+	const manifest = resolve(buildRoot, TEST_MANIFEST);
 	for (let attempt = 0; attempt < RUNS; attempt += 1) {
 		run(
 			"cargo",
 			[
 				"test",
 				"--manifest-path",
-				TEST_MANIFEST,
+				manifest,
 				"--locked",
 				"--",
 				"--ignored",
