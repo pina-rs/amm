@@ -146,7 +146,7 @@ last_update         = now
 `SyncPool` and every swap run this with the price in force at the _start_ of the interval, exactly like Uniswap V2. To read the average price of token 0 over a window, sample the accumulator and the timestamp twice and divide:
 
 ```text
-twap_0 = (cumulative_b - cumulative_a) / 2^64 / (timestamp_b - timestamp_a)
+twap_0 = wrapping_sub(cumulative_b, cumulative_a) / 2^64 / (timestamp_b - timestamp_a)
 ```
 
 The value is token 1 per token 0; invert for the other direction. Notes:
@@ -154,7 +154,7 @@ The value is token 1 per token 0; invert for the other direction. Notes:
 - Proportional deposits and withdrawals do not change the price, and fee collection does not change reserves, so only swaps, donations, and `SyncPool` move the accumulator.
 - A donation changes the price without a program call; the next swap or `SyncPool` folds it in over the whole interval since the last advance. Sample through a `SyncPool` when that matters.
 - A pool with an empty side records no price, and a `last_update` of zero only anchors the clock.
-- The accumulator is `u128` and every step is checked: a trade that would overflow it fails instead of wrapping.
+- The accumulator is `u128` and wraps modulo `2^128`, exactly like Uniswap V2. Only the difference between two samples matters, so subtract with wrapping arithmetic (`u128::wrapping_sub` in Rust, `(b - a) & (2n ** 128n - 1n)` with TypeScript `bigint`). Wrapping keeps a pool tradable forever: a checked sum would halt every swap once the accumulator filled.
 
 ## Limits
 
