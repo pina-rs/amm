@@ -1,13 +1,17 @@
 //! Pool loading and reserve accounting shared by the processors.
 
+use pina::sysvars::Sysvar;
+use pina::sysvars::clock::Clock;
 use pina::*;
 
 use crate::ID;
 use crate::errors::AmmError;
 use crate::math::FeeRates;
+use crate::math::PriceOracle;
 use crate::state::CreatorFeeMode;
 use crate::state::Pool;
 use crate::state::PoolSeedsWithBump;
+use crate::state::PoolZc;
 use crate::token::vault_amount;
 
 /// A copy of a pool's state, taken so the account borrow can be released
@@ -28,8 +32,7 @@ pub(crate) struct PoolSnapshot {
 	pub creator_fees_1: u64,
 	pub rates: FeeRates,
 	pub creator_fee_mode: CreatorFeeMode,
-	pub price_0_cumulative_last: u128,
-	pub last_update_timestamp: u64,
+	pub oracle: PriceOracle,
 	pub bump: u8,
 }
 
@@ -60,8 +63,12 @@ impl PoolSnapshot {
 				creator: state.creator_fee_rate.get(),
 			},
 			creator_fee_mode,
-			price_0_cumulative_last: state.price_0_cumulative_last.get(),
-			last_update_timestamp: state.last_update_timestamp.get(),
+			oracle: PriceOracle {
+				price_0_cumulative: state.price_0_cumulative_last.get(),
+				last_update: state.last_update_timestamp.get(),
+				reserve_0: state.reserve_0_last.get(),
+				reserve_1: state.reserve_1_last.get(),
+			},
 			bump: state.bump,
 		})
 	}
@@ -92,6 +99,22 @@ impl PoolSnapshot {
 			.ok_or(AmmError::VaultAccountingMismatch)?;
 		Ok((reserve_0, reserve_1))
 	}
+}
+
+/// The cluster's Unix second.
+pub(crate) fn unix_now() -> Result<u64, ProgramError> {
+	u64::try_from(Clock::get()?.unix_timestamp).map_err(|_| AmmError::MathOverflow.into())
+}
+
+/// Write a pool's price oracle state.
+///
+/// Callers pass the result of `PriceOracle::observe` with the reserves the
+/// pool holds once their instruction settles.
+pub(crate) fn store_oracle(pool: &mut PoolZc, oracle: PriceOracle) {
+	pool.price_0_cumulative_last.set(oracle.price_0_cumulative);
+	pool.last_update_timestamp.set(oracle.last_update);
+	pool.reserve_0_last.set(oracle.reserve_0);
+	pool.reserve_1_last.set(oracle.reserve_1);
 }
 
 /// The pool PDA's canonical signer seeds.

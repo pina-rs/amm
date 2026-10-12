@@ -21,6 +21,7 @@ use harness::ata;
 use pina_amm_client::PINA_AMM_ID;
 use pina_amm_client::accounts::AmmConfig;
 use pina_amm_client::accounts::Pool;
+use pina_amm_client::events::ConfigCreated;
 use pina_amm_client::instructions::CollectCreatorFees;
 use pina_amm_client::instructions::CollectCreatorFeesInstructionData;
 use pina_amm_client::instructions::CollectProtocolFees;
@@ -293,7 +294,23 @@ fn pool_state(h: &Harness, pool: &Pubkey) -> Pool {
 		bump: state.bump,
 		price0_cumulative_last: state.price0_cumulative_last.get(),
 		last_update_timestamp: state.last_update_timestamp.get(),
+		reserve0_last: state.reserve0_last.get(),
+		reserve1_last: state.reserve1_last.get(),
 	}
+}
+
+/// Decoded `Program data:` records from the logs of one transaction that
+/// invokes only the AMM, in emission order.
+fn program_events(logs: &[String]) -> Vec<Vec<u8>> {
+	use base64::Engine as _;
+	logs.iter()
+		.filter_map(|line| line.strip_prefix("Program data: "))
+		.map(|data| {
+			base64::engine::general_purpose::STANDARD
+				.decode(data)
+				.expect("base64 event")
+		})
+		.collect()
 }
 
 /// Liquidity reserves: vault balances minus fees accrued for collection.
@@ -554,6 +571,21 @@ fn create_config_requires_the_upgrade_authority() {
 			&Pubkey::default(),
 		);
 		h.expect_custom_error(&[too_expensive], &[&admin], code::INVALID_FEE_RATES);
+
+		let (_, logs) = h
+			.simulate_with_logs(std::slice::from_ref(&instruction), &[&admin])
+			.unwrap_or_else(|(error, logs)| panic!("{error:?}\n{}", logs.join("\n")));
+		let created = program_events(&logs)
+			.into_iter()
+			.find_map(|data| ConfigCreated::try_from_bytes(&data).ok().copied())
+			.expect("ConfigCreated event");
+		assert_eq!(created.amm_config, config_address(0));
+		assert_eq!(created.authority, admin.pubkey());
+		assert_eq!(created.pool_creator_authority, Pubkey::default());
+		assert_eq!(created.trade_fee_rate.get(), TRADE_FEE_RATE);
+		assert_eq!(created.protocol_fee_rate.get(), PROTOCOL_FEE_RATE);
+		assert_eq!(created.creator_fee_rate.get(), CREATOR_FEE_RATE);
+		assert_eq!(created.index.get(), 0);
 
 		h.send(&[instruction], &[&admin]).expect("create config");
 		let account = h.account(&config_address(0)).expect("config account");
@@ -1290,6 +1322,89 @@ fn sync_accumulates_the_time_weighted_price() {
 		assert_eq!(
 			swapped.price0_cumulative_last,
 			synced.price0_cumulative_last + price_0 * u128::from(second)
+		);
+		h.stop().expect("stop");
+	});
+}
+
+/// The audit's TWAP manipulation, end to end: in one transaction an attacker
+/// flash-deposits liquidity, donates 100x the token 1 reserve straight to the
+/// vault, calls `SyncPool`, and withdraws again. The interval since the last
+/// observation must still be priced at the reserves that stood through it;
+/// the donation prices only the time after it.
+#[test]
+#[ignore = "run with `pina test`"]
+fn donations_cannot_reprice_the_elapsed_interval() {
+	pina_test::run(async {
+		let h = Harness::start().await.expect("start");
+		let admin = install_admin(&h);
+		let fixture = spl_pool(&h, &admin, 0);
+		let created = pool_state(&h, &fixture.pool);
+		assert_eq!(
+			(created.reserve0_last, created.reserve1_last),
+			(1_000_000_000, 4_000_000_000)
+		);
+		let price_0 = 4_000_000_000u128 * (1u128 << 64) / 1_000_000_000u128;
+
+		let attacker = funded_trader(&h, &fixture, 500_000_000_000);
+		h.create_ata(&attacker.pubkey(), &fixture.lp_mint, &TOKEN_PROGRAM)
+			.expect("attacker lp account");
+		let attacker_token_1 = ata(&attacker.pubkey(), &fixture.mint_1, &fixture.program_1);
+		// Nine times the pool's LP supply, so the attacker owns 90% of the pool
+		// while the donation is in it.
+		let flash_lp = 18_000_000_000;
+		#[allow(deprecated)]
+		let donation = spl_token_2022_interface::instruction::transfer(
+			&fixture.program_1,
+			&attacker_token_1,
+			&fixture.vault_1,
+			&attacker.pubkey(),
+			&[],
+			400_000_000_000,
+		)
+		.expect("donation");
+
+		h.advance_seconds(10).expect("advance");
+		h.send(
+			&[
+				deposit_instruction(&fixture, &attacker.pubkey(), flash_lp, (u64::MAX, u64::MAX)),
+				donation,
+				sync_instruction(&fixture),
+				withdraw_instruction(&fixture, &attacker.pubkey(), flash_lp, (0, 0)),
+			],
+			&[&attacker],
+		)
+		.expect("attack");
+
+		let after_attack = pool_state(&h, &fixture.pool);
+		let elapsed = after_attack.last_update_timestamp - created.last_update_timestamp;
+		assert!(elapsed >= 9, "clock advanced by {elapsed}");
+		// The elapsed interval is priced at 4, exactly as if nothing happened.
+		assert_eq!(
+			after_attack.price0_cumulative_last,
+			price_0 * u128::from(elapsed)
+		);
+		// The donation did land: the pool now stands at a price near 40.
+		let (reserve_0, reserve_1) = reserves(&h, &fixture);
+		assert!(
+			reserve_1 / reserve_0 >= 40,
+			"reserves {reserve_0}:{reserve_1}"
+		);
+		assert_eq!(
+			(after_attack.reserve0_last, after_attack.reserve1_last),
+			(reserve_0, reserve_1)
+		);
+
+		// From here on the donated price counts, but only for the time it
+		// actually stands.
+		h.advance_seconds(10).expect("advance");
+		h.send(&[sync_instruction(&fixture)], &[]).expect("sync");
+		let synced = pool_state(&h, &fixture.pool);
+		let second = synced.last_update_timestamp - after_attack.last_update_timestamp;
+		let donated_price = (u128::from(reserve_1) << 64) / u128::from(reserve_0);
+		assert_eq!(
+			synced.price0_cumulative_last,
+			after_attack.price0_cumulative_last + donated_price * u128::from(second)
 		);
 		h.stop().expect("stop");
 	});

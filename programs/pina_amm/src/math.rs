@@ -359,7 +359,9 @@ pub const Q64: u128 = 1 << 64;
 /// The accumulator sums `price_0 * elapsed_seconds` as Q64.64 price times
 /// seconds, exactly like Uniswap V2: the price in force for an interval is
 /// the pool's price at the start of it, so a caller samples the accumulator
-/// at two times and divides the difference by the time difference. A pool
+/// at two times and divides the difference by the time difference. The
+/// reserves must be the ones recorded at `last_update` (see [`PriceOracle`]),
+/// never the live vault balances. A pool
 /// with an empty side records no price, and a zero `last_update` only
 /// anchors the clock, so a first sample after a migration adds nothing.
 ///
@@ -386,6 +388,53 @@ pub fn advance_price_accumulator(
 	let price_0 = (u128::from(reserve_1) << 64) / u128::from(reserve_0);
 	let elapsed = u128::from(now - last_update);
 	(cumulative.wrapping_add(price_0.wrapping_mul(elapsed)), now)
+}
+
+/// A pool's time-weighted price state.
+///
+/// `reserve_0` and `reserve_1` are the reserves the pool held at the end of
+/// the last instruction that observed them, which is the price in force for
+/// the whole interval since `last_update`. Reading the reserves the pool
+/// holds _now_ for that interval would let a donation followed by any
+/// observation reprice time that has already passed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PriceOracle {
+	/// Q64.64 price of token 1 in token 0, summed over seconds. Wraps modulo
+	/// `2^128`.
+	pub price_0_cumulative: u128,
+	/// Unix second of the last accumulator advance; zero before the first.
+	pub last_update: u64,
+	/// Token 0 reserve that prices the interval since `last_update`.
+	pub reserve_0: u64,
+	/// Token 1 reserve that prices the interval since `last_update`.
+	pub reserve_1: u64,
+}
+
+impl PriceOracle {
+	/// Advance the accumulator to `now` with the stored reserves, then store
+	/// `reserve_0` and `reserve_1`, the reserves after the instruction that is
+	/// observing the pool, as the price of the next interval.
+	///
+	/// This is Uniswap V2's `_update`. Every instruction that can change a
+	/// pool's reserves calls it once with its post-instruction reserves, so a
+	/// value moved within one transaction prices nothing that has already
+	/// elapsed, and a price only counts for the time it actually stood.
+	#[must_use]
+	pub fn observe(self, now: u64, reserve_0: u64, reserve_1: u64) -> Self {
+		let (price_0_cumulative, last_update) = advance_price_accumulator(
+			self.reserve_0,
+			self.reserve_1,
+			self.price_0_cumulative,
+			self.last_update,
+			now,
+		);
+		Self {
+			price_0_cumulative,
+			last_update,
+			reserve_0,
+			reserve_1,
+		}
+	}
 }
 
 /// LP issued by a new pool and the part minted to its first depositor.
@@ -698,6 +747,254 @@ mod tests {
 			prop_assert_eq!(
 				cumulative.wrapping_sub(start),
 				price.wrapping_mul(u128::from(elapsed))
+			);
+		}
+	}
+
+	fn q64_price(reserve_0: u64, reserve_1: u64) -> u128 {
+		(u128::from(reserve_1) << 64) / u128::from(reserve_0)
+	}
+
+	/// The audit's attack: reserves of 1e9 and 4e9 stand for ten seconds, then
+	/// someone donates token 1 straight to the vault and calls `SyncPool` (or
+	/// any swap, deposit, or withdrawal) in the same transaction. The elapsed
+	/// ten seconds must still be priced at 4, not at the donated 400.
+	#[test]
+	fn a_donation_cannot_reprice_the_elapsed_interval() {
+		let oracle = PriceOracle {
+			price_0_cumulative: 0,
+			last_update: 1_000,
+			reserve_0: 1_000_000_000,
+			reserve_1: 4_000_000_000,
+		};
+		let honest = oracle.observe(1_010, 1_000_000_000, 4_000_000_000);
+		let donated = oracle.observe(1_010, 1_000_000_000, 400_000_000_000);
+		assert_eq!(
+			honest.price_0_cumulative,
+			q64_price(1_000_000_000, 4_000_000_000) * 10
+		);
+		assert_eq!(donated.price_0_cumulative, honest.price_0_cumulative);
+		assert_eq!(donated.last_update, 1_010);
+		// The donated price counts only for the time it actually stands.
+		let later = donated.observe(1_011, 1_000_000_000, 4_000_000_000);
+		assert_eq!(
+			later.price_0_cumulative,
+			honest.price_0_cumulative + q64_price(1_000_000_000, 400_000_000_000)
+		);
+	}
+
+	/// Moving the price and restoring it within one second accrues nothing:
+	/// only the reserves left standing when the clock ticks are priced.
+	#[test]
+	fn same_second_observations_only_keep_the_last_reserves() {
+		let oracle = PriceOracle {
+			price_0_cumulative: 7,
+			last_update: 1_000,
+			reserve_0: 100,
+			reserve_1: 200,
+		};
+		let moved = oracle.observe(1_000, 100, 200_000);
+		assert_eq!(moved.price_0_cumulative, 7);
+		let restored = moved.observe(1_000, 100, 200);
+		assert_eq!(restored, oracle);
+	}
+
+	/// One instruction the property test applies to a model pool.
+	#[derive(Debug, Clone)]
+	enum Operation {
+		SwapExactIn {
+			zero_for_one: bool,
+			amount: u64,
+		},
+		SwapExactOut {
+			zero_for_one: bool,
+			amount: u64,
+		},
+		Deposit {
+			lp: u64,
+		},
+		Withdraw {
+			lp: u64,
+		},
+		/// A plain token transfer into a vault: no program call, no observation.
+		Donate {
+			to_0: bool,
+			amount: u64,
+		},
+		Sync,
+	}
+
+	fn operation() -> impl Strategy<Value = Operation> {
+		prop_oneof![
+			(any::<bool>(), 1u64..1_000_000_000).prop_map(|(zero_for_one, amount)| {
+				Operation::SwapExactIn {
+					zero_for_one,
+					amount,
+				}
+			}),
+			(any::<bool>(), 1u64..100_000_000).prop_map(|(zero_for_one, amount)| {
+				Operation::SwapExactOut {
+					zero_for_one,
+					amount,
+				}
+			}),
+			(1u64..1_000_000_000).prop_map(|lp| Operation::Deposit { lp }),
+			(1u64..1_000_000_000).prop_map(|lp| Operation::Withdraw { lp }),
+			(any::<bool>(), 1u64..1_000_000_000_000)
+				.prop_map(|(to_0, amount)| Operation::Donate { to_0, amount }),
+			Just(Operation::Sync),
+		]
+	}
+
+	/// Live reserves after `operation`, or `None` when the instruction would
+	/// fail and roll back. Donations return the new reserves but are not
+	/// program instructions, so they never observe the oracle.
+	fn apply(
+		operation: &Operation,
+		reserve_0: u64,
+		reserve_1: u64,
+		lp_supply: u64,
+	) -> Option<(u64, u64, u64)> {
+		let orient = |zero_for_one: bool| {
+			if zero_for_one {
+				reserves(reserve_0, reserve_1)
+			} else {
+				reserves(reserve_1, reserve_0)
+			}
+		};
+		let settle = |zero_for_one: bool, quote: SwapQuote| {
+			let after = quote.reserves_after(orient(zero_for_one)).ok()?;
+			Some(if zero_for_one {
+				(after.input, after.output, lp_supply)
+			} else {
+				(after.output, after.input, lp_supply)
+			})
+		};
+		match *operation {
+			Operation::SwapExactIn {
+				zero_for_one,
+				amount,
+			} => {
+				settle(
+					zero_for_one,
+					swap_exact_in(amount, orient(zero_for_one), RATES, true).ok()?,
+				)
+			}
+			Operation::SwapExactOut {
+				zero_for_one,
+				amount,
+			} => {
+				settle(
+					zero_for_one,
+					swap_exact_out(amount, orient(zero_for_one), RATES, false).ok()?,
+				)
+			}
+			Operation::Deposit { lp } => {
+				let amounts = deposit_amounts(lp, lp_supply, reserve_0, reserve_1).ok()?;
+				Some((
+					reserve_0.checked_add(amounts.amount_0)?,
+					reserve_1.checked_add(amounts.amount_1)?,
+					lp_supply.checked_add(lp)?,
+				))
+			}
+			Operation::Withdraw { lp } => {
+				let amounts = withdraw_amounts(lp, lp_supply, reserve_0, reserve_1).ok()?;
+				Some((
+					reserve_0 - amounts.amount_0,
+					reserve_1 - amounts.amount_1,
+					lp_supply - lp,
+				))
+			}
+			Operation::Donate { to_0, amount } => {
+				if to_0 {
+					Some((reserve_0.checked_add(amount)?, reserve_1, lp_supply))
+				} else {
+					Some((reserve_0, reserve_1.checked_add(amount)?, lp_supply))
+				}
+			}
+			Operation::Sync => Some((reserve_0, reserve_1, lp_supply)),
+		}
+	}
+
+	proptest! {
+		/// Across any mix of swaps, deposits, withdrawals, donations, and
+		/// syncs, the accumulator equals the integral of the price the pool
+		/// held at each whole second, rebuilt second by second from the
+		/// observations alone. A donation only ever enters that timeline at
+		/// the next instruction's own timestamp, never earlier.
+		#[test]
+		fn accrual_prices_each_second_with_the_reserves_standing_then(
+			steps in proptest::collection::vec((0u64..120, operation()), 1..40),
+		) {
+			let start = 1_000u64;
+			let (mut reserve_0, mut reserve_1) = (1_000_000_000u64, 4_000_000_000u64);
+			let mut lp_supply = initial_liquidity(reserve_0, reserve_1).unwrap().lp_supply;
+			let mut oracle = PriceOracle {
+				price_0_cumulative: 0,
+				last_update: start,
+				reserve_0,
+				reserve_1,
+			};
+			// Every observation in order: (timestamp, reserve_0, reserve_1).
+			let mut timeline = std::vec![(start, reserve_0, reserve_1)];
+			let mut now = start;
+			for (elapsed, operation) in &steps {
+				now += elapsed;
+				let Some((next_0, next_1, next_supply)) =
+					apply(operation, reserve_0, reserve_1, lp_supply)
+				else {
+					continue;
+				};
+				(reserve_0, reserve_1, lp_supply) = (next_0, next_1, next_supply);
+				if matches!(operation, Operation::Donate { .. }) {
+					continue;
+				}
+				oracle = oracle.observe(now, reserve_0, reserve_1);
+				prop_assert_eq!((oracle.reserve_0, oracle.reserve_1), (reserve_0, reserve_1));
+				prop_assert_eq!(oracle.last_update, now);
+				timeline.push((now, reserve_0, reserve_1));
+			}
+
+			// Each second from `start` up to the last observation is priced by
+			// the latest observation made at or before it.
+			let end = oracle.last_update;
+			let mut expected = 0u128;
+			for second in start..end {
+				let &(_, standing_0, standing_1) = timeline
+					.iter()
+					.rev()
+					.find(|(at, _, _)| *at <= second)
+					.unwrap();
+				expected = expected.wrapping_add(q64_price(standing_0, standing_1));
+			}
+			prop_assert_eq!(oracle.price_0_cumulative, expected);
+		}
+
+		/// Whatever the live reserves are when an instruction observes the
+		/// pool, the interval it closes is priced only by the stored ones.
+		#[test]
+		fn the_closed_interval_ignores_the_new_reserves(
+			stored_0 in 1u64..,
+			stored_1 in 1u64..,
+			start in any::<u128>(),
+			last_update in 1u64..u64::MAX / 2,
+			elapsed in 0u64..1_000_000,
+			live_a in (any::<u64>(), any::<u64>()),
+			live_b in (any::<u64>(), any::<u64>()),
+		) {
+			let oracle = PriceOracle {
+				price_0_cumulative: start,
+				last_update,
+				reserve_0: stored_0,
+				reserve_1: stored_1,
+			};
+			let now = last_update + elapsed;
+			let a = oracle.observe(now, live_a.0, live_a.1);
+			let b = oracle.observe(now, live_b.0, live_b.1);
+			prop_assert_eq!(a.price_0_cumulative, b.price_0_cumulative);
+			prop_assert_eq!(
+				a.price_0_cumulative.wrapping_sub(start),
+				q64_price(stored_0, stored_1).wrapping_mul(u128::from(elapsed))
 			);
 		}
 	}

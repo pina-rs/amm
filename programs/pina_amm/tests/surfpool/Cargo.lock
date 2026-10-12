@@ -4722,6 +4722,7 @@ dependencies = [
 name = "pina_amm_surfpool_tests"
 version = "0.0.0"
 dependencies = [
+ "base64 0.22.1",
  "pina_amm_client",
  "pina_test",
  "serde_json",

@@ -13,6 +13,7 @@ pub(crate) mod r#swapped;
 pub(crate) mod r#liquidity_changed;
 pub(crate) mod r#fees_collected;
 pub(crate) mod r#pool_synced;
+pub(crate) mod r#config_created;
 pub(crate) mod r#config_updated;
 pub(crate) mod r#pool_creator_changed;
 
@@ -21,5 +22,6 @@ pub use self::r#swapped::*;
 pub use self::r#liquidity_changed::*;
 pub use self::r#fees_collected::*;
 pub use self::r#pool_synced::*;
+pub use self::r#config_created::*;
 pub use self::r#config_updated::*;
 pub use self::r#pool_creator_changed::*;

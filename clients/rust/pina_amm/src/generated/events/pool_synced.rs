@@ -8,8 +8,9 @@
 	clippy::too_many_arguments
 )]
 
-/// Emitted by `SyncPool`. Swaps advance the same accumulator and report
-/// their reserves through `Swapped`.
+/// Emitted by `SyncPool`. Swaps, deposits, and withdrawals advance the same
+/// accumulator and report their effect through `Swapped` and
+/// `LiquidityChanged`.
 #[allow(clippy::len_without_is_empty)]
 #[derive(pina::PinaPod)]
 #[pinapod(crate = pina::pinapod, no_inherent)]
@@ -18,9 +19,9 @@ pub struct PoolSynced {
 	pub migration_version: u8,
 	/// The pool whose accumulator advanced.
 	pub pool: solana_pubkey::Pubkey,
-	/// Token 0 reserve at the advance.
+	/// Token 0 reserve recorded at the advance; it prices the next interval.
 	pub reserve0: u64,
-	/// Token 1 reserve at the advance.
+	/// Token 1 reserve recorded at the advance; it prices the next interval.
 	pub reserve1: u64,
 	/// The accumulator after the advance: Q64.64 price of token 1 in token 0,
 	/// summed over seconds.

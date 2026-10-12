@@ -32,6 +32,7 @@ solana-program-error = { default-features = false, version = "3.0" }
 solana-pubkey = { default-features = false, version = "4", features = ["std"] }
 solana-rpc-client = { default-features = false, version = "4.2" }
 solana-rpc-client-api = { default-features = false, version = "4.2" }
+solana-security-txt = { default-features = false, version = "1.1.3" }
 solana-signer = { default-features = false, version = "3.0" }
 solana-transaction = { default-features = false, version = "4.1" }
 thiserror = { default-features = false, version = "2" }

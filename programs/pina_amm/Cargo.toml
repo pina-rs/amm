@@ -23,10 +23,13 @@ default = []
 # Formatted failure diagnostics and caller locations. Costs `core::fmt` in the
 # deployed binary; use it while debugging, never for production deploys.
 verbose-logs = ["pina/verbose-logs"]
-bpf-entrypoint = []
+# The deployed program's entrypoint, plus the `security.txt` that explorers
+# and `query-security-txt` read from the binary.
+bpf-entrypoint = ["dep:solana-security-txt"]
 
 [dependencies]
 pina = { workspace = true, features = ["account-resize", "derive", "logs", "token", "validation"] }
+solana-security-txt = { workspace = true, optional = true }
 
 [dev-dependencies]
 proptest.workspace = true

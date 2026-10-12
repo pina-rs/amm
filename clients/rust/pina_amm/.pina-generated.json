@@ -6,6 +6,7 @@
     "src/generated/accounts/pool.rs",
     "src/generated/errors/mod.rs",
     "src/generated/errors/pina_amm.rs",
+    "src/generated/events/config_created.rs",
     "src/generated/events/config_updated.rs",
     "src/generated/events/fees_collected.rs",
     "src/generated/events/liquidity_changed.rs",

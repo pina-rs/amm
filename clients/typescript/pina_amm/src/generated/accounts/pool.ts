@@ -68,11 +68,27 @@ creatorFeeMode: number;
 bump: number; 
 /**
  * Time-weighted price of token 1 in token 0, summed as Q64.64 price
- * times seconds. `SyncPool` and every swap advance it.
+ * times seconds and wrapping modulo `2^128`. Every swap, deposit,
+ * withdrawal, and `SyncPool` advances it with `reserve_0_last` and
+ * `reserve_1_last` before changing the reserves.
  */
 price0CumulativeLast: bigint; 
 /** Unix second of the last accumulator advance; zero before the first. */
-lastUpdateTimestamp: bigint;  };
+lastUpdateTimestamp: bigint; 
+/**
+ * Token 0 reserve at the end of the last instruction that changed or
+ * observed the reserves: `CreatePool`, a swap, a deposit, a withdrawal,
+ * or `SyncPool`. It prices the accumulator's next interval and nothing
+ * else: trades and liquidity always price from the live vault balances.
+ */
+reserve0Last: bigint; 
+/**
+ * Token 1 reserve at the end of the last instruction that changed or
+ * observed the reserves: `CreatePool`, a swap, a deposit, a withdrawal,
+ * or `SyncPool`. It prices the accumulator's next interval and nothing
+ * else: trades and liquidity always price from the live vault balances.
+ */
+reserve1Last: bigint;  };
 
 export type PoolArgs = { 
 /** Fee tier this pool was created under. */
@@ -118,20 +134,36 @@ creatorFeeMode: number;
 bump: number; 
 /**
  * Time-weighted price of token 1 in token 0, summed as Q64.64 price
- * times seconds. `SyncPool` and every swap advance it.
+ * times seconds and wrapping modulo `2^128`. Every swap, deposit,
+ * withdrawal, and `SyncPool` advances it with `reserve_0_last` and
+ * `reserve_1_last` before changing the reserves.
  */
 price0CumulativeLast: number | bigint; 
 /** Unix second of the last accumulator advance; zero before the first. */
-lastUpdateTimestamp: number | bigint;  };
+lastUpdateTimestamp: number | bigint; 
+/**
+ * Token 0 reserve at the end of the last instruction that changed or
+ * observed the reserves: `CreatePool`, a swap, a deposit, a withdrawal,
+ * or `SyncPool`. It prices the accumulator's next interval and nothing
+ * else: trades and liquidity always price from the live vault balances.
+ */
+reserve0Last: number | bigint; 
+/**
+ * Token 1 reserve at the end of the last instruction that changed or
+ * observed the reserves: `CreatePool`, a swap, a deposit, a withdrawal,
+ * or `SyncPool`. It prices the accumulator's next interval and nothing
+ * else: trades and liquidity always price from the live vault balances.
+ */
+reserve1Last: number | bigint;  };
 
 /** Gets the encoder for {@link PoolArgs} account data. */
 export function getPoolEncoder(): FixedSizeEncoder<PoolArgs> {
-    return transformEncoder(getStructEncoder([['discriminator', getU8Encoder()], ['migrationVersion', getU8Encoder()], ['ammConfig', getAddressEncoder()], ['creator', getAddressEncoder()], ['mint0', getAddressEncoder()], ['mint1', getAddressEncoder()], ['vault0', getAddressEncoder()], ['vault1', getAddressEncoder()], ['lpMint', getAddressEncoder()], ['lpSupply', getU64Encoder()], ['protocolFees0', getU64Encoder()], ['protocolFees1', getU64Encoder()], ['creatorFees0', getU64Encoder()], ['creatorFees1', getU64Encoder()], ['tradeFeeRate', getU32Encoder()], ['protocolFeeRate', getU32Encoder()], ['creatorFeeRate', getU32Encoder()], ['creatorFeeMode', getU8Encoder()], ['bump', getU8Encoder()], ['price0CumulativeLast', getU128Encoder()], ['lastUpdateTimestamp', getU64Encoder()]]), (value) => ({ ...value, discriminator: 2, migrationVersion: 0 }));
+    return transformEncoder(getStructEncoder([['discriminator', getU8Encoder()], ['migrationVersion', getU8Encoder()], ['ammConfig', getAddressEncoder()], ['creator', getAddressEncoder()], ['mint0', getAddressEncoder()], ['mint1', getAddressEncoder()], ['vault0', getAddressEncoder()], ['vault1', getAddressEncoder()], ['lpMint', getAddressEncoder()], ['lpSupply', getU64Encoder()], ['protocolFees0', getU64Encoder()], ['protocolFees1', getU64Encoder()], ['creatorFees0', getU64Encoder()], ['creatorFees1', getU64Encoder()], ['tradeFeeRate', getU32Encoder()], ['protocolFeeRate', getU32Encoder()], ['creatorFeeRate', getU32Encoder()], ['creatorFeeMode', getU8Encoder()], ['bump', getU8Encoder()], ['price0CumulativeLast', getU128Encoder()], ['lastUpdateTimestamp', getU64Encoder()], ['reserve0Last', getU64Encoder()], ['reserve1Last', getU64Encoder()]]), (value) => ({ ...value, discriminator: 2, migrationVersion: 0 }));
 }
 
 /** Gets the decoder for {@link Pool} account data. */
 export function getPoolDecoder(): FixedSizeDecoder<Pool> {
-    return getStructDecoder([['discriminator', getPinaPodDiscriminatorDecoder(POOL_DISCRIMINATOR, getU8Decoder())], ['migrationVersion', getPinaPodMigrationVersionDecoder(0, getU8Decoder())], ['ammConfig', getAddressDecoder()], ['creator', getAddressDecoder()], ['mint0', getAddressDecoder()], ['mint1', getAddressDecoder()], ['vault0', getAddressDecoder()], ['vault1', getAddressDecoder()], ['lpMint', getAddressDecoder()], ['lpSupply', getU64Decoder()], ['protocolFees0', getU64Decoder()], ['protocolFees1', getU64Decoder()], ['creatorFees0', getU64Decoder()], ['creatorFees1', getU64Decoder()], ['tradeFeeRate', getU32Decoder()], ['protocolFeeRate', getU32Decoder()], ['creatorFeeRate', getU32Decoder()], ['creatorFeeMode', getU8Decoder()], ['bump', getU8Decoder()], ['price0CumulativeLast', getU128Decoder()], ['lastUpdateTimestamp', getU64Decoder()]]);
+    return getStructDecoder([['discriminator', getPinaPodDiscriminatorDecoder(POOL_DISCRIMINATOR, getU8Decoder())], ['migrationVersion', getPinaPodMigrationVersionDecoder(0, getU8Decoder())], ['ammConfig', getAddressDecoder()], ['creator', getAddressDecoder()], ['mint0', getAddressDecoder()], ['mint1', getAddressDecoder()], ['vault0', getAddressDecoder()], ['vault1', getAddressDecoder()], ['lpMint', getAddressDecoder()], ['lpSupply', getU64Decoder()], ['protocolFees0', getU64Decoder()], ['protocolFees1', getU64Decoder()], ['creatorFees0', getU64Decoder()], ['creatorFees1', getU64Decoder()], ['tradeFeeRate', getU32Decoder()], ['protocolFeeRate', getU32Decoder()], ['creatorFeeRate', getU32Decoder()], ['creatorFeeMode', getU8Decoder()], ['bump', getU8Decoder()], ['price0CumulativeLast', getU128Decoder()], ['lastUpdateTimestamp', getU64Decoder()], ['reserve0Last', getU64Decoder()], ['reserve1Last', getU64Decoder()]]);
 }
 
 /** Gets the codec for {@link Pool} account data. */

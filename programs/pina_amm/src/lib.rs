@@ -20,9 +20,12 @@
 //!   pool. A small amount of liquidity is locked forever when the pool is
 //!   created, so the pool can never be emptied.
 //!
-//! Reserves are never stored. A pool's reserve is its vault balance minus the
-//! protocol and creator fees it has accrued but not yet paid out, so tokens
-//! sent directly to a vault become liquidity for every LP.
+//! Reserves are never stored for pricing. A pool's reserve is its vault
+//! balance minus the protocol and creator fees it has accrued but not yet paid
+//! out, so tokens sent directly to a vault become liquidity for every LP. The
+//! only stored copy belongs to the time-weighted price accumulator, which
+//! prices each elapsed interval with the reserves recorded at its start so a
+//! donation can never reprice the past.
 //!
 //! ## Module map
 //!

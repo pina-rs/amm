@@ -39,6 +39,8 @@ pub struct Pool {
 	pub bump: u8,
 	pub price0_cumulative_last: u128,
 	pub last_update_timestamp: u64,
+	pub reserve0_last: u64,
+	pub reserve1_last: u64,
 }
 
 /// Account discriminator declared by the program's IDL.
@@ -46,7 +48,7 @@ pub const POOL_DISCRIMINATOR: [u8; 2] = [2, 0];
 
 impl Pool {
 	/// Encoded size of this account's data.
-	pub const LEN: usize = 304;
+	pub const LEN: usize = 320;
 
 	/// Whether `data` carries this account's discriminator.
 	#[inline(always)]
@@ -123,6 +125,12 @@ impl Pool {
 		cursor += 16;
 		let last_update_timestamp: u64 = u64::from_le_bytes(data.get(cursor..cursor + 8)?
 		.try_into().ok()?);
+		cursor += 8;
+		let reserve0_last: u64 = u64::from_le_bytes(data.get(cursor..cursor + 8)?
+		.try_into().ok()?);
+		cursor += 8;
+		let reserve1_last: u64 = u64::from_le_bytes(data.get(cursor..cursor + 8)?
+		.try_into().ok()?);
 
 		Some(Pool {
 			amm_config,
@@ -144,6 +152,8 @@ impl Pool {
 			bump,
 			price0_cumulative_last,
 			last_update_timestamp,
+			reserve0_last,
+			reserve1_last,
 		})
 	}
 }

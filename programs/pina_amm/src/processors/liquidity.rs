@@ -4,6 +4,8 @@ use pina::*;
 
 use super::common::PoolSnapshot;
 use super::common::pool_signer_seeds;
+use super::common::store_oracle;
+use super::common::unix_now;
 use crate::ID;
 use crate::errors::AmmError;
 use crate::events::LiquidityChanged;
@@ -62,7 +64,7 @@ impl LiquidityAccounts<'_> {
 		Ok((snapshot, reserve_0, reserve_1))
 	}
 
-	fn deposit(self, lp_amount: u64, maximum_0: u64, maximum_1: u64) -> ProgramResult {
+	fn deposit(mut self, lp_amount: u64, maximum_0: u64, maximum_1: u64) -> ProgramResult {
 		let (snapshot, reserve_0, reserve_1) = self.load()?;
 		let amounts = deposit_amounts(lp_amount, snapshot.lp_supply, reserve_0, reserve_1)?;
 		if amounts.amount_0 > maximum_0 || amounts.amount_1 > maximum_1 {
@@ -72,10 +74,13 @@ impl LiquidityAccounts<'_> {
 			.lp_supply
 			.checked_add(lp_amount)
 			.ok_or(AmmError::MathOverflow)?;
-		self.pool
-			.as_account_mut::<Pool>(&ID)?
-			.lp_supply
-			.set(lp_supply);
+		let after_0 = reserve_0
+			.checked_add(amounts.amount_0)
+			.ok_or(AmmError::MathOverflow)?;
+		let after_1 = reserve_1
+			.checked_add(amounts.amount_1)
+			.ok_or(AmmError::MathOverflow)?;
+		self.record(&snapshot, lp_supply, after_0, after_1)?;
 
 		transfer(
 			self.owner_token_0,
@@ -99,7 +104,7 @@ impl LiquidityAccounts<'_> {
 		self.emit(true, lp_amount, amounts, lp_supply)
 	}
 
-	fn withdraw(self, lp_amount: u64, minimum_0: u64, minimum_1: u64) -> ProgramResult {
+	fn withdraw(mut self, lp_amount: u64, minimum_0: u64, minimum_1: u64) -> ProgramResult {
 		let (snapshot, reserve_0, reserve_1) = self.load()?;
 		let amounts = withdraw_amounts(lp_amount, snapshot.lp_supply, reserve_0, reserve_1)?;
 		if amounts.amount_0 < minimum_0 || amounts.amount_1 < minimum_1 {
@@ -109,10 +114,13 @@ impl LiquidityAccounts<'_> {
 			.lp_supply
 			.checked_sub(lp_amount)
 			.ok_or(AmmError::InsufficientLiquidity)?;
-		self.pool
-			.as_account_mut::<Pool>(&ID)?
-			.lp_supply
-			.set(lp_supply);
+		let after_0 = reserve_0
+			.checked_sub(amounts.amount_0)
+			.ok_or(AmmError::InsufficientLiquidity)?;
+		let after_1 = reserve_1
+			.checked_sub(amounts.amount_1)
+			.ok_or(AmmError::InsufficientLiquidity)?;
+		self.record(&snapshot, lp_supply, after_0, after_1)?;
 
 		token::instructions::Burn::new(self.owner_lp_token, self.lp_mint, self.owner, lp_amount)
 			.invoke()?;
@@ -140,6 +148,27 @@ impl LiquidityAccounts<'_> {
 		}
 
 		self.emit(false, lp_amount, amounts, lp_supply)
+	}
+
+	/// Store the new LP supply and advance the price oracle.
+	///
+	/// Like every instruction that changes the reserves, a deposit or
+	/// withdrawal first prices the elapsed interval with the reserves stored
+	/// at the last observation, then stores its own post-instruction
+	/// reserves. Liquidity reads the live balances, so it also folds in any
+	/// donation since, but only for the interval that starts now.
+	fn record(
+		&mut self,
+		snapshot: &PoolSnapshot,
+		lp_supply: u64,
+		reserve_0: u64,
+		reserve_1: u64,
+	) -> ProgramResult {
+		let oracle = snapshot.oracle.observe(unix_now()?, reserve_0, reserve_1);
+		let mut pool = self.pool.as_account_mut::<Pool>(&ID)?;
+		pool.lp_supply.set(lp_supply);
+		store_oracle(&mut pool, oracle);
+		Ok(())
 	}
 
 	fn emit(

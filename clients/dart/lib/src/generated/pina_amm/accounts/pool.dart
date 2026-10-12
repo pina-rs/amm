@@ -33,6 +33,8 @@ class Pool {
     required this.bump,
     required this.price0CumulativeLast,
     required this.lastUpdateTimestamp,
+    required this.reserve0Last,
+    required this.reserve1Last,
   }) : discriminator = 2,
        migrationVersion = 0;
 
@@ -57,6 +59,8 @@ class Pool {
   final int bump;
   final BigInt price0CumulativeLast;
   final BigInt lastUpdateTimestamp;
+  final BigInt reserve0Last;
+  final BigInt reserve1Last;
 
   @override
   bool operator ==(Object other) =>
@@ -83,7 +87,9 @@ class Pool {
           creatorFeeMode == other.creatorFeeMode &&
           bump == other.bump &&
           price0CumulativeLast == other.price0CumulativeLast &&
-          lastUpdateTimestamp == other.lastUpdateTimestamp;
+          lastUpdateTimestamp == other.lastUpdateTimestamp &&
+          reserve0Last == other.reserve0Last &&
+          reserve1Last == other.reserve1Last;
 
   @override
   int get hashCode => Object.hashAll([
@@ -108,11 +114,13 @@ class Pool {
     bump,
     price0CumulativeLast,
     lastUpdateTimestamp,
+    reserve0Last,
+    reserve1Last,
   ]);
 
   @override
   String toString() =>
-      'Pool(discriminator: $discriminator, migrationVersion: $migrationVersion, ammConfig: $ammConfig, creator: $creator, mint0: $mint0, mint1: $mint1, vault0: $vault0, vault1: $vault1, lpMint: $lpMint, lpSupply: $lpSupply, protocolFees0: $protocolFees0, protocolFees1: $protocolFees1, creatorFees0: $creatorFees0, creatorFees1: $creatorFees1, tradeFeeRate: $tradeFeeRate, protocolFeeRate: $protocolFeeRate, creatorFeeRate: $creatorFeeRate, creatorFeeMode: $creatorFeeMode, bump: $bump, price0CumulativeLast: $price0CumulativeLast, lastUpdateTimestamp: $lastUpdateTimestamp)';
+      'Pool(discriminator: $discriminator, migrationVersion: $migrationVersion, ammConfig: $ammConfig, creator: $creator, mint0: $mint0, mint1: $mint1, vault0: $vault0, vault1: $vault1, lpMint: $lpMint, lpSupply: $lpSupply, protocolFees0: $protocolFees0, protocolFees1: $protocolFees1, creatorFees0: $creatorFees0, creatorFees1: $creatorFees1, tradeFeeRate: $tradeFeeRate, protocolFeeRate: $protocolFeeRate, creatorFeeRate: $creatorFeeRate, creatorFeeMode: $creatorFeeMode, bump: $bump, price0CumulativeLast: $price0CumulativeLast, lastUpdateTimestamp: $lastUpdateTimestamp, reserve0Last: $reserve0Last, reserve1Last: $reserve1Last)';
 }
 
 Encoder<Pool> getPoolEncoder() {
@@ -138,6 +146,8 @@ Encoder<Pool> getPoolEncoder() {
     ('bump', getU8Encoder()),
     ('price0CumulativeLast', getU128Encoder()),
     ('lastUpdateTimestamp', getU64Encoder()),
+    ('reserve0Last', getU64Encoder()),
+    ('reserve1Last', getU64Encoder()),
   ]);
 
   return transformEncoder(
@@ -164,6 +174,8 @@ Encoder<Pool> getPoolEncoder() {
       'bump': value.bump,
       'price0CumulativeLast': value.price0CumulativeLast,
       'lastUpdateTimestamp': value.lastUpdateTimestamp,
+      'reserve0Last': value.reserve0Last,
+      'reserve1Last': value.reserve1Last,
     },
   );
 }
@@ -191,6 +203,8 @@ Decoder<Pool> getPoolDecoder() {
     ('bump', getU8Decoder()),
     ('price0CumulativeLast', getU128Decoder()),
     ('lastUpdateTimestamp', getU64Decoder()),
+    ('reserve0Last', getU64Decoder()),
+    ('reserve1Last', getU64Decoder()),
   ]);
 
   Never throwInvalidByteLength(int expected, int bytesLength) {
@@ -234,6 +248,8 @@ Decoder<Pool> getPoolDecoder() {
         bump: map['bump']! as int,
         price0CumulativeLast: map['price0CumulativeLast']! as BigInt,
         lastUpdateTimestamp: map['lastUpdateTimestamp']! as BigInt,
+        reserve0Last: map['reserve0Last']! as BigInt,
+        reserve1Last: map['reserve1Last']! as BigInt,
       ),
       newOffset,
     );

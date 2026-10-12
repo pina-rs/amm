@@ -6,6 +6,7 @@
     "lib/src/generated/pina_amm/accounts/pool.dart",
     "lib/src/generated/pina_amm/errors/errors.dart",
     "lib/src/generated/pina_amm/errors/pina_amm.dart",
+    "lib/src/generated/pina_amm/events/config_created.dart",
     "lib/src/generated/pina_amm/events/config_updated.dart",
     "lib/src/generated/pina_amm/events/event_log.dart",
     "lib/src/generated/pina_amm/events/events.dart",
