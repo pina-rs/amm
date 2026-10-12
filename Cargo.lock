@@ -1516,7 +1516,7 @@ dependencies = [
 
 [[package]]
 name = "pina_amm"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "pina",
  "proptest",
@@ -1525,7 +1525,7 @@ dependencies = [
 
 [[package]]
 name = "pina_amm_cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "base64 0.22.1",
  "clap",
@@ -1545,7 +1545,7 @@ dependencies = [
 
 [[package]]
 name = "pina_amm_client"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "num-derive 0.5.1",
  "num-traits",
@@ -1558,7 +1558,7 @@ dependencies = [
 
 [[package]]
 name = "pina_amm_cpi"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "pina",
 ]
