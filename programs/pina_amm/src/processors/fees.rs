@@ -3,7 +3,7 @@
 use pina::*;
 
 use super::common::PoolSnapshot;
-use super::common::with_pool_signer;
+use super::common::pool_signer_seeds;
 use crate::ID;
 use crate::errors::AmmError;
 use crate::events::FeesCollected;
@@ -91,29 +91,29 @@ impl FeeTransfer<'_> {
 		amount_1: u64,
 	) -> ProgramResult {
 		snapshot.assert_vaults(self.vault_0, self.vault_1)?;
-		with_pool_signer(snapshot, |signer| {
-			if amount_0 > 0 {
-				transfer_signed(
-					self.vault_0,
-					self.recipient_token_0,
-					pool,
-					self.token_program_0,
-					amount_0,
-					signer,
-				)?;
-			}
-			if amount_1 > 0 {
-				transfer_signed(
-					self.vault_1,
-					self.recipient_token_1,
-					pool,
-					self.token_program_1,
-					amount_1,
-					signer,
-				)?;
-			}
-			Ok(())
-		})
+		let seeds = pool_signer_seeds(snapshot);
+		let signer = seeds.to_signer();
+		if amount_0 > 0 {
+			transfer_signed(
+				self.vault_0,
+				self.recipient_token_0,
+				pool,
+				self.token_program_0,
+				amount_0,
+				&signer.as_signer(),
+			)?;
+		}
+		if amount_1 > 0 {
+			transfer_signed(
+				self.vault_1,
+				self.recipient_token_1,
+				pool,
+				self.token_program_1,
+				amount_1,
+				&signer.as_signer(),
+			)?;
+		}
+		Ok(())
 	}
 }
 

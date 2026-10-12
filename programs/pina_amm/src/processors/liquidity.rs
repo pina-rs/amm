@@ -3,7 +3,7 @@
 use pina::*;
 
 use super::common::PoolSnapshot;
-use super::common::with_pool_signer;
+use super::common::pool_signer_seeds;
 use crate::ID;
 use crate::errors::AmmError;
 use crate::events::LiquidityChanged;
@@ -91,15 +91,10 @@ impl LiquidityAccounts<'_> {
 			self.token_program_1,
 			amounts.amount_1,
 		)?;
-		with_pool_signer(&snapshot, |signer| {
-			token::instructions::MintTo::new(
-				self.lp_mint,
-				self.owner_lp_token,
-				self.pool,
-				lp_amount,
-			)
-			.invoke_signed(core::slice::from_ref(signer))
-		})?;
+		let seeds = pool_signer_seeds(&snapshot);
+		let signer = seeds.to_signer();
+		token::instructions::MintTo::new(self.lp_mint, self.owner_lp_token, self.pool, lp_amount)
+			.invoke_signed(core::slice::from_ref(&signer.as_signer()))?;
 
 		self.emit(true, lp_amount, amounts, lp_supply)
 	}
@@ -121,29 +116,28 @@ impl LiquidityAccounts<'_> {
 
 		token::instructions::Burn::new(self.owner_lp_token, self.lp_mint, self.owner, lp_amount)
 			.invoke()?;
-		with_pool_signer(&snapshot, |signer| {
-			if amounts.amount_0 > 0 {
-				transfer_signed(
-					self.vault_0,
-					self.owner_token_0,
-					self.pool,
-					self.token_program_0,
-					amounts.amount_0,
-					signer,
-				)?;
-			}
-			if amounts.amount_1 > 0 {
-				transfer_signed(
-					self.vault_1,
-					self.owner_token_1,
-					self.pool,
-					self.token_program_1,
-					amounts.amount_1,
-					signer,
-				)?;
-			}
-			Ok(())
-		})?;
+		let seeds = pool_signer_seeds(&snapshot);
+		let signer = seeds.to_signer();
+		if amounts.amount_0 > 0 {
+			transfer_signed(
+				self.vault_0,
+				self.owner_token_0,
+				self.pool,
+				self.token_program_0,
+				amounts.amount_0,
+				&signer.as_signer(),
+			)?;
+		}
+		if amounts.amount_1 > 0 {
+			transfer_signed(
+				self.vault_1,
+				self.owner_token_1,
+				self.pool,
+				self.token_program_1,
+				amounts.amount_1,
+				&signer.as_signer(),
+			)?;
+		}
 
 		self.emit(false, lp_amount, amounts, lp_supply)
 	}
