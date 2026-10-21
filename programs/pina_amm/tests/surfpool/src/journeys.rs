@@ -74,6 +74,22 @@ fn journey_mints(h: &Harness) -> ((Pubkey, Pubkey), (Pubkey, Pubkey)) {
 	}
 }
 
+/// Move the cluster clock past the pool's last oracle update before an
+/// instruction that observes the price oracle.
+///
+/// The oracle only advances its accumulator, a `u128` division and multiply
+/// worth about 200 compute units, once a whole second has passed since the
+/// pool's last update. Surfnet's clock follows wall time, so without this
+/// step whether an instruction paid that cost would depend on where a second
+/// boundary happened to fall, and the benchmark would report noise. The jump
+/// is two seconds, not one, so it still clears the last update when the clock
+/// sysvar `advance_seconds` reads from trails the cluster;
+/// `sync_accumulates_the_time_weighted_price` likewise relies on only nine of
+/// the ten seconds it advances.
+fn advance_clock(h: &Harness) {
+	h.advance_seconds(2).expect("advance the clock");
+}
+
 /// The journey's tier authority: a funded, fixed-seed keypair installed as
 /// the program's upgrade authority.
 fn journey_admin(h: &Harness) -> Keypair {
@@ -124,6 +140,7 @@ fn every_instruction_runs_in_one_journey() {
 		h.send(&[create], &[&owner]).expect("create pool");
 		assert_eq!(pool_state(&h, &fixture.pool).lp_supply, 2_000_000_000);
 
+		advance_clock(&h);
 		h.send(
 			&[deposit_instruction(
 				&fixture,
@@ -137,6 +154,7 @@ fn every_instruction_runs_in_one_journey() {
 		assert_eq!(pool_state(&h, &fixture.pool).lp_supply, 2_001_000_000);
 
 		let trader = funded_trader(&h, &fixture, 1_000_000_000);
+		advance_clock(&h);
 		h.send(
 			&[swap_exact_in_instruction(
 				&fixture,
@@ -148,6 +166,7 @@ fn every_instruction_runs_in_one_journey() {
 			&[&trader],
 		)
 		.expect("swap exact in");
+		advance_clock(&h);
 		h.send(
 			&[swap_exact_out_instruction(
 				&fixture,
@@ -161,6 +180,7 @@ fn every_instruction_runs_in_one_journey() {
 		.expect("swap exact out");
 
 		// SyncPool advances the accumulator outside a trade.
+		advance_clock(&h);
 		h.send(
 			&[SyncPool::new(
 				fixture.pool,
@@ -233,6 +253,7 @@ fn every_instruction_runs_in_one_journey() {
 		h.send(&[set_creator], &[&owner]).expect("set pool creator");
 		assert_eq!(pool_state(&h, &fixture.pool).creator, successor.pubkey());
 
+		advance_clock(&h);
 		h.send(
 			&[withdraw_instruction(
 				&fixture,
