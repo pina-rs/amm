@@ -1,0 +1,1480 @@
+{
+	"schema_version": "0.10",
+	"kind": "monochange.releaseRecord",
+	"created_at": "2026-10-23T09:15:19Z",
+	"command": "release",
+	"version": "0.2.0",
+	"versions": {
+		"amm": "0.2.0"
+	},
+	"release_targets": [
+		{
+			"id": "amm",
+			"kind": "group",
+			"version": "0.2.0",
+			"version_format": "primary",
+			"tag": true,
+			"release": true,
+			"tag_name": "v0.2.0",
+			"rendered_title": "v0.2.0 (2026-10-23)",
+			"rendered_changelog_title": "[0.2.0](https://github.com/pina-rs/amm/releases/tag/v0.2.0) (2026-10-23)",
+			"members": [
+				"pina_amm_program",
+				"pina_amm_cpi",
+				"pina_amm_client",
+				"pina_amm_cli",
+				"pina_amm_client_typescript",
+				"pina_amm_client_dart"
+			]
+		}
+	],
+	"released_packages": [
+		"@pina-rs/amm",
+		"pina_amm",
+		"pina_amm_cli",
+		"pina_amm_client",
+		"pina_amm_cpi"
+	],
+	"changed_files": [
+		"Cargo.lock",
+		"Cargo.toml",
+		"changelog.md",
+		"clients/cpi/pina_amm/Cargo.toml",
+		"clients/dart/pubspec.yaml",
+		"clients/rust/pina_amm/Cargo.toml",
+		"clients/typescript/pina_amm/package.json",
+		"crates/pina_amm_cli/Cargo.toml",
+		"programs/pina_amm/Cargo.toml",
+		"release-notes/v0.2.0.md"
+	],
+	"package_publications": [
+		{
+			"package": "pina_amm_cli",
+			"ecosystem": "cargo",
+			"registry": "crates_io",
+			"version": "0.2.0",
+			"mode": "builtin",
+			"trusted_publishing": {
+				"enabled": true,
+				"mode": "required",
+				"repository": "pina-rs/amm",
+				"workflow": "publish.yml",
+				"environment": "publisher"
+			}
+		},
+		{
+			"package": "pina_amm_client",
+			"ecosystem": "cargo",
+			"registry": "crates_io",
+			"version": "0.2.0",
+			"mode": "builtin",
+			"trusted_publishing": {
+				"enabled": true,
+				"mode": "required",
+				"repository": "pina-rs/amm",
+				"workflow": "publish.yml",
+				"environment": "publisher"
+			}
+		},
+		{
+			"package": "pina_amm_client_dart",
+			"ecosystem": "dart",
+			"registry": "pub_dev",
+			"version": "0.2.0",
+			"mode": "builtin",
+			"trusted_publishing": {
+				"enabled": true,
+				"mode": "required",
+				"repository": "pina-rs/amm",
+				"workflow": "publish.yml",
+				"environment": "publisher"
+			}
+		},
+		{
+			"package": "pina_amm_client_typescript",
+			"ecosystem": "npm",
+			"registry": "npm",
+			"version": "0.2.0",
+			"mode": "builtin",
+			"trusted_publishing": {
+				"enabled": true,
+				"mode": "required",
+				"repository": "pina-rs/amm",
+				"workflow": "publish.yml",
+				"environment": "publisher"
+			}
+		},
+		{
+			"package": "pina_amm_cpi",
+			"ecosystem": "cargo",
+			"registry": "crates_io",
+			"version": "0.2.0",
+			"mode": "builtin",
+			"trusted_publishing": {
+				"enabled": true,
+				"mode": "required",
+				"repository": "pina-rs/amm",
+				"workflow": "publish.yml",
+				"environment": "publisher"
+			}
+		}
+	],
+	"updated_changelogs": [
+		"changelog.md",
+		"release-notes/v0.2.0.md"
+	],
+	"deleted_changesets": [
+		".changeset/client-journeys-and-performance-gate.md",
+		".changeset/mainnet-program-identity-user.md",
+		".changeset/mainnet-program-identity.md",
+		".changeset/reject-default-pool-creators-user.md",
+		".changeset/reject-default-pool-creators.md",
+		".changeset/trim-swap-compute-and-size-user.md",
+		".changeset/trim-swap-compute-and-size.md",
+		".changeset/twap-accumulator-and-observability-user.md",
+		".changeset/twap-accumulator-and-observability.md",
+		".changeset/twap-accumulator-wraps.md",
+		".changeset/twap-stored-reserves-user.md",
+		".changeset/twap-stored-reserves.md"
+	],
+	"changesets": [
+		{
+			"path": ".changeset/client-journeys-and-performance-gate.md",
+			"summary": "Client journeys and a performance gate",
+			"details": "- Every instruction now has one ordered journey on a live Surfnet through the generated Rust client (`every_instruction_runs_in_one_journey`) and through the generated TypeScript client (`typescript_client_runs_every_instruction`), which the Rust side drives with funded fixtures and then checks the resulting on-chain state. The TypeScript journey asserts the client's PDA helpers reproduce the Rust-derived addresses before sending anything.\n- The journey's keypairs are seeded, so identical binaries measure identical compute units.\n- A `performance` workflow benchmarks the pull request against its base: deployed binary size plus every instruction's compute units (median of three journey runs), posted as one consolidated PR comment. The policy fails the check on any binary-size increase or a compute-unit regression above 2%, unless the pull request carries `performance-approved`. `scripts/benchmark.ts` and `scripts/compare-benchmarks.ts` run the same pipeline locally.\n- `docs/performance.md` documents the pipeline and the policy.",
+			"targets": [
+				{
+					"id": "amm",
+					"kind": "group",
+					"bump": "minor",
+					"origin": "direct-change",
+					"evidence_refs": [],
+					"change_type": "minor"
+				}
+			],
+			"context": {
+				"provider": "github",
+				"host": "github.com",
+				"capabilities": {
+					"commit_web_urls": true,
+					"actor_profiles": true,
+					"review_request_lookup": true,
+					"related_issues": true,
+					"issue_comments": true
+				},
+				"introduced": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "46cfbd6bc31bb32f1e2919d924ceb03f239bbd79",
+						"short_sha": "46cfbd6",
+						"url": "https://github.com/pina-rs/amm/commit/46cfbd6bc31bb32f1e2919d924ceb03f239bbd79",
+						"authored_at": "2026-10-12T01:56:24+01:00",
+						"committed_at": "2026-10-12T01:56:24+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "1160934+ifiokjr@users.noreply.github.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#11",
+						"title": "test(pina_amm): drive every instruction through each client and gate performance",
+						"url": "https://github.com/pina-rs/amm/pull/11",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"last_updated": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "46cfbd6bc31bb32f1e2919d924ceb03f239bbd79",
+						"short_sha": "46cfbd6",
+						"url": "https://github.com/pina-rs/amm/commit/46cfbd6bc31bb32f1e2919d924ceb03f239bbd79",
+						"authored_at": "2026-10-12T01:56:24+01:00",
+						"committed_at": "2026-10-12T01:56:24+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "1160934+ifiokjr@users.noreply.github.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#11",
+						"title": "test(pina_amm): drive every instruction through each client and gate performance",
+						"url": "https://github.com/pina-rs/amm/pull/11",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"related_issues": []
+			}
+		},
+		{
+			"path": ".changeset/mainnet-program-identity-user.md",
+			"summary": "The AMM has its permanent mainnet address",
+			"details": "##### User impact\n\nThe AMM now lives at `pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi`. Pools, fee tiers, and liquidity tokens are created under this address, so wallets and apps should use the latest clients to find them.",
+			"targets": [
+				{
+					"id": "amm",
+					"kind": "group",
+					"bump": "none",
+					"origin": "direct-change",
+					"evidence_refs": [],
+					"change_type": "user"
+				}
+			],
+			"context": {
+				"provider": "github",
+				"host": "github.com",
+				"capabilities": {
+					"commit_web_urls": true,
+					"actor_profiles": true,
+					"review_request_lookup": true,
+					"related_issues": true,
+					"issue_comments": true
+				},
+				"introduced": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "d8a3e131951b3bf264164abd9c78dcf8b3dec24f",
+						"short_sha": "d8a3e13",
+						"url": "https://github.com/pina-rs/amm/commit/d8a3e131951b3bf264164abd9c78dcf8b3dec24f",
+						"authored_at": "2026-10-12T16:07:40+01:00",
+						"committed_at": "2026-10-12T16:07:40+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "ifiokotung@gmail.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#19",
+						"title": "chore(pina_amm)!: deploy under the mainnet identity pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi",
+						"url": "https://github.com/pina-rs/amm/pull/19",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"last_updated": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "d8a3e131951b3bf264164abd9c78dcf8b3dec24f",
+						"short_sha": "d8a3e13",
+						"url": "https://github.com/pina-rs/amm/commit/d8a3e131951b3bf264164abd9c78dcf8b3dec24f",
+						"authored_at": "2026-10-12T16:07:40+01:00",
+						"committed_at": "2026-10-12T16:07:40+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "ifiokotung@gmail.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#19",
+						"title": "chore(pina_amm)!: deploy under the mainnet identity pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi",
+						"url": "https://github.com/pina-rs/amm/pull/19",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"related_issues": []
+			}
+		},
+		{
+			"path": ".changeset/mainnet-program-identity.md",
+			"summary": "Deploy under the mainnet program identity",
+			"details": "The program's address moves from `pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV` to `pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi` before its first mainnet deployment.\n\n- `declare_id!` was synced with `pina keys sync`, and `pina migrations create` rebound the unpublished migration history (no publication receipts existed) to the new ID.\n- The TypeScript, Dart, Rust, and CPI clients were regenerated: `PINA_AMM_PROGRAM_ADDRESS`, `PINA_AMM_ID`, the event source address, and every PDA helper's default program address now name the new ID, so every config, pool, LP mint, and vault PDA changes with it.\n- Integrators that hard-code the old ID, or CPI callers that pin an older `pina_amm_cpi`, must update before calling the deployed program.",
+			"targets": [
+				{
+					"id": "amm",
+					"kind": "group",
+					"bump": "major",
+					"origin": "direct-change",
+					"evidence_refs": [],
+					"change_type": "major"
+				}
+			],
+			"context": {
+				"provider": "github",
+				"host": "github.com",
+				"capabilities": {
+					"commit_web_urls": true,
+					"actor_profiles": true,
+					"review_request_lookup": true,
+					"related_issues": true,
+					"issue_comments": true
+				},
+				"introduced": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "d8a3e131951b3bf264164abd9c78dcf8b3dec24f",
+						"short_sha": "d8a3e13",
+						"url": "https://github.com/pina-rs/amm/commit/d8a3e131951b3bf264164abd9c78dcf8b3dec24f",
+						"authored_at": "2026-10-12T16:07:40+01:00",
+						"committed_at": "2026-10-12T16:07:40+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "ifiokotung@gmail.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#19",
+						"title": "chore(pina_amm)!: deploy under the mainnet identity pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi",
+						"url": "https://github.com/pina-rs/amm/pull/19",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"last_updated": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "d8a3e131951b3bf264164abd9c78dcf8b3dec24f",
+						"short_sha": "d8a3e13",
+						"url": "https://github.com/pina-rs/amm/commit/d8a3e131951b3bf264164abd9c78dcf8b3dec24f",
+						"authored_at": "2026-10-12T16:07:40+01:00",
+						"committed_at": "2026-10-12T16:07:40+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "ifiokotung@gmail.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#19",
+						"title": "chore(pina_amm)!: deploy under the mainnet identity pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi",
+						"url": "https://github.com/pina-rs/amm/pull/19",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"related_issues": []
+			}
+		},
+		{
+			"path": ".changeset/reject-default-pool-creators-user.md",
+			"summary": "Pools can no longer name an empty creator address",
+			"details": "##### User impact\n\nFees that would have accrued to an address nobody controls are now impossible to create: naming the unset default address as a pool creator fails with `DefaultCreator`, and so does handing an existing pool's creator rights to it.",
+			"targets": [
+				{
+					"id": "amm",
+					"kind": "group",
+					"bump": "none",
+					"origin": "direct-change",
+					"evidence_refs": [],
+					"change_type": "user"
+				}
+			],
+			"context": {
+				"provider": "github",
+				"host": "github.com",
+				"capabilities": {
+					"commit_web_urls": true,
+					"actor_profiles": true,
+					"review_request_lookup": true,
+					"related_issues": true,
+					"issue_comments": true
+				},
+				"introduced": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "a7e4b37d9c08409c80b9c5856372f559d4206cc3",
+						"short_sha": "a7e4b37",
+						"url": "https://github.com/pina-rs/amm/commit/a7e4b37d9c08409c80b9c5856372f559d4206cc3",
+						"authored_at": "2026-10-12T04:51:24+01:00",
+						"committed_at": "2026-10-12T04:51:24+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "1160934+ifiokjr@users.noreply.github.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#9",
+						"title": "fix(pina_amm): reject the default address as a pool creator",
+						"url": "https://github.com/pina-rs/amm/pull/9",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"last_updated": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "a7e4b37d9c08409c80b9c5856372f559d4206cc3",
+						"short_sha": "a7e4b37",
+						"url": "https://github.com/pina-rs/amm/commit/a7e4b37d9c08409c80b9c5856372f559d4206cc3",
+						"authored_at": "2026-10-12T04:51:24+01:00",
+						"committed_at": "2026-10-12T04:51:24+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "1160934+ifiokjr@users.noreply.github.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#9",
+						"title": "fix(pina_amm): reject the default address as a pool creator",
+						"url": "https://github.com/pina-rs/amm/pull/9",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"related_issues": []
+			}
+		},
+		{
+			"path": ".changeset/reject-default-pool-creators.md",
+			"summary": "Reject the default address as a pool creator",
+			"details": "`CreatePool` and `SetPoolCreator` reject the default address with the new `DefaultCreator` error. Creator fees accrued to the default address could never be collected, yet they still reduce the reserves every withdrawal pays from.",
+			"targets": [
+				{
+					"id": "amm",
+					"kind": "group",
+					"bump": "major",
+					"origin": "direct-change",
+					"evidence_refs": [],
+					"change_type": "major"
+				}
+			],
+			"context": {
+				"provider": "github",
+				"host": "github.com",
+				"capabilities": {
+					"commit_web_urls": true,
+					"actor_profiles": true,
+					"review_request_lookup": true,
+					"related_issues": true,
+					"issue_comments": true
+				},
+				"introduced": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "a7e4b37d9c08409c80b9c5856372f559d4206cc3",
+						"short_sha": "a7e4b37",
+						"url": "https://github.com/pina-rs/amm/commit/a7e4b37d9c08409c80b9c5856372f559d4206cc3",
+						"authored_at": "2026-10-12T04:51:24+01:00",
+						"committed_at": "2026-10-12T04:51:24+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "1160934+ifiokjr@users.noreply.github.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#9",
+						"title": "fix(pina_amm): reject the default address as a pool creator",
+						"url": "https://github.com/pina-rs/amm/pull/9",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"last_updated": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "a7e4b37d9c08409c80b9c5856372f559d4206cc3",
+						"short_sha": "a7e4b37",
+						"url": "https://github.com/pina-rs/amm/commit/a7e4b37d9c08409c80b9c5856372f559d4206cc3",
+						"authored_at": "2026-10-12T04:51:24+01:00",
+						"committed_at": "2026-10-12T04:51:24+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "1160934+ifiokjr@users.noreply.github.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#9",
+						"title": "fix(pina_amm): reject the default address as a pool creator",
+						"url": "https://github.com/pina-rs/amm/pull/9",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"related_issues": []
+			}
+		},
+		{
+			"path": ".changeset/trim-swap-compute-and-size-user.md",
+			"summary": "A slightly cheaper, slightly smaller program",
+			"details": "##### User impact\n\nSwaps, deposits, and withdrawals each cost 10–25 fewer compute units, and the deployed program is about 0.5 KB smaller, which lowers its rent. Every processor now builds the pool PDA's signer through one shared helper instead of a compiled copy per call site. Nothing about the math, fees, or account layout changed.",
+			"targets": [
+				{
+					"id": "amm",
+					"kind": "group",
+					"bump": "none",
+					"origin": "direct-change",
+					"evidence_refs": [],
+					"change_type": "user"
+				}
+			],
+			"context": {
+				"provider": "github",
+				"host": "github.com",
+				"capabilities": {
+					"commit_web_urls": true,
+					"actor_profiles": true,
+					"review_request_lookup": true,
+					"related_issues": true,
+					"issue_comments": true
+				},
+				"introduced": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "758c8666b57cebe0bc6e6b43a9e6c7fe722ec16a",
+						"short_sha": "758c866",
+						"url": "https://github.com/pina-rs/amm/commit/758c8666b57cebe0bc6e6b43a9e6c7fe722ec16a",
+						"authored_at": "2026-10-12T08:53:12+01:00",
+						"committed_at": "2026-10-12T08:53:12+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "1160934+ifiokjr@users.noreply.github.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#15",
+						"title": "perf(pina_amm): share one pool-signer seed builder across processors",
+						"url": "https://github.com/pina-rs/amm/pull/15",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"last_updated": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "758c8666b57cebe0bc6e6b43a9e6c7fe722ec16a",
+						"short_sha": "758c866",
+						"url": "https://github.com/pina-rs/amm/commit/758c8666b57cebe0bc6e6b43a9e6c7fe722ec16a",
+						"authored_at": "2026-10-12T08:53:12+01:00",
+						"committed_at": "2026-10-12T08:53:12+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "1160934+ifiokjr@users.noreply.github.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#15",
+						"title": "perf(pina_amm): share one pool-signer seed builder across processors",
+						"url": "https://github.com/pina-rs/amm/pull/15",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"related_issues": []
+			}
+		},
+		{
+			"path": ".changeset/trim-swap-compute-and-size.md",
+			"summary": "Trim the deployed program and every instruction's compute",
+			"details": "Compiles the pool PDA's signer-seed builder once instead of a copy per call site: the deployed binary shrinks by 520 bytes and swaps, deposits, and withdrawals each get slightly cheaper. No account, instruction, event, or wire format changes.",
+			"targets": [
+				{
+					"id": "amm",
+					"kind": "group",
+					"bump": "patch",
+					"origin": "direct-change",
+					"evidence_refs": [],
+					"change_type": "fix"
+				}
+			],
+			"context": {
+				"provider": "github",
+				"host": "github.com",
+				"capabilities": {
+					"commit_web_urls": true,
+					"actor_profiles": true,
+					"review_request_lookup": true,
+					"related_issues": true,
+					"issue_comments": true
+				},
+				"introduced": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "758c8666b57cebe0bc6e6b43a9e6c7fe722ec16a",
+						"short_sha": "758c866",
+						"url": "https://github.com/pina-rs/amm/commit/758c8666b57cebe0bc6e6b43a9e6c7fe722ec16a",
+						"authored_at": "2026-10-12T08:53:12+01:00",
+						"committed_at": "2026-10-12T08:53:12+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "1160934+ifiokjr@users.noreply.github.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#15",
+						"title": "perf(pina_amm): share one pool-signer seed builder across processors",
+						"url": "https://github.com/pina-rs/amm/pull/15",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"last_updated": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "758c8666b57cebe0bc6e6b43a9e6c7fe722ec16a",
+						"short_sha": "758c866",
+						"url": "https://github.com/pina-rs/amm/commit/758c8666b57cebe0bc6e6b43a9e6c7fe722ec16a",
+						"authored_at": "2026-10-12T08:53:12+01:00",
+						"committed_at": "2026-10-12T08:53:12+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "1160934+ifiokjr@users.noreply.github.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#15",
+						"title": "perf(pina_amm): share one pool-signer seed builder across processors",
+						"url": "https://github.com/pina-rs/amm/pull/15",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"related_issues": []
+			}
+		},
+		{
+			"path": ".changeset/twap-accumulator-and-observability-user.md",
+			"summary": "Pools now track their average price over time",
+			"details": "##### User impact\n\nEvery market now keeps a running sum of its price over time, and a new permissionless `SyncPool` instruction advances it on demand. Anyone can sample that sum at two moments to compute a time-weighted average price that a single transaction cannot meaningfully move — the standard building block for pricing collateral and rewards. Nothing else about trading changes: swaps cost the same and advance the accumulator themselves.",
+			"targets": [
+				{
+					"id": "amm",
+					"kind": "group",
+					"bump": "none",
+					"origin": "direct-change",
+					"evidence_refs": [],
+					"change_type": "user"
+				}
+			],
+			"context": {
+				"provider": "github",
+				"host": "github.com",
+				"capabilities": {
+					"commit_web_urls": true,
+					"actor_profiles": true,
+					"review_request_lookup": true,
+					"related_issues": true,
+					"issue_comments": true
+				},
+				"introduced": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "4e18f1e0911d4d9f2f7cc81d49cfd1a148d538a9",
+						"short_sha": "4e18f1e",
+						"url": "https://github.com/pina-rs/amm/commit/4e18f1e0911d4d9f2f7cc81d49cfd1a148d538a9",
+						"authored_at": "2026-10-12T06:25:34+01:00",
+						"committed_at": "2026-10-12T06:25:34+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "1160934+ifiokjr@users.noreply.github.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#10",
+						"title": "feat(pina_amm): add a time-weighted price accumulator and admin events",
+						"url": "https://github.com/pina-rs/amm/pull/10",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"last_updated": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "4e18f1e0911d4d9f2f7cc81d49cfd1a148d538a9",
+						"short_sha": "4e18f1e",
+						"url": "https://github.com/pina-rs/amm/commit/4e18f1e0911d4d9f2f7cc81d49cfd1a148d538a9",
+						"authored_at": "2026-10-12T06:25:34+01:00",
+						"committed_at": "2026-10-12T06:25:34+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "1160934+ifiokjr@users.noreply.github.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#10",
+						"title": "feat(pina_amm): add a time-weighted price accumulator and admin events",
+						"url": "https://github.com/pina-rs/amm/pull/10",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"related_issues": []
+			}
+		},
+		{
+			"path": ".changeset/twap-accumulator-and-observability.md",
+			"summary": "Time-weighted price accumulator and admin events",
+			"details": "- Every pool now sums its price over time: `price_0_cumulative_last` (Q64.64 price of token 1 in token 0, times seconds) advances on every swap with the pre-trade price and on the new permissionless `SyncPool` instruction. Sample it twice and divide by the elapsed time for a manipulation-resistant average, exactly like Uniswap V2; see `docs/math.md`.\n- `UpdateConfig` emits `ConfigUpdated` and `SetPoolCreator` emits `PoolCreatorChanged`, so indexers can follow tier-rate and fee-recipient changes without polling accounts.\n- `SyncPool` emits `PoolSynced` with the reserves and the accumulator after the advance.\n- `Pool` grows two fields; `pina migrations create` recorded the automatic transition and the generated clients, IDL, and ABI layout test are regenerated.",
+			"targets": [
+				{
+					"id": "amm",
+					"kind": "group",
+					"bump": "major",
+					"origin": "direct-change",
+					"evidence_refs": [],
+					"change_type": "major"
+				}
+			],
+			"context": {
+				"provider": "github",
+				"host": "github.com",
+				"capabilities": {
+					"commit_web_urls": true,
+					"actor_profiles": true,
+					"review_request_lookup": true,
+					"related_issues": true,
+					"issue_comments": true
+				},
+				"introduced": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "4e18f1e0911d4d9f2f7cc81d49cfd1a148d538a9",
+						"short_sha": "4e18f1e",
+						"url": "https://github.com/pina-rs/amm/commit/4e18f1e0911d4d9f2f7cc81d49cfd1a148d538a9",
+						"authored_at": "2026-10-12T06:25:34+01:00",
+						"committed_at": "2026-10-12T06:25:34+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "1160934+ifiokjr@users.noreply.github.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#10",
+						"title": "feat(pina_amm): add a time-weighted price accumulator and admin events",
+						"url": "https://github.com/pina-rs/amm/pull/10",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"last_updated": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "4e18f1e0911d4d9f2f7cc81d49cfd1a148d538a9",
+						"short_sha": "4e18f1e",
+						"url": "https://github.com/pina-rs/amm/commit/4e18f1e0911d4d9f2f7cc81d49cfd1a148d538a9",
+						"authored_at": "2026-10-12T06:25:34+01:00",
+						"committed_at": "2026-10-12T06:25:34+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "1160934+ifiokjr@users.noreply.github.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#10",
+						"title": "feat(pina_amm): add a time-weighted price accumulator and admin events",
+						"url": "https://github.com/pina-rs/amm/pull/10",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"related_issues": []
+			}
+		},
+		{
+			"path": ".changeset/twap-accumulator-wraps.md",
+			"summary": "Wrap the price accumulator instead of halting the pool",
+			"details": "`advance_price_accumulator` now wraps modulo `2^128`, like Uniswap V2, instead of failing with `MathOverflow`. The accumulator only ever grows, so a checked sum would have failed every swap and `SyncPool` permanently once a pool with an extreme price ratio had accumulated enough time, with no way to recover short of a program upgrade. Integrators must subtract samples with wrapping arithmetic; `docs/math.md` shows how. The function no longer returns a `Result`.",
+			"targets": [
+				{
+					"id": "amm",
+					"kind": "group",
+					"bump": "major",
+					"origin": "direct-change",
+					"evidence_refs": [],
+					"change_type": "breaking"
+				}
+			],
+			"context": {
+				"provider": "github",
+				"host": "github.com",
+				"capabilities": {
+					"commit_web_urls": true,
+					"actor_profiles": true,
+					"review_request_lookup": true,
+					"related_issues": true,
+					"issue_comments": true
+				},
+				"introduced": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "cf9d8d4377e608c33abbdcc2450ecfe1e82fe308",
+						"short_sha": "cf9d8d4",
+						"url": "https://github.com/pina-rs/amm/commit/cf9d8d4377e608c33abbdcc2450ecfe1e82fe308",
+						"authored_at": "2026-10-12T14:08:54+01:00",
+						"committed_at": "2026-10-12T14:08:54+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "ifiokotung@gmail.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#16",
+						"title": "fix(pina_amm): wrap the price accumulator instead of halting the pool",
+						"url": "https://github.com/pina-rs/amm/pull/16",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"last_updated": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "e1fca060e1ea56c872aa3c8d89db0f39192a00ac",
+						"short_sha": "e1fca06",
+						"url": "https://github.com/pina-rs/amm/commit/e1fca060e1ea56c872aa3c8d89db0f39192a00ac",
+						"authored_at": "2026-10-12T15:23:36+01:00",
+						"committed_at": "2026-10-12T15:23:36+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "ifiokotung@gmail.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#16",
+						"title": "fix(pina_amm): wrap the price accumulator instead of halting the pool",
+						"url": "https://github.com/pina-rs/amm/pull/16",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"related_issues": []
+			}
+		},
+		{
+			"path": ".changeset/twap-stored-reserves-user.md",
+			"summary": "Average prices can no longer be rewritten after the fact",
+			"details": "##### User impact\n\nA pool's time-weighted average price now only counts each price for the time it actually stood. Sending tokens straight into a pool and syncing it can no longer change the average for time that has already passed, so integrations that rely on the average are much harder to manipulate. New fee tiers now announce themselves with an event, and the program publishes its security contact details so researchers can reach the maintainers privately.",
+			"targets": [
+				{
+					"id": "amm",
+					"kind": "group",
+					"bump": "none",
+					"origin": "direct-change",
+					"evidence_refs": [],
+					"change_type": "user"
+				}
+			],
+			"context": {
+				"provider": "github",
+				"host": "github.com",
+				"capabilities": {
+					"commit_web_urls": true,
+					"actor_profiles": true,
+					"review_request_lookup": true,
+					"related_issues": true,
+					"issue_comments": true
+				},
+				"introduced": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "f4b2572a15c71cad024e1542f03e2c64ede05667",
+						"short_sha": "f4b2572",
+						"url": "https://github.com/pina-rs/amm/commit/f4b2572a15c71cad024e1542f03e2c64ede05667",
+						"authored_at": "2026-10-12T15:27:27+01:00",
+						"committed_at": "2026-10-12T15:27:27+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "ifiokotung@gmail.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#18",
+						"title": "fix(pina_amm): price the TWAP accumulator with stored reserves",
+						"url": "https://github.com/pina-rs/amm/pull/18",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"last_updated": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "f4b2572a15c71cad024e1542f03e2c64ede05667",
+						"short_sha": "f4b2572",
+						"url": "https://github.com/pina-rs/amm/commit/f4b2572a15c71cad024e1542f03e2c64ede05667",
+						"authored_at": "2026-10-12T15:27:27+01:00",
+						"committed_at": "2026-10-12T15:27:27+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "ifiokotung@gmail.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#18",
+						"title": "fix(pina_amm): price the TWAP accumulator with stored reserves",
+						"url": "https://github.com/pina-rs/amm/pull/18",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"related_issues": []
+			}
+		},
+		{
+			"path": ".changeset/twap-stored-reserves.md",
+			"summary": "Price the accumulator with stored reserves so donations cannot reprice the past",
+			"details": "The time-weighted price accumulator priced the whole interval since `last_update_timestamp` with the reserves read from the vaults _now_. Reserves are vault balances, so a donation straight to a vault followed by `SyncPool` or a swap in the same transaction repriced time that had already passed; with flash-deposited liquidity (deposits and withdrawals are feeless) the attacker recovered nearly all of the donation.\n\n- `Pool` gains `reserve_0_last` and `reserve_1_last`, the reserves at the last observation. `CreatePool`, both swaps, `Deposit`, `Withdraw`, and `SyncPool` now accrue the elapsed interval with those stored reserves first, then store their own post-instruction reserves, exactly like Uniswap V2's `_update`. Deposits and withdrawals now advance the accumulator too.\n- The new pure `PriceOracle::observe` holds the logic; property tests prove the accumulator equals the per-second integral of the observed reserves across mixed swaps, deposits, withdrawals, donations, and syncs.\n- `docs/math.md` and `docs/security.md` describe the sampling rules and the remaining limits honestly: the average resists single-transaction manipulation, not a price held across seconds.\n- `CreateConfig` emits the new `ConfigCreated` event with the tier's index, rates, authority, and pool-creator restriction.\n- The deployed binary embeds a `security.txt` pointing at `SECURITY.md` and the private advisory form.",
+			"targets": [
+				{
+					"id": "amm",
+					"kind": "group",
+					"bump": "major",
+					"origin": "direct-change",
+					"evidence_refs": [],
+					"change_type": "major"
+				}
+			],
+			"context": {
+				"provider": "github",
+				"host": "github.com",
+				"capabilities": {
+					"commit_web_urls": true,
+					"actor_profiles": true,
+					"review_request_lookup": true,
+					"related_issues": true,
+					"issue_comments": true
+				},
+				"introduced": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "f4b2572a15c71cad024e1542f03e2c64ede05667",
+						"short_sha": "f4b2572",
+						"url": "https://github.com/pina-rs/amm/commit/f4b2572a15c71cad024e1542f03e2c64ede05667",
+						"authored_at": "2026-10-12T15:27:27+01:00",
+						"committed_at": "2026-10-12T15:27:27+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "ifiokotung@gmail.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#18",
+						"title": "fix(pina_amm): price the TWAP accumulator with stored reserves",
+						"url": "https://github.com/pina-rs/amm/pull/18",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"last_updated": {
+					"actor": {
+						"provider": "github",
+						"host": "github.com",
+						"id": null,
+						"login": "ifiokjr",
+						"display_name": "ifiokjr",
+						"url": "https://github.com/ifiokjr",
+						"source": "review_request_author"
+					},
+					"commit": {
+						"provider": "github",
+						"host": "github.com",
+						"sha": "f4b2572a15c71cad024e1542f03e2c64ede05667",
+						"short_sha": "f4b2572",
+						"url": "https://github.com/pina-rs/amm/commit/f4b2572a15c71cad024e1542f03e2c64ede05667",
+						"authored_at": "2026-10-12T15:27:27+01:00",
+						"committed_at": "2026-10-12T15:27:27+01:00",
+						"author_name": "Ifiok Jr.",
+						"author_email": "ifiokotung@gmail.com"
+					},
+					"review_request": {
+						"provider": "github",
+						"host": "github.com",
+						"kind": "pull_request",
+						"id": "#18",
+						"title": "fix(pina_amm): price the TWAP accumulator with stored reserves",
+						"url": "https://github.com/pina-rs/amm/pull/18",
+						"author": {
+							"provider": "github",
+							"host": "github.com",
+							"id": null,
+							"login": "ifiokjr",
+							"display_name": "ifiokjr",
+							"url": "https://github.com/ifiokjr",
+							"source": "review_request_author"
+						}
+					}
+				},
+				"related_issues": []
+			}
+		}
+	],
+	"changelogs": [
+		{
+			"owner_id": "amm",
+			"owner_kind": "group",
+			"output": "default",
+			"stream": "default",
+			"path": "changelog.md",
+			"format": "keep_a_changelog",
+			"notes": {
+				"title": "[0.2.0](https://github.com/pina-rs/amm/releases/tag/v0.2.0) (2026-10-23)",
+				"summary": [
+					"Grouped release for `amm`."
+				],
+				"sections": [
+					{
+						"title": "Breaking changes",
+						"collapsed": false,
+						"entries": [
+							"#### Deploy under the mainnet program identity\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #19](https://github.com/pina-rs/amm/pull/19)\n\nThe program's address moves from `pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV` to `pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi` before its first mainnet deployment.\n\n- `declare_id!` was synced with `pina keys sync`, and `pina migrations create` rebound the unpublished migration history (no publication receipts existed) to the new ID.\n- The TypeScript, Dart, Rust, and CPI clients were regenerated: `PINA_AMM_PROGRAM_ADDRESS`, `PINA_AMM_ID`, the event source address, and every PDA helper's default program address now name the new ID, so every config, pool, LP mint, and vault PDA changes with it.\n- Integrators that hard-code the old ID, or CPI callers that pin an older `pina_amm_cpi`, must update before calling the deployed program.",
+							"#### Reject the default address as a pool creator\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #9](https://github.com/pina-rs/amm/pull/9)\n\n`CreatePool` and `SetPoolCreator` reject the default address with the new `DefaultCreator` error. Creator fees accrued to the default address could never be collected, yet they still reduce the reserves every withdrawal pays from.",
+							"#### Time-weighted price accumulator and admin events\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #10](https://github.com/pina-rs/amm/pull/10)\n\n- Every pool now sums its price over time: `price_0_cumulative_last` (Q64.64 price of token 1 in token 0, times seconds) advances on every swap with the pre-trade price and on the new permissionless `SyncPool` instruction. Sample it twice and divide by the elapsed time for a manipulation-resistant average, exactly like Uniswap V2; see `docs/math.md`.\n- `UpdateConfig` emits `ConfigUpdated` and `SetPoolCreator` emits `PoolCreatorChanged`, so indexers can follow tier-rate and fee-recipient changes without polling accounts.\n- `SyncPool` emits `PoolSynced` with the reserves and the accumulator after the advance.\n- `Pool` grows two fields; `pina migrations create` recorded the automatic transition and the generated clients, IDL, and ABI layout test are regenerated.",
+							"#### Wrap the price accumulator instead of halting the pool\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #16](https://github.com/pina-rs/amm/pull/16)\n\n`advance_price_accumulator` now wraps modulo `2^128`, like Uniswap V2, instead of failing with `MathOverflow`. The accumulator only ever grows, so a checked sum would have failed every swap and `SyncPool` permanently once a pool with an extreme price ratio had accumulated enough time, with no way to recover short of a program upgrade. Integrators must subtract samples with wrapping arithmetic; `docs/math.md` shows how. The function no longer returns a `Result`.",
+							"#### Price the accumulator with stored reserves so donations cannot reprice the past\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #18](https://github.com/pina-rs/amm/pull/18)\n\nThe time-weighted price accumulator priced the whole interval since `last_update_timestamp` with the reserves read from the vaults _now_. Reserves are vault balances, so a donation straight to a vault followed by `SyncPool` or a swap in the same transaction repriced time that had already passed; with flash-deposited liquidity (deposits and withdrawals are feeless) the attacker recovered nearly all of the donation.\n\n- `Pool` gains `reserve_0_last` and `reserve_1_last`, the reserves at the last observation. `CreatePool`, both swaps, `Deposit`, `Withdraw`, and `SyncPool` now accrue the elapsed interval with those stored reserves first, then store their own post-instruction reserves, exactly like Uniswap V2's `_update`. Deposits and withdrawals now advance the accumulator too.\n- The new pure `PriceOracle::observe` holds the logic; property tests prove the accumulator equals the per-second integral of the observed reserves across mixed swaps, deposits, withdrawals, donations, and syncs.\n- `docs/math.md` and `docs/security.md` describe the sampling rules and the remaining limits honestly: the average resists single-transaction manipulation, not a price held across seconds.\n- `CreateConfig` emits the new `ConfigCreated` event with the tier's index, rates, authority, and pool-creator restriction.\n- The deployed binary embeds a `security.txt` pointing at `SECURITY.md` and the private advisory form."
+						]
+					},
+					{
+						"title": "Features",
+						"collapsed": false,
+						"entries": [
+							"#### Client journeys and a performance gate\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #11](https://github.com/pina-rs/amm/pull/11)\n\n- Every instruction now has one ordered journey on a live Surfnet through the generated Rust client (`every_instruction_runs_in_one_journey`) and through the generated TypeScript client (`typescript_client_runs_every_instruction`), which the Rust side drives with funded fixtures and then checks the resulting on-chain state. The TypeScript journey asserts the client's PDA helpers reproduce the Rust-derived addresses before sending anything.\n- The journey's keypairs are seeded, so identical binaries measure identical compute units.\n- A `performance` workflow benchmarks the pull request against its base: deployed binary size plus every instruction's compute units (median of three journey runs), posted as one consolidated PR comment. The policy fails the check on any binary-size increase or a compute-unit regression above 2%, unless the pull request carries `performance-approved`. `scripts/benchmark.ts` and `scripts/compare-benchmarks.ts` run the same pipeline locally.\n- `docs/performance.md` documents the pipeline and the policy."
+						]
+					},
+					{
+						"title": "Fixes",
+						"collapsed": false,
+						"entries": [
+							"- **Trim the deployed program and every instruction's compute.** Compiles the pool PDA's signer-seed builder once instead of a copy per call site: the deployed binary shrinks by 520 bytes and swaps, deposits, and withdrawals each get slightly cheaper. No account, instruction, event, or wire format changes.\n  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #15](https://github.com/pina-rs/amm/pull/15)"
+						]
+					}
+				]
+			},
+			"rendered": "## [0.2.0](https://github.com/pina-rs/amm/releases/tag/v0.2.0) (2026-10-23)\n\nGrouped release for `amm`.\n\n### Breaking changes\n\n#### Deploy under the mainnet program identity\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #19](https://github.com/pina-rs/amm/pull/19)\n\nThe program's address moves from `pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV` to `pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi` before its first mainnet deployment.\n\n- `declare_id!` was synced with `pina keys sync`, and `pina migrations create` rebound the unpublished migration history (no publication receipts existed) to the new ID.\n- The TypeScript, Dart, Rust, and CPI clients were regenerated: `PINA_AMM_PROGRAM_ADDRESS`, `PINA_AMM_ID`, the event source address, and every PDA helper's default program address now name the new ID, so every config, pool, LP mint, and vault PDA changes with it.\n- Integrators that hard-code the old ID, or CPI callers that pin an older `pina_amm_cpi`, must update before calling the deployed program.\n\n#### Reject the default address as a pool creator\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #9](https://github.com/pina-rs/amm/pull/9)\n\n`CreatePool` and `SetPoolCreator` reject the default address with the new `DefaultCreator` error. Creator fees accrued to the default address could never be collected, yet they still reduce the reserves every withdrawal pays from.\n\n#### Time-weighted price accumulator and admin events\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #10](https://github.com/pina-rs/amm/pull/10)\n\n- Every pool now sums its price over time: `price_0_cumulative_last` (Q64.64 price of token 1 in token 0, times seconds) advances on every swap with the pre-trade price and on the new permissionless `SyncPool` instruction. Sample it twice and divide by the elapsed time for a manipulation-resistant average, exactly like Uniswap V2; see `docs/math.md`.\n- `UpdateConfig` emits `ConfigUpdated` and `SetPoolCreator` emits `PoolCreatorChanged`, so indexers can follow tier-rate and fee-recipient changes without polling accounts.\n- `SyncPool` emits `PoolSynced` with the reserves and the accumulator after the advance.\n- `Pool` grows two fields; `pina migrations create` recorded the automatic transition and the generated clients, IDL, and ABI layout test are regenerated.\n\n#### Wrap the price accumulator instead of halting the pool\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #16](https://github.com/pina-rs/amm/pull/16)\n\n`advance_price_accumulator` now wraps modulo `2^128`, like Uniswap V2, instead of failing with `MathOverflow`. The accumulator only ever grows, so a checked sum would have failed every swap and `SyncPool` permanently once a pool with an extreme price ratio had accumulated enough time, with no way to recover short of a program upgrade. Integrators must subtract samples with wrapping arithmetic; `docs/math.md` shows how. The function no longer returns a `Result`.\n\n#### Price the accumulator with stored reserves so donations cannot reprice the past\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #18](https://github.com/pina-rs/amm/pull/18)\n\nThe time-weighted price accumulator priced the whole interval since `last_update_timestamp` with the reserves read from the vaults _now_. Reserves are vault balances, so a donation straight to a vault followed by `SyncPool` or a swap in the same transaction repriced time that had already passed; with flash-deposited liquidity (deposits and withdrawals are feeless) the attacker recovered nearly all of the donation.\n\n- `Pool` gains `reserve_0_last` and `reserve_1_last`, the reserves at the last observation. `CreatePool`, both swaps, `Deposit`, `Withdraw`, and `SyncPool` now accrue the elapsed interval with those stored reserves first, then store their own post-instruction reserves, exactly like Uniswap V2's `_update`. Deposits and withdrawals now advance the accumulator too.\n- The new pure `PriceOracle::observe` holds the logic; property tests prove the accumulator equals the per-second integral of the observed reserves across mixed swaps, deposits, withdrawals, donations, and syncs.\n- `docs/math.md` and `docs/security.md` describe the sampling rules and the remaining limits honestly: the average resists single-transaction manipulation, not a price held across seconds.\n- `CreateConfig` emits the new `ConfigCreated` event with the tier's index, rates, authority, and pool-creator restriction.\n- The deployed binary embeds a `security.txt` pointing at `SECURITY.md` and the private advisory form.\n\n### Features\n\n#### Client journeys and a performance gate\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #11](https://github.com/pina-rs/amm/pull/11)\n\n- Every instruction now has one ordered journey on a live Surfnet through the generated Rust client (`every_instruction_runs_in_one_journey`) and through the generated TypeScript client (`typescript_client_runs_every_instruction`), which the Rust side drives with funded fixtures and then checks the resulting on-chain state. The TypeScript journey asserts the client's PDA helpers reproduce the Rust-derived addresses before sending anything.\n- The journey's keypairs are seeded, so identical binaries measure identical compute units.\n- A `performance` workflow benchmarks the pull request against its base: deployed binary size plus every instruction's compute units (median of three journey runs), posted as one consolidated PR comment. The policy fails the check on any binary-size increase or a compute-unit regression above 2%, unless the pull request carries `performance-approved`. `scripts/benchmark.ts` and `scripts/compare-benchmarks.ts` run the same pipeline locally.\n- `docs/performance.md` documents the pipeline and the policy.\n\n### Fixes\n\n- **Trim the deployed program and every instruction's compute.** Compiles the pool PDA's signer-seed builder once instead of a copy per call site: the deployed binary shrinks by 520 bytes and swaps, deposits, and withdrawals each get slightly cheaper. No account, instruction, event, or wire format changes.\n  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #15](https://github.com/pina-rs/amm/pull/15)"
+		},
+		{
+			"owner_id": "amm",
+			"owner_kind": "group",
+			"output": "user",
+			"stream": "user",
+			"path": "release-notes/v0.2.0.md",
+			"format": "monochange",
+			"notes": {
+				"title": "[0.2.0](https://github.com/pina-rs/amm/releases/tag/v0.2.0) (2026-10-23)",
+				"summary": [
+					"Grouped release for `amm`."
+				],
+				"sections": [
+					{
+						"title": "What's new",
+						"collapsed": false,
+						"entries": [
+							"#### The AMM has its permanent mainnet address\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #19](https://github.com/pina-rs/amm/pull/19)\n\n##### User impact\n\nThe AMM now lives at `pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi`. Pools, fee tiers, and liquidity tokens are created under this address, so wallets and apps should use the latest clients to find them.",
+							"#### Pools can no longer name an empty creator address\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #9](https://github.com/pina-rs/amm/pull/9)\n\n##### User impact\n\nFees that would have accrued to an address nobody controls are now impossible to create: naming the unset default address as a pool creator fails with `DefaultCreator`, and so does handing an existing pool's creator rights to it.",
+							"#### A slightly cheaper, slightly smaller program\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #15](https://github.com/pina-rs/amm/pull/15)\n\n##### User impact\n\nSwaps, deposits, and withdrawals each cost 10–25 fewer compute units, and the deployed program is about 0.5 KB smaller, which lowers its rent. Every processor now builds the pool PDA's signer through one shared helper instead of a compiled copy per call site. Nothing about the math, fees, or account layout changed.",
+							"#### Pools now track their average price over time\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #10](https://github.com/pina-rs/amm/pull/10)\n\n##### User impact\n\nEvery market now keeps a running sum of its price over time, and a new permissionless `SyncPool` instruction advances it on demand. Anyone can sample that sum at two moments to compute a time-weighted average price that a single transaction cannot meaningfully move — the standard building block for pricing collateral and rewards. Nothing else about trading changes: swaps cost the same and advance the accumulator themselves.",
+							"#### Average prices can no longer be rewritten after the fact\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #18](https://github.com/pina-rs/amm/pull/18)\n\n##### User impact\n\nA pool's time-weighted average price now only counts each price for the time it actually stood. Sending tokens straight into a pool and syncing it can no longer change the average for time that has already passed, so integrations that rely on the average are much harder to manipulate. New fee tiers now announce themselves with an event, and the program publishes its security contact details so researchers can reach the maintainers privately."
+						]
+					}
+				]
+			},
+			"rendered": "## [0.2.0](https://github.com/pina-rs/amm/releases/tag/v0.2.0) (2026-10-23)\n\nGrouped release for `amm`.\n\n### What's new\n\n#### The AMM has its permanent mainnet address\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #19](https://github.com/pina-rs/amm/pull/19)\n\n##### User impact\n\nThe AMM now lives at `pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi`. Pools, fee tiers, and liquidity tokens are created under this address, so wallets and apps should use the latest clients to find them.\n\n#### Pools can no longer name an empty creator address\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #9](https://github.com/pina-rs/amm/pull/9)\n\n##### User impact\n\nFees that would have accrued to an address nobody controls are now impossible to create: naming the unset default address as a pool creator fails with `DefaultCreator`, and so does handing an existing pool's creator rights to it.\n\n#### A slightly cheaper, slightly smaller program\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #15](https://github.com/pina-rs/amm/pull/15)\n\n##### User impact\n\nSwaps, deposits, and withdrawals each cost 10–25 fewer compute units, and the deployed program is about 0.5 KB smaller, which lowers its rent. Every processor now builds the pool PDA's signer through one shared helper instead of a compiled copy per call site. Nothing about the math, fees, or account layout changed.\n\n#### Pools now track their average price over time\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #10](https://github.com/pina-rs/amm/pull/10)\n\n##### User impact\n\nEvery market now keeps a running sum of its price over time, and a new permissionless `SyncPool` instruction advances it on demand. Anyone can sample that sum at two moments to compute a time-weighted average price that a single transaction cannot meaningfully move — the standard building block for pricing collateral and rewards. Nothing else about trading changes: swaps cost the same and advance the accumulator themselves.\n\n#### Average prices can no longer be rewritten after the fact\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #18](https://github.com/pina-rs/amm/pull/18)\n\n##### User impact\n\nA pool's time-weighted average price now only counts each price for the time it actually stood. Sending tokens straight into a pool and syncing it can no longer change the average for time that has already passed, so integrations that rely on the average are much harder to manipulate. New fee tiers now announce themselves with an event, and the program publishes its security contact details so researchers can reach the maintainers privately."
+		}
+	],
+	"provider": {
+		"kind": "github",
+		"owner": "pina-rs",
+		"repo": "amm",
+		"host": null
+	}
+}
