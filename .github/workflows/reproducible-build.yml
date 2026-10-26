@@ -1,0 +1,98 @@
+name: "reproducible-build"
+permissions:
+  contents: read
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - programs/**
+      - Cargo.toml
+      - Cargo.lock
+      - rust-toolchain.toml
+      - devenv.nix
+      - devenv.lock
+      - devenv.yaml
+      - .github/workflows/reproducible-build.yml
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# A deployment is only reviewable against the source it claims to be built
+# from when the binary is reproducible. This workflow builds the SBF artifact
+# twice from a clean tree and fails unless the two SHA-256 digests match, so
+# nondeterminism (an unpinned toolchain, a path or timestamp baked into the
+# binary) surfaces here instead of at deployment. The digest it prints is the
+# one to record next to a deployment; see docs/deploying.md.
+jobs:
+  attest:
+    name: build the program twice and compare digests
+    timeout-minutes: 45
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          extra_nix_config: |
+            accept-flake-config = true
+            extra-substituters = https://devenv.cachix.org
+            extra-trusted-public-keys = devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw=
+
+      - name: Install locked Devenv
+        run: |
+          devenv_revision="$(
+            nix eval --impure --raw --expr '
+              let
+                lock = builtins.fromJSON (builtins.readFile ./devenv.lock);
+              in
+                lock.nodes.devenv.locked.rev
+            '
+          )"
+          nix profile add --accept-flake-config "github:cachix/devenv/${devenv_revision}#devenv"
+
+      - name: Build the program (first pass)
+        run: |
+          devenv shell build:program
+          mkdir -p target/reproducible
+          cp target/deploy/pina_amm.so target/reproducible/pina_amm-first.so
+          sha256sum target/reproducible/pina_amm-first.so | tee target/reproducible/first.sha256
+
+      # The second pass starts from an empty target directory, so nothing
+      # from the first build can leak into the artifact it produces.
+      - name: Build the program (clean second pass)
+        run: |
+          rm -rf target
+          devenv shell build:program
+          cp target/deploy/pina_amm.so target/reproducible/pina_amm-second.so
+          sha256sum target/reproducible/pina_amm-second.so | tee target/reproducible/second.sha256
+
+      - name: Compare the digests
+        run: |
+          first="$(cut -d' ' -f1 target/reproducible/first.sha256)"
+          second="$(cut -d' ' -f1 target/reproducible/second.sha256)"
+          {
+            echo "## Reproducible build attestation"
+            echo
+            echo "- first pass: \`$first\`"
+            echo "- second pass: \`$second\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$first" != "$second" ]; then
+            echo "::error::The two builds of pina_amm.so differ; the program binary is not reproducible."
+            exit 1
+          fi
+
+      - name: Upload the attested artifacts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: reproducible-build
+          path: target/reproducible/
+          if-no-files-found: error

@@ -1,0 +1,109 @@
+name: "mutation-testing"
+permissions:
+  contents: read
+on:
+  schedule:
+    # Every Monday at 06:00 UTC.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Mutation testing measures the claim that the property tests pin the math
+# invariants: cargo-mutants flips operators and bounds in `math.rs` and every
+# mutant must be caught by `cargo test -p pina_amm --lib`. A survived mutant
+# is a behavior change no test notices. The scope is deliberately the pure
+# math module: the processors are proven by the Surfpool suite, which runs a
+# deployed SBF binary and is far too slow to re-run per mutant.
+#
+# The job is informational: it always uploads its report and never gates a
+# pull request.
+jobs:
+  mutants:
+    name: cargo-mutants over the math module
+    timeout-minutes: 90
+    runs-on: ubuntu-24.04
+    env:
+      CARGO_MUTANTS_VERSION: "27.1.0"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          extra_nix_config: |
+            accept-flake-config = true
+            extra-substituters = https://devenv.cachix.org
+            extra-trusted-public-keys = devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw=
+
+      - name: Install locked Devenv
+        run: |
+          devenv_revision="$(
+            nix eval --impure --raw --expr '
+              let
+                lock = builtins.fromJSON (builtins.readFile ./devenv.lock);
+              in
+                lock.nodes.devenv.locked.rev
+            '
+          )"
+          nix profile add --accept-flake-config "github:cachix/devenv/${devenv_revision}#devenv"
+
+      - name: Fetch the workspace's crates
+        run: devenv shell -- cargo fetch --locked
+
+      - name: Put cargo's install directory on PATH
+        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      - name: Install cargo-mutants
+        run: |
+          if command -v cargo-mutants >/dev/null; then
+            cargo-mutants --version
+            exit 0
+          fi
+          devenv shell -- cargo install cargo-mutants --version "$CARGO_MUTANTS_VERSION" --locked
+
+      # Survived mutants do not fail the step: the report is the deliverable
+      # and a weekly job should inform, not alarm. The summary lists every
+      # survived mutant for triage.
+      - name: Run cargo-mutants over the math module
+        continue-on-error: true
+        run: |
+          devenv shell -- cargo mutants \
+            --package pina_amm \
+            --file programs/pina_amm/src/math.rs \
+            --output target/mutants
+
+      - name: Summarize the mutants
+        if: always()
+        run: |
+          {
+            echo "## Mutation testing report"
+            echo
+            if [ -f target/mutants/summary.txt ]; then
+              cat target/mutants/summary.txt
+            else
+              echo "cargo-mutants did not produce a report; see the job log."
+            fi
+            echo
+            if [ -f target/mutants/survived.txt ]; then
+              echo "### Survived mutants"
+              echo
+              echo '```text'
+              cat target/mutants/survived.txt
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the mutants report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutants-report
+          path: target/mutants/
+          if-no-files-found: error
