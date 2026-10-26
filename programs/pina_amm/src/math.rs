@@ -675,6 +675,78 @@ mod tests {
 	}
 
 	#[test]
+	fn exact_out_with_creator_fee_on_input_matches_hand_computation() {
+		let quote = swap_exact_out(1_000_000, reserves(10_000_000, 20_000_000), RATES, true)
+			.expect("quote");
+		// net_in = ceil(10e6 * 1e6 / 19e6) = 526,316.
+		// amount_in = ceil(526,316e6 / 997,000) = 527,900, so the combined
+		// fee is 1,584; the creator takes floor(1,584 * 500 / 3,000) = 264 of
+		// it and the protocol floor(1,320 * 200,000 / 1e6) = 264 of the rest.
+		assert_eq!(quote.amount_in, 527_900);
+		assert_eq!(quote.amount_out, 1_000_000);
+		assert_eq!(quote.trade_fee, 1_320);
+		assert_eq!(quote.creator_fee, 264);
+		assert_eq!(quote.protocol_fee, 264);
+		assert!(quote.creator_fee_on_input);
+	}
+
+	#[test]
+	fn gross_up_rejects_a_whole_fee_rate() {
+		// A rate of 100% leaves nothing net, so gross-up has no answer.
+		assert_eq!(
+			code(gross_up(1_000, FEE_RATE_DENOMINATOR).expect_err("whole rate must be rejected")),
+			AmmError::InvalidFeeRates
+		);
+	}
+
+	#[test]
+	fn the_constant_product_check_rejects_a_decreasing_k() {
+		let before = reserves(10_000, 10_000);
+		let shrink = reserves(9_999, 10_000);
+		let equal = reserves(8_000, 12_500);
+		assert_eq!(
+			code(
+				assert_constant_product(before, shrink)
+					.expect_err("a smaller product must be rejected")
+			),
+			AmmError::InvariantViolation
+		);
+		assert!(assert_constant_product(before, equal).is_ok());
+	}
+
+	#[test]
+	fn deposits_of_zero_lp_are_rejected() {
+		for (lp_amount, lp_supply) in [(0, 1_000), (1, 0), (0, 0)] {
+			assert_eq!(
+				code(
+					deposit_amounts(lp_amount, lp_supply, 10, 11)
+						.expect_err("a zero side must be rejected")
+				),
+				AmmError::ZeroAmount
+			);
+		}
+	}
+
+	#[test]
+	fn withdrawals_can_round_one_side_to_zero_but_not_both() {
+		// One raw unit of a 2,000-supply pool against reserves of 1 and
+		// 2,000,000 pays nothing of token 0 and 1,000 of token 1; only a
+		// withdrawal that pays nothing at all is rejected.
+		let amounts = withdraw_amounts(1, 2_000, 1, 2_000_000).expect("withdraw");
+		assert_eq!(
+			amounts,
+			TokenAmounts {
+				amount_0: 0,
+				amount_1: 1_000,
+			}
+		);
+		assert_eq!(
+			code(withdraw_amounts(1, 2_000, 1, 1).expect_err("both sides zero")),
+			AmmError::ZeroAmount
+		);
+	}
+
+	#[test]
 	fn liquidity_locks_the_minimum() {
 		let liquidity = initial_liquidity(1_000_000, 4_000_000).expect("liquidity");
 		assert_eq!(liquidity.lp_supply, 2_000_000);
@@ -1119,6 +1191,149 @@ mod tests {
 			prop_assert!(root * root <= value);
 			let next = root + 1;
 			prop_assert!(next.checked_mul(next).is_none_or(|square| square > value));
+		}
+
+		/// Every rounded quantity in a quote is the exact floor or ceiling of
+		/// its ideal rational value, verified by cross-multiplication:
+		/// `floor(n/d)` is exactly `q` when `q*d <= n < (q+1)*d`, and
+		/// `ceil(n/d)` is exactly `q` when `q*d - d < n <= q*d`. The checks
+		/// divide nothing, so they share no arithmetic with the
+		/// implementation they judge.
+		#[test]
+		fn quotes_round_exactly_against_their_ideal_values(
+			input in 1_000u64..=u64::MAX / 4,
+			output in 1_000u64..=u64::MAX / 4,
+			amount in 1_000u64..=u64::MAX / 4,
+			rates in rates(),
+			on_input in any::<bool>(),
+		) {
+			let before = reserves(input, output);
+			let exact_ceiling = |q: u128, n: u128, d: u128| q * d >= n && q * d - n < d;
+			let exact_floor = |q: u128, n: u128, d: u128| q * d <= n && n - q * d < d;
+			let d = DENOMINATOR;
+
+			if let Ok(quote) = swap_exact_in(amount, before, rates, on_input) {
+				let protocol = u128::from(quote.trade_fee) * u128::from(rates.protocol);
+				prop_assert!(exact_floor(u128::from(quote.protocol_fee), protocol, d));
+				if on_input {
+					let total = u128::from(quote.trade_fee + quote.creator_fee);
+					prop_assert!(exact_ceiling(
+						total,
+						u128::from(amount) * u128::from(rates.trade + rates.creator),
+						d
+					));
+					let combined = u128::from(rates.trade) + u128::from(rates.creator);
+					prop_assert!(exact_floor(
+						u128::from(quote.creator_fee),
+						total * u128::from(rates.creator),
+						combined
+					));
+					let net = u128::from(amount - quote.trade_fee - quote.creator_fee);
+					prop_assert!(exact_floor(
+						u128::from(quote.amount_out),
+						net * u128::from(output),
+						net + u128::from(input)
+					));
+				} else {
+					prop_assert!(exact_ceiling(
+						u128::from(quote.trade_fee),
+						u128::from(amount) * u128::from(rates.trade),
+						d
+					));
+					let net = u128::from(amount - quote.trade_fee);
+					let gross = u128::from(quote.amount_out + quote.creator_fee);
+					prop_assert!(exact_floor(
+						gross,
+						net * u128::from(output),
+						net + u128::from(input)
+					));
+					prop_assert!(exact_ceiling(
+						u128::from(quote.creator_fee),
+						gross * u128::from(rates.creator),
+						d
+					));
+				}
+			}
+
+			if let Ok(quote) = swap_exact_out(amount, before, rates, on_input) {
+				prop_assert_eq!(quote.amount_out, amount);
+				let protocol = u128::from(quote.trade_fee) * u128::from(rates.protocol);
+				prop_assert!(exact_floor(u128::from(quote.protocol_fee), protocol, d));
+				if on_input {
+					let total = u128::from(quote.trade_fee + quote.creator_fee);
+					let net_in = u128::from(quote.amount_in) - total;
+					prop_assert!(exact_ceiling(
+						net_in,
+						u128::from(input) * u128::from(amount),
+						u128::from(output - amount)
+					));
+					let combined = u128::from(rates.trade + rates.creator);
+					prop_assert!(exact_ceiling(
+						u128::from(quote.amount_in),
+						net_in * d,
+						d - combined
+					));
+					prop_assert!(exact_floor(
+						u128::from(quote.creator_fee),
+						total * u128::from(rates.creator),
+						combined
+					));
+				} else {
+					let gross_out = u128::from(quote.amount_out + quote.creator_fee);
+					let net_in = u128::from(quote.amount_in) - u128::from(quote.trade_fee);
+					prop_assert!(exact_ceiling(
+						gross_out,
+						u128::from(amount) * d,
+						d - u128::from(rates.creator)
+					));
+					prop_assert!(exact_ceiling(
+						net_in,
+						u128::from(input) * gross_out,
+						u128::from(output) - gross_out
+					));
+					prop_assert!(exact_ceiling(
+						u128::from(quote.amount_in),
+						net_in * d,
+						d - u128::from(rates.trade)
+					));
+				}
+			}
+		}
+
+		/// Deposit and withdrawal amounts are the exact ceiling and floor of
+		/// the caller's rational share of each reserve.
+		#[test]
+		fn liquidity_amounts_round_exactly_against_their_ideal_shares(
+			reserve_0 in 1_001u64..=1u64 << 60,
+			reserve_1 in 1_001u64..=1u64 << 60,
+			supply in 1_001u64..=1u64 << 60,
+			lp in 1u64..=1u64 << 40,
+		) {
+			let exact_ceiling = |q: u128, n: u128, d: u128| q * d >= n && q * d - n < d;
+			let exact_floor = |q: u128, n: u128, d: u128| q * d <= n && n - q * d < d;
+			let deposit = deposit_amounts(lp, supply, reserve_0, reserve_1).expect("deposit");
+			prop_assert!(exact_ceiling(
+				u128::from(deposit.amount_0),
+				u128::from(reserve_0) * u128::from(lp),
+				u128::from(supply)
+			));
+			prop_assert!(exact_ceiling(
+				u128::from(deposit.amount_1),
+				u128::from(reserve_1) * u128::from(lp),
+				u128::from(supply)
+			));
+			if let Ok(withdraw) = withdraw_amounts(lp, supply, reserve_0, reserve_1) {
+				prop_assert!(exact_floor(
+					u128::from(withdraw.amount_0),
+					u128::from(reserve_0) * u128::from(lp),
+					u128::from(supply)
+				));
+				prop_assert!(exact_floor(
+					u128::from(withdraw.amount_1),
+					u128::from(reserve_1) * u128::from(lp),
+					u128::from(supply)
+				));
+			}
 		}
 	}
 }

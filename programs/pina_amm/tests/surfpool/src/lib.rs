@@ -10,6 +10,7 @@
 //! Run with `pina test` (or `devenv shell test:surfpool`) after `pina build`.
 
 mod cli;
+mod fuzz;
 mod harness;
 mod journeys;
 
@@ -1412,6 +1413,61 @@ fn donations_cannot_reprice_the_elapsed_interval() {
 
 #[test]
 #[ignore = "run with `pina test`"]
+fn extreme_pools_keep_trading_when_the_accumulator_wraps() {
+	pina_test::run(async {
+		let h = Harness::start().await.expect("start");
+		let admin = install_admin(&h);
+		let config = create_config(&h, &admin, 0, &Pubkey::default());
+		let (token_0, token_1) = ordered_mints(&h, &TOKEN_PROGRAM, &[], &TOKEN_PROGRAM, &[]);
+		// One raw unit of token 0 against 10^18 of token 1 puts the Q64.64
+		// price of token 1 in token 0 near 2^124; after a few idle minutes
+		// `price * elapsed` has wrapped past 2^128 several times over. Before
+		// the accumulator wrapped, every later swap failed with MathOverflow
+		// forever and froze the pool, so this journey is the wrap's end-to-end
+		// regression test.
+		let fixture = create_pool(
+			&h,
+			&PoolSpec {
+				config,
+				token_0,
+				token_1,
+				amounts: (1, 1_000_000_000_000_000_000),
+				creator_fee_mode: 0,
+				pool_creator_authority: None,
+			},
+		);
+		h.advance_seconds(600).expect("advance");
+		let trader = funded_trader(&h, &fixture, 10_000);
+		// Selling the scarce side is the only direction whose output is not
+		// dust; 1,000 in clears the minimum fee and still moves the price of
+		// a pool whose other side holds a single unit.
+		let out_token = swap_route(&fixture, &trader.pubkey(), true).1;
+		let out_before = h.token_balance(&out_token);
+		h.send(
+			&[swap_exact_in_instruction(
+				&fixture,
+				&trader.pubkey(),
+				true,
+				1_000,
+				0,
+			)],
+			&[&trader],
+		)
+		.expect("swap still settles after the accumulator wraps");
+		assert!(h.token_balance(&out_token) > out_before);
+		let advanced = pool_state(&h, &fixture.pool);
+		assert!(advanced.last_update_timestamp > 0);
+
+		// SyncPool keeps working on the wrapped pool.
+		h.send(&[sync_instruction(&fixture)], &[]).expect("sync");
+		let synced = pool_state(&h, &fixture.pool);
+		assert!(synced.last_update_timestamp >= advanced.last_update_timestamp);
+		h.stop().expect("stop");
+	});
+}
+
+#[test]
+#[ignore = "run with `pina test`"]
 fn compute_units_stay_within_budget() {
 	pina_test::run(async {
 		let h = Harness::start().await.expect("start");
@@ -1476,7 +1532,12 @@ fn compute_units_stay_within_budget() {
 		);
 
 		let config = create_config(&h, &admin, 1, &Pubkey::default());
-		let (token_0, token_1) = ordered_mints(&h, &TOKEN_PROGRAM, &[], &TOKEN_PROGRAM, &[]);
+		// Fixed-seed mints, so the four canonical bump searches inside
+		// `CreatePool` cost the same on every run instead of varying with the
+		// addresses: the ceiling then measures a regression, not luck. Two
+		// runs of the random-address version measured 48,847 and 59,347 CU
+		// against a 60,000 CU ceiling.
+		let (token_0, token_1) = crate::journeys::journey_mints(&h);
 		let owner = h.funded_keypair().expect("owner");
 		let (create, _) = create_pool_instruction(
 			&h,
