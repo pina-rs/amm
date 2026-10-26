@@ -30,6 +30,8 @@ pub enum AmmEvent {
 	ConfigUpdated = 6,
 	/// A pool's creator-fee rights moved. See `PoolCreatorChanged`.
 	PoolCreatorChanged = 7,
+	/// A fee tier was created. See `ConfigCreated`.
+	ConfigCreated = 8,
 }
 
 /// Emitted by `CreatePool`.
@@ -118,21 +120,46 @@ pub struct FeesCollected {
 	pub amount_1: u64,
 }
 
-/// Emitted by `SyncPool`. Swaps advance the same accumulator and report
+/// Emitted by `SyncPool`. Swaps advance the same accumulators and report
 /// their reserves through `Swapped`.
 #[event(discriminator = AmmEvent)]
 pub struct PoolSynced {
-	/// The pool whose accumulator advanced.
+	/// The pool whose accumulators advanced.
 	pub pool: Address,
 	/// Token 0 reserve at the advance.
 	pub reserve_0: u64,
 	/// Token 1 reserve at the advance.
 	pub reserve_1: u64,
-	/// The accumulator after the advance: Q64.64 price of token 1 in token 0,
-	/// summed over seconds.
+	/// The token-1-in-token-0 accumulator after the advance: Q64.64 price
+	/// summed over seconds. `u128::MAX` means it saturated and its TWAP is
+	/// no longer usable.
 	pub price_0_cumulative_last: u128,
+	/// The token-0-in-token-1 accumulator after the advance, saturating the
+	/// same way.
+	pub price_1_cumulative_last: u128,
 	/// Unix second of the advance.
 	pub last_update_timestamp: u64,
+}
+
+/// Emitted by `CreateConfig`.
+#[event(discriminator = AmmEvent)]
+pub struct ConfigCreated {
+	/// The tier that was created.
+	pub amm_config: Address,
+	/// The tier's authority, which may update it and collect its protocol
+	/// fees.
+	pub authority: Address,
+	/// The only signer allowed to create pools in this tier, or the default
+	/// address for open creation.
+	pub pool_creator_authority: Address,
+	/// Fee charged on every swap, in parts per million.
+	pub trade_fee_rate: u32,
+	/// Protocol share of the trade fee, in parts per million.
+	pub protocol_fee_rate: u32,
+	/// Additional fee paid to each pool's creator, in parts per million.
+	pub creator_fee_rate: u32,
+	/// Tier index, also the PDA seed.
+	pub index: u16,
 }
 
 /// Emitted by `UpdateConfig`.

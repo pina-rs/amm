@@ -71,6 +71,12 @@ bump: number;
  * times seconds. `SyncPool` and every swap advance it.
  */
 price0CumulativeLast: bigint; 
+/**
+ * Time-weighted price of token 0 in token 1, summed as Q64.64 price
+ * times seconds. Advanced with `price_0_cumulative_last`; both
+ * saturate at `u128::MAX` instead of failing a swap.
+ */
+price1CumulativeLast: bigint; 
 /** Unix second of the last accumulator advance; zero before the first. */
 lastUpdateTimestamp: bigint;  };
 
@@ -121,17 +127,23 @@ bump: number;
  * times seconds. `SyncPool` and every swap advance it.
  */
 price0CumulativeLast: number | bigint; 
+/**
+ * Time-weighted price of token 0 in token 1, summed as Q64.64 price
+ * times seconds. Advanced with `price_0_cumulative_last`; both
+ * saturate at `u128::MAX` instead of failing a swap.
+ */
+price1CumulativeLast: number | bigint; 
 /** Unix second of the last accumulator advance; zero before the first. */
 lastUpdateTimestamp: number | bigint;  };
 
 /** Gets the encoder for {@link PoolArgs} account data. */
 export function getPoolEncoder(): FixedSizeEncoder<PoolArgs> {
-    return transformEncoder(getStructEncoder([['discriminator', getU8Encoder()], ['migrationVersion', getU8Encoder()], ['ammConfig', getAddressEncoder()], ['creator', getAddressEncoder()], ['mint0', getAddressEncoder()], ['mint1', getAddressEncoder()], ['vault0', getAddressEncoder()], ['vault1', getAddressEncoder()], ['lpMint', getAddressEncoder()], ['lpSupply', getU64Encoder()], ['protocolFees0', getU64Encoder()], ['protocolFees1', getU64Encoder()], ['creatorFees0', getU64Encoder()], ['creatorFees1', getU64Encoder()], ['tradeFeeRate', getU32Encoder()], ['protocolFeeRate', getU32Encoder()], ['creatorFeeRate', getU32Encoder()], ['creatorFeeMode', getU8Encoder()], ['bump', getU8Encoder()], ['price0CumulativeLast', getU128Encoder()], ['lastUpdateTimestamp', getU64Encoder()]]), (value) => ({ ...value, discriminator: 2, migrationVersion: 0 }));
+    return transformEncoder(getStructEncoder([['discriminator', getU8Encoder()], ['migrationVersion', getU8Encoder()], ['ammConfig', getAddressEncoder()], ['creator', getAddressEncoder()], ['mint0', getAddressEncoder()], ['mint1', getAddressEncoder()], ['vault0', getAddressEncoder()], ['vault1', getAddressEncoder()], ['lpMint', getAddressEncoder()], ['lpSupply', getU64Encoder()], ['protocolFees0', getU64Encoder()], ['protocolFees1', getU64Encoder()], ['creatorFees0', getU64Encoder()], ['creatorFees1', getU64Encoder()], ['tradeFeeRate', getU32Encoder()], ['protocolFeeRate', getU32Encoder()], ['creatorFeeRate', getU32Encoder()], ['creatorFeeMode', getU8Encoder()], ['bump', getU8Encoder()], ['price0CumulativeLast', getU128Encoder()], ['price1CumulativeLast', getU128Encoder()], ['lastUpdateTimestamp', getU64Encoder()]]), (value) => ({ ...value, discriminator: 2, migrationVersion: 0 }));
 }
 
 /** Gets the decoder for {@link Pool} account data. */
 export function getPoolDecoder(): FixedSizeDecoder<Pool> {
-    return getStructDecoder([['discriminator', getPinaPodDiscriminatorDecoder(POOL_DISCRIMINATOR, getU8Decoder())], ['migrationVersion', getPinaPodMigrationVersionDecoder(0, getU8Decoder())], ['ammConfig', getAddressDecoder()], ['creator', getAddressDecoder()], ['mint0', getAddressDecoder()], ['mint1', getAddressDecoder()], ['vault0', getAddressDecoder()], ['vault1', getAddressDecoder()], ['lpMint', getAddressDecoder()], ['lpSupply', getU64Decoder()], ['protocolFees0', getU64Decoder()], ['protocolFees1', getU64Decoder()], ['creatorFees0', getU64Decoder()], ['creatorFees1', getU64Decoder()], ['tradeFeeRate', getU32Decoder()], ['protocolFeeRate', getU32Decoder()], ['creatorFeeRate', getU32Decoder()], ['creatorFeeMode', getU8Decoder()], ['bump', getU8Decoder()], ['price0CumulativeLast', getU128Decoder()], ['lastUpdateTimestamp', getU64Decoder()]]);
+    return getStructDecoder([['discriminator', getPinaPodDiscriminatorDecoder(POOL_DISCRIMINATOR, getU8Decoder())], ['migrationVersion', getPinaPodMigrationVersionDecoder(0, getU8Decoder())], ['ammConfig', getAddressDecoder()], ['creator', getAddressDecoder()], ['mint0', getAddressDecoder()], ['mint1', getAddressDecoder()], ['vault0', getAddressDecoder()], ['vault1', getAddressDecoder()], ['lpMint', getAddressDecoder()], ['lpSupply', getU64Decoder()], ['protocolFees0', getU64Decoder()], ['protocolFees1', getU64Decoder()], ['creatorFees0', getU64Decoder()], ['creatorFees1', getU64Decoder()], ['tradeFeeRate', getU32Decoder()], ['protocolFeeRate', getU32Decoder()], ['creatorFeeRate', getU32Decoder()], ['creatorFeeMode', getU8Decoder()], ['bump', getU8Decoder()], ['price0CumulativeLast', getU128Decoder()], ['price1CumulativeLast', getU128Decoder()], ['lastUpdateTimestamp', getU64Decoder()]]);
 }
 
 /** Gets the codec for {@link Pool} account data. */

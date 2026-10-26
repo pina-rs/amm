@@ -32,6 +32,7 @@ class Pool {
     required this.creatorFeeMode,
     required this.bump,
     required this.price0CumulativeLast,
+    required this.price1CumulativeLast,
     required this.lastUpdateTimestamp,
   }) : discriminator = 2,
        migrationVersion = 0;
@@ -56,6 +57,7 @@ class Pool {
   final int creatorFeeMode;
   final int bump;
   final BigInt price0CumulativeLast;
+  final BigInt price1CumulativeLast;
   final BigInt lastUpdateTimestamp;
 
   @override
@@ -83,6 +85,7 @@ class Pool {
           creatorFeeMode == other.creatorFeeMode &&
           bump == other.bump &&
           price0CumulativeLast == other.price0CumulativeLast &&
+          price1CumulativeLast == other.price1CumulativeLast &&
           lastUpdateTimestamp == other.lastUpdateTimestamp;
 
   @override
@@ -107,12 +110,13 @@ class Pool {
     creatorFeeMode,
     bump,
     price0CumulativeLast,
+    price1CumulativeLast,
     lastUpdateTimestamp,
   ]);
 
   @override
   String toString() =>
-      'Pool(discriminator: $discriminator, migrationVersion: $migrationVersion, ammConfig: $ammConfig, creator: $creator, mint0: $mint0, mint1: $mint1, vault0: $vault0, vault1: $vault1, lpMint: $lpMint, lpSupply: $lpSupply, protocolFees0: $protocolFees0, protocolFees1: $protocolFees1, creatorFees0: $creatorFees0, creatorFees1: $creatorFees1, tradeFeeRate: $tradeFeeRate, protocolFeeRate: $protocolFeeRate, creatorFeeRate: $creatorFeeRate, creatorFeeMode: $creatorFeeMode, bump: $bump, price0CumulativeLast: $price0CumulativeLast, lastUpdateTimestamp: $lastUpdateTimestamp)';
+      'Pool(discriminator: $discriminator, migrationVersion: $migrationVersion, ammConfig: $ammConfig, creator: $creator, mint0: $mint0, mint1: $mint1, vault0: $vault0, vault1: $vault1, lpMint: $lpMint, lpSupply: $lpSupply, protocolFees0: $protocolFees0, protocolFees1: $protocolFees1, creatorFees0: $creatorFees0, creatorFees1: $creatorFees1, tradeFeeRate: $tradeFeeRate, protocolFeeRate: $protocolFeeRate, creatorFeeRate: $creatorFeeRate, creatorFeeMode: $creatorFeeMode, bump: $bump, price0CumulativeLast: $price0CumulativeLast, price1CumulativeLast: $price1CumulativeLast, lastUpdateTimestamp: $lastUpdateTimestamp)';
 }
 
 Encoder<Pool> getPoolEncoder() {
@@ -137,6 +141,7 @@ Encoder<Pool> getPoolEncoder() {
     ('creatorFeeMode', getU8Encoder()),
     ('bump', getU8Encoder()),
     ('price0CumulativeLast', getU128Encoder()),
+    ('price1CumulativeLast', getU128Encoder()),
     ('lastUpdateTimestamp', getU64Encoder()),
   ]);
 
@@ -163,6 +168,7 @@ Encoder<Pool> getPoolEncoder() {
       'creatorFeeMode': value.creatorFeeMode,
       'bump': value.bump,
       'price0CumulativeLast': value.price0CumulativeLast,
+      'price1CumulativeLast': value.price1CumulativeLast,
       'lastUpdateTimestamp': value.lastUpdateTimestamp,
     },
   );
@@ -190,6 +196,7 @@ Decoder<Pool> getPoolDecoder() {
     ('creatorFeeMode', getU8Decoder()),
     ('bump', getU8Decoder()),
     ('price0CumulativeLast', getU128Decoder()),
+    ('price1CumulativeLast', getU128Decoder()),
     ('lastUpdateTimestamp', getU64Decoder()),
   ]);
 
@@ -233,6 +240,7 @@ Decoder<Pool> getPoolDecoder() {
         creatorFeeMode: map['creatorFeeMode']! as int,
         bump: map['bump']! as int,
         price0CumulativeLast: map['price0CumulativeLast']! as BigInt,
+        price1CumulativeLast: map['price1CumulativeLast']! as BigInt,
         lastUpdateTimestamp: map['lastUpdateTimestamp']! as BigInt,
       ),
       newOffset,

@@ -58,6 +58,10 @@ pub struct Pool {
 	/// Time-weighted price of token 1 in token 0, summed as Q64.64 price
 	/// times seconds. `SyncPool` and every swap advance it.
 	pub price0_cumulative_last: u128,
+	/// Time-weighted price of token 0 in token 1, summed as Q64.64 price
+	/// times seconds. Advanced with `price_0_cumulative_last`; both
+	/// saturate at `u128::MAX` instead of failing a swap.
+	pub price1_cumulative_last: u128,
 	/// Unix second of the last accumulator advance; zero before the first.
 	pub last_update_timestamp: u64,
 }

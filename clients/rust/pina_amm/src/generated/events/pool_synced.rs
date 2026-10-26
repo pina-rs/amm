@@ -8,7 +8,7 @@
 	clippy::too_many_arguments
 )]
 
-/// Emitted by `SyncPool`. Swaps advance the same accumulator and report
+/// Emitted by `SyncPool`. Swaps advance the same accumulators and report
 /// their reserves through `Swapped`.
 #[allow(clippy::len_without_is_empty)]
 #[derive(pina::PinaPod)]
@@ -16,15 +16,19 @@
 pub struct PoolSynced {
 	pub discriminator: u8,
 	pub migration_version: u8,
-	/// The pool whose accumulator advanced.
+	/// The pool whose accumulators advanced.
 	pub pool: solana_pubkey::Pubkey,
 	/// Token 0 reserve at the advance.
 	pub reserve0: u64,
 	/// Token 1 reserve at the advance.
 	pub reserve1: u64,
-	/// The accumulator after the advance: Q64.64 price of token 1 in token 0,
-	/// summed over seconds.
+	/// The token-1-in-token-0 accumulator after the advance: Q64.64 price
+	/// summed over seconds. `u128::MAX` means it saturated and its TWAP is
+	/// no longer usable.
 	pub price0_cumulative_last: u128,
+	/// The token-0-in-token-1 accumulator after the advance, saturating the
+	/// same way.
+	pub price1_cumulative_last: u128,
 	/// Unix second of the advance.
 	pub last_update_timestamp: u64,
 }

@@ -58,7 +58,9 @@ const MINT_0_SEED: [u8; 32] = *b"pina amm journey mint zero 00100";
 const MINT_1_SEED: [u8; 32] = *b"pina amm journey mint one 000100";
 
 /// Two fresh mints with fixed addresses, ordered as the program requires.
-fn journey_mints(h: &Harness) -> ((Pubkey, Pubkey), (Pubkey, Pubkey)) {
+/// Also used by the compute-unit ceilings, so `CreatePool`'s bump-search cost
+/// measures the same on every run instead of riding on address luck.
+pub(crate) fn journey_mints(h: &Harness) -> ((Pubkey, Pubkey), (Pubkey, Pubkey)) {
 	let zero = Keypair::new_from_array(MINT_0_SEED);
 	let one = Keypair::new_from_array(MINT_1_SEED);
 	let a = h

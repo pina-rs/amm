@@ -176,8 +176,9 @@ Emits `PoolSynced`. Errors: the pool and vault mismatches from the other read pa
 | `Swapped`            | `pool`, `trader`, `zero_for_one`, `amount_in`, `amount_out`, `trade_fee`, `protocol_fee`, `creator_fee`, `creator_fee_on_input`, `reserve_0`, `reserve_1` |
 | `LiquidityChanged`   | `pool`, `owner`, `is_deposit`, `lp_amount`, `amount_0`, `amount_1`, `lp_supply`                                                                           |
 | `FeesCollected`      | `pool`, `collector`, `is_protocol`, `amount_0`, `amount_1`                                                                                                |
-| `PoolSynced`         | `pool`, `reserve_0`, `reserve_1`, `price_0_cumulative_last`, `last_update_timestamp`                                                                      |
+| `PoolSynced`         | `pool`, `reserve_0`, `reserve_1`, `price_0_cumulative_last`, `price_1_cumulative_last`, `last_update_timestamp`                                           |
 | `ConfigUpdated`      | `amm_config`, `new_authority`, `trade_fee_rate`, `protocol_fee_rate`, `creator_fee_rate`                                                                  |
+| `ConfigCreated`      | `amm_config`, `authority`, `pool_creator_authority`, `trade_fee_rate`, `protocol_fee_rate`, `creator_fee_rate`, `index`                                   |
 | `PoolCreatorChanged` | `pool`, `previous_creator`, `new_creator`                                                                                                                 |
 
 Flags are `u8`: `1` for true and `0` for false. Decode them with the generated `parsePinaAmmEventsFromLogs` (TypeScript and Dart), which only attributes records the AMM itself emitted.

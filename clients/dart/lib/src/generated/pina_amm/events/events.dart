@@ -7,6 +7,7 @@ export 'swapped.dart';
 export 'liquidity_changed.dart';
 export 'fees_collected.dart';
 export 'pool_synced.dart';
+export 'config_created.dart';
 export 'config_updated.dart';
 export 'pool_creator_changed.dart';
 
@@ -16,6 +17,7 @@ import 'swapped.dart';
 import 'liquidity_changed.dart';
 import 'fees_collected.dart';
 import 'pool_synced.dart';
+import 'config_created.dart';
 import 'config_updated.dart';
 import 'pool_creator_changed.dart';
 
@@ -87,6 +89,11 @@ List<PinaAmmEvent> parsePinaAmmEventsFromLogs(
       discovered.add(poolSynced);
       continue;
     }
+    final configCreated = parseConfigCreatedEventFromLog(log);
+    if (configCreated != null) {
+      discovered.add(configCreated);
+      continue;
+    }
     final configUpdated = parseConfigUpdatedEventFromLog(log);
     if (configUpdated != null) {
       discovered.add(configUpdated);
@@ -136,6 +143,11 @@ String? _unrecognizedEventVersion(String log) {
     return bytes.length < 2
         ? 'event "poolSynced" log is too short for its version envelope'
         : 'event "poolSynced" log carries migration version ${bytes[1]}, which this client cannot decode; regenerate it';
+  }
+  if (bytes.length >= 1 && bytes[0] == 8) {
+    return bytes.length < 2
+        ? 'event "configCreated" log is too short for its version envelope'
+        : 'event "configCreated" log carries migration version ${bytes[1]}, which this client cannot decode; regenerate it';
   }
   if (bytes.length >= 1 && bytes[0] == 6) {
     return bytes.length < 2

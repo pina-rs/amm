@@ -11,9 +11,10 @@ use crate::errors::AmmError;
 use crate::events::Swapped;
 use crate::instructions::SwapExactInInstruction;
 use crate::instructions::SwapExactOutInstruction;
+use crate::math::PriceAccumulators;
 use crate::math::SwapQuote;
 use crate::math::SwapReserves;
-use crate::math::advance_price_accumulator;
+use crate::math::advance_price_accumulators;
 use crate::math::assert_constant_product;
 use crate::math::swap_exact_in;
 use crate::math::swap_exact_out;
@@ -100,17 +101,20 @@ impl SwapAccounts<'_> {
 		};
 
 		// The price in force for the interval since the last update is the
-		// pre-trade price, so the accumulator advances before this swap moves
+		// pre-trade price, so the accumulators advance before this swap moves
 		// the reserves.
 		let now =
 			u64::try_from(Clock::get()?.unix_timestamp).map_err(|_| AmmError::MathOverflow)?;
-		let (price_0_cumulative_last, last_update_timestamp) = advance_price_accumulator(
+		let (accumulators, last_update_timestamp) = advance_price_accumulators(
 			reserve_0,
 			reserve_1,
-			snapshot.price_0_cumulative_last,
+			PriceAccumulators {
+				price_0_cumulative: snapshot.price_0_cumulative_last,
+				price_1_cumulative: snapshot.price_1_cumulative_last,
+			},
 			snapshot.last_update_timestamp,
 			now,
-		)?;
+		);
 		let creator_fee_on_input = snapshot.creator_fee_mode.is_on_input(zero_for_one);
 		let quote = match request {
 			SwapRequest::ExactIn {
@@ -139,12 +143,7 @@ impl SwapAccounts<'_> {
 		let after = quote.reserves_after(reserves)?;
 		assert_constant_product(reserves, after)?;
 
-		self.accrue_fees(
-			&quote,
-			zero_for_one,
-			price_0_cumulative_last,
-			last_update_timestamp,
-		)?;
+		self.accrue_fees(&quote, zero_for_one, accumulators, last_update_timestamp)?;
 
 		transfer(
 			self.input_token,
@@ -190,11 +189,14 @@ impl SwapAccounts<'_> {
 		&mut self,
 		quote: &SwapQuote,
 		zero_for_one: bool,
-		price_0_cumulative_last: u128,
+		accumulators: PriceAccumulators,
 		last_update_timestamp: u64,
 	) -> ProgramResult {
 		let mut pool = self.pool.as_account_mut::<Pool>(&ID)?;
-		pool.price_0_cumulative_last.set(price_0_cumulative_last);
+		pool.price_0_cumulative_last
+			.set(accumulators.price_0_cumulative);
+		pool.price_1_cumulative_last
+			.set(accumulators.price_1_cumulative);
 		pool.last_update_timestamp.set(last_update_timestamp);
 		let (protocol_input, creator_input, creator_output) = if quote.creator_fee_on_input {
 			(quote.protocol_fee, quote.creator_fee, 0)

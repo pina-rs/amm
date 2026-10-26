@@ -6,7 +6,7 @@
 //! check` fails when this file no longer matches the manifest. A layout
 //! change that forgets an offset fails `cargo test` in the same change.
 
-// manifest-sha256: 6216d61fd14479089b99a118761079365d70a3256d1727cfd144582ba9151351
+// manifest-sha256: f2ba33d3c61c64d2957e77f774ed7fa075161861c64d78e483ceb21a7bc55d23
 // program-id: pAMMvXaqR2VVFqznf6dgvUFQjLXXAEeL9cb48cXsGeV
 // version_type: u8
 
@@ -61,7 +61,7 @@ pub mod account_1_02 {
 	/// Current schema version.
 	pub const VERSION: u32 = 0;
 	/// Schema hash recorded for this version.
-	pub const SCHEMA_SHA256: &str = "e6fc3c825c36ed0ca558b8a4363af33aa046af93d2e4259895b0d2b9773d7446";
+	pub const SCHEMA_SHA256: &str = "0ba368645818a27a4865369a1df871376fda16d1a3b09608340f90a715835ce7";
 	/// Width of the discriminator in bytes.
 	pub const DISCRIMINATOR_BYTES: usize = 1;
 	/// Byte offset of the migration version field.
@@ -71,11 +71,11 @@ pub mod account_1_02 {
 	/// Bytes occupied by the discriminator and version envelope together.
 	pub const MIGRATION_HEADER_SIZE: usize = 2;
 	/// Payload size in bytes, excluding the envelope header.
-	pub const PAYLOAD_SIZE: usize = 302;
+	pub const PAYLOAD_SIZE: usize = 318;
 	/// Total encoded size in bytes, including the envelope header.
 	pub const SIZE: usize = MIGRATION_HEADER_SIZE + PAYLOAD_SIZE;
 	/// Manifest payload size; must agree with `PAYLOAD_SIZE`.
-	pub const MANIFEST_PAYLOAD_SIZE: usize = 302;
+	pub const MANIFEST_PAYLOAD_SIZE: usize = 318;
 	/// `(name, absolute_offset, size)` in encoded bytes.
 	pub const FIELDS: &[(&str, usize, usize)] = &[
 		("amm_config", MIGRATION_HEADER_SIZE + 0, 32),
@@ -96,7 +96,8 @@ pub mod account_1_02 {
 		("creator_fee_mode", MIGRATION_HEADER_SIZE + 276, 1),
 		("bump", MIGRATION_HEADER_SIZE + 277, 1),
 		("price_0_cumulative_last", MIGRATION_HEADER_SIZE + 278, 16),
-		("last_update_timestamp", MIGRATION_HEADER_SIZE + 294, 8),
+		("price_1_cumulative_last", MIGRATION_HEADER_SIZE + 294, 16),
+		("last_update_timestamp", MIGRATION_HEADER_SIZE + 310, 8),
 	];
 }
 
@@ -257,7 +258,7 @@ pub mod event_1_05 {
 	/// Current schema version.
 	pub const VERSION: u32 = 0;
 	/// Schema hash recorded for this version.
-	pub const SCHEMA_SHA256: &str = "50f7f80060b3271e6ea1a1b6b59df1e06453c747537531cd026b76013c4ed0b1";
+	pub const SCHEMA_SHA256: &str = "156ab0df2108c499a7f7129bfeb907ff8cf457d7b7493005f0ec2fc6cb96f988";
 	/// Width of the discriminator in bytes.
 	pub const DISCRIMINATOR_BYTES: usize = 1;
 	/// Byte offset of the migration version field.
@@ -267,18 +268,19 @@ pub mod event_1_05 {
 	/// Bytes occupied by the discriminator and version envelope together.
 	pub const MIGRATION_HEADER_SIZE: usize = 2;
 	/// Payload size in bytes, excluding the envelope header.
-	pub const PAYLOAD_SIZE: usize = 72;
+	pub const PAYLOAD_SIZE: usize = 88;
 	/// Total encoded size in bytes, including the envelope header.
 	pub const SIZE: usize = MIGRATION_HEADER_SIZE + PAYLOAD_SIZE;
 	/// Manifest payload size; must agree with `PAYLOAD_SIZE`.
-	pub const MANIFEST_PAYLOAD_SIZE: usize = 72;
+	pub const MANIFEST_PAYLOAD_SIZE: usize = 88;
 	/// `(name, absolute_offset, size)` in encoded bytes.
 	pub const FIELDS: &[(&str, usize, usize)] = &[
 		("pool", MIGRATION_HEADER_SIZE + 0, 32),
 		("reserve_0", MIGRATION_HEADER_SIZE + 32, 8),
 		("reserve_1", MIGRATION_HEADER_SIZE + 40, 8),
 		("price_0_cumulative_last", MIGRATION_HEADER_SIZE + 48, 16),
-		("last_update_timestamp", MIGRATION_HEADER_SIZE + 64, 8),
+		("price_1_cumulative_last", MIGRATION_HEADER_SIZE + 64, 16),
+		("last_update_timestamp", MIGRATION_HEADER_SIZE + 80, 8),
 	];
 }
 
@@ -345,6 +347,42 @@ pub mod event_1_07 {
 		("pool", MIGRATION_HEADER_SIZE + 0, 32),
 		("previous_creator", MIGRATION_HEADER_SIZE + 32, 32),
 		("new_creator", MIGRATION_HEADER_SIZE + 64, 32),
+	];
+}
+
+/// ABI layout for the `ConfigCreated` event.
+pub mod event_1_08 {
+	/// Manifest contract key.
+	pub const KEY: &str = "event:1:08";
+	/// Rust type name as declared in the program.
+	pub const RUST_NAME: &str = "ConfigCreated";
+	/// Current schema version.
+	pub const VERSION: u32 = 0;
+	/// Schema hash recorded for this version.
+	pub const SCHEMA_SHA256: &str = "4ca657269746ee3c239a668858e3d9e664d93524e7d006331cb9a5965aefbfdf";
+	/// Width of the discriminator in bytes.
+	pub const DISCRIMINATOR_BYTES: usize = 1;
+	/// Byte offset of the migration version field.
+	pub const VERSION_OFFSET: usize = 1;
+	/// Width of the migration version field in bytes; zero without an envelope.
+	pub const VERSION_BYTES: usize = 1;
+	/// Bytes occupied by the discriminator and version envelope together.
+	pub const MIGRATION_HEADER_SIZE: usize = 2;
+	/// Payload size in bytes, excluding the envelope header.
+	pub const PAYLOAD_SIZE: usize = 110;
+	/// Total encoded size in bytes, including the envelope header.
+	pub const SIZE: usize = MIGRATION_HEADER_SIZE + PAYLOAD_SIZE;
+	/// Manifest payload size; must agree with `PAYLOAD_SIZE`.
+	pub const MANIFEST_PAYLOAD_SIZE: usize = 110;
+	/// `(name, absolute_offset, size)` in encoded bytes.
+	pub const FIELDS: &[(&str, usize, usize)] = &[
+		("amm_config", MIGRATION_HEADER_SIZE + 0, 32),
+		("authority", MIGRATION_HEADER_SIZE + 32, 32),
+		("pool_creator_authority", MIGRATION_HEADER_SIZE + 64, 32),
+		("trade_fee_rate", MIGRATION_HEADER_SIZE + 96, 4),
+		("protocol_fee_rate", MIGRATION_HEADER_SIZE + 100, 4),
+		("creator_fee_rate", MIGRATION_HEADER_SIZE + 104, 4),
+		("index", MIGRATION_HEADER_SIZE + 108, 2),
 	];
 }
 

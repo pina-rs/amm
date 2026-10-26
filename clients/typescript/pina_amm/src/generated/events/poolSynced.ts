@@ -18,47 +18,59 @@ export const POOL_SYNCED_EVENT_DISCRIMINATOR2 = 0;
 export function getPoolSyncedEventDiscriminator2Bytes(): ReadonlyUint8Array { return getU8Encoder().encode(POOL_SYNCED_EVENT_DISCRIMINATOR2); }
 
 /**
- * Emitted by `SyncPool`. Swaps advance the same accumulator and report
+ * Emitted by `SyncPool`. Swaps advance the same accumulators and report
  * their reserves through `Swapped`.
  */
 export type PoolSyncedEvent = { discriminator: number; migrationVersion: number; 
-/** The pool whose accumulator advanced. */
+/** The pool whose accumulators advanced. */
 pool: Address; 
 /** Token 0 reserve at the advance. */
 reserve0: bigint; 
 /** Token 1 reserve at the advance. */
 reserve1: bigint; 
 /**
- * The accumulator after the advance: Q64.64 price of token 1 in token 0,
- * summed over seconds.
+ * The token-1-in-token-0 accumulator after the advance: Q64.64 price
+ * summed over seconds. `u128::MAX` means it saturated and its TWAP is
+ * no longer usable.
  */
 price0CumulativeLast: bigint; 
+/**
+ * The token-0-in-token-1 accumulator after the advance, saturating the
+ * same way.
+ */
+price1CumulativeLast: bigint; 
 /** Unix second of the advance. */
 lastUpdateTimestamp: bigint;  };
 
 export type PoolSyncedEventArgs = { 
-/** The pool whose accumulator advanced. */
+/** The pool whose accumulators advanced. */
 pool: Address; 
 /** Token 0 reserve at the advance. */
 reserve0: number | bigint; 
 /** Token 1 reserve at the advance. */
 reserve1: number | bigint; 
 /**
- * The accumulator after the advance: Q64.64 price of token 1 in token 0,
- * summed over seconds.
+ * The token-1-in-token-0 accumulator after the advance: Q64.64 price
+ * summed over seconds. `u128::MAX` means it saturated and its TWAP is
+ * no longer usable.
  */
 price0CumulativeLast: number | bigint; 
+/**
+ * The token-0-in-token-1 accumulator after the advance, saturating the
+ * same way.
+ */
+price1CumulativeLast: number | bigint; 
 /** Unix second of the advance. */
 lastUpdateTimestamp: number | bigint;  };
 
 /** Gets the encoder for {@link PoolSyncedEventArgs} event data. */
 export function getPoolSyncedEventEncoder(): FixedSizeEncoder<PoolSyncedEventArgs> {
-    return transformEncoder(getStructEncoder([['discriminator', getU8Encoder()], ['migrationVersion', getU8Encoder()], ['pool', getAddressEncoder()], ['reserve0', getU64Encoder()], ['reserve1', getU64Encoder()], ['price0CumulativeLast', getU128Encoder()], ['lastUpdateTimestamp', getU64Encoder()]]), (value) => ({ ...value, discriminator: 5, migrationVersion: 0 }));
+    return transformEncoder(getStructEncoder([['discriminator', getU8Encoder()], ['migrationVersion', getU8Encoder()], ['pool', getAddressEncoder()], ['reserve0', getU64Encoder()], ['reserve1', getU64Encoder()], ['price0CumulativeLast', getU128Encoder()], ['price1CumulativeLast', getU128Encoder()], ['lastUpdateTimestamp', getU64Encoder()]]), (value) => ({ ...value, discriminator: 5, migrationVersion: 0 }));
 }
 
 /** Gets the decoder for {@link PoolSyncedEvent} event data. */
 export function getPoolSyncedEventDecoder(): FixedSizeDecoder<PoolSyncedEvent> {
-    return getStructDecoder([['discriminator', getPinaPodDiscriminatorDecoder(POOL_SYNCED_EVENT_DISCRIMINATOR, getU8Decoder())], ['migrationVersion', getPinaPodMigrationVersionDecoder(0, getU8Decoder())], ['pool', getAddressDecoder()], ['reserve0', getU64Decoder()], ['reserve1', getU64Decoder()], ['price0CumulativeLast', getU128Decoder()], ['lastUpdateTimestamp', getU64Decoder()]]);
+    return getStructDecoder([['discriminator', getPinaPodDiscriminatorDecoder(POOL_SYNCED_EVENT_DISCRIMINATOR, getU8Decoder())], ['migrationVersion', getPinaPodMigrationVersionDecoder(0, getU8Decoder())], ['pool', getAddressDecoder()], ['reserve0', getU64Decoder()], ['reserve1', getU64Decoder()], ['price0CumulativeLast', getU128Decoder()], ['price1CumulativeLast', getU128Decoder()], ['lastUpdateTimestamp', getU64Decoder()]]);
 }
 
 /** Gets the codec for {@link PoolSyncedEvent} event data. */

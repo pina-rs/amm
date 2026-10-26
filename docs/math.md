@@ -135,26 +135,28 @@ amount_1 = floor(reserve_1 * lp / S)
 
 ## Time-weighted average price
 
-Every pool sums its price over time so integrators can build manipulation-resistant oracles. The pool stores a cumulative accumulator and the Unix second it was last advanced:
+Every pool sums its price over time in **both directions** so integrators can build manipulation-resistant oracles. The pool stores two cumulative accumulators and the Unix second they were last advanced:
 
 ```text
-price_0            = reserve_1 * 2^64 / reserve_0        // Q64.64
+price_0            = reserve_1 * 2^64 / reserve_0        // Q64.64, token 1 per token 0
+price_1            = reserve_0 * 2^64 / reserve_1        // Q64.64, token 0 per token 1
 price_0_cumulative += price_0 * (now - last_update)
+price_1_cumulative += price_1 * (now - last_update)
 last_update         = now
 ```
 
-`SyncPool` and every swap run this with the price in force at the _start_ of the interval, exactly like Uniswap V2. To read the average price of token 0 over a window, sample the accumulator and the timestamp twice and divide:
+`SyncPool` and every swap run this with the price in force at the _start_ of the interval, exactly like Uniswap V2's two cumulative prices. To read the average price of token 0 over a window, sample an accumulator and the timestamp twice and divide:
 
 ```text
 twap_0 = (cumulative_b - cumulative_a) / 2^64 / (timestamp_b - timestamp_a)
 ```
 
-The value is token 1 per token 0; invert for the other direction. Notes:
+`price_0_cumulative` gives token 1 per token 0 and `price_1_cumulative` token 0 per token 1; each is an exact integer sum in its own direction, so neither has to be derived from the other. Notes:
 
-- Proportional deposits and withdrawals do not change the price, and fee collection does not change reserves, so only swaps, donations, and `SyncPool` move the accumulator.
+- Proportional deposits and withdrawals do not change the price, and fee collection does not change reserves, so only swaps, donations, and `SyncPool` move the accumulators.
 - A donation changes the price without a program call; the next swap or `SyncPool` folds it in over the whole interval since the last advance. Sample through a `SyncPool` when that matters.
 - A pool with an empty side records no price, and a `last_update` of zero only anchors the clock.
-- The accumulator is `u128` and every step is checked: a trade that would overflow it fails instead of wrapping.
+- Each accumulator is `u128` and **saturates** at `u128::MAX`: an extreme reserve ratio whose `price * elapsed` would overflow pins that direction's accumulator instead of failing the trade, so an extreme pool always keeps trading. An accumulator reading `u128::MAX` has no usable TWAP in that direction; read the other direction or treat the pool as unpriceable.
 
 ## Limits
 

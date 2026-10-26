@@ -9,7 +9,8 @@ use crate::ID;
 use crate::errors::AmmError;
 use crate::events::PoolSynced;
 use crate::instructions::SyncPoolInstruction;
-use crate::math::advance_price_accumulator;
+use crate::math::PriceAccumulators;
+use crate::math::advance_price_accumulators;
 use crate::state::Pool;
 
 /// Accounts for `SyncPool`.
@@ -40,23 +41,34 @@ impl<'a> ProcessAccountInfos<'a> for SyncPoolAccounts<'a> {
 		)?;
 		let now =
 			u64::try_from(Clock::get()?.unix_timestamp).map_err(|_| AmmError::MathOverflow)?;
-		let (price_0_cumulative_last, last_update_timestamp) = advance_price_accumulator(
+		let (accumulators, last_update_timestamp) = advance_price_accumulators(
 			reserve_0,
 			reserve_1,
-			snapshot.price_0_cumulative_last,
+			PriceAccumulators {
+				price_0_cumulative: snapshot.price_0_cumulative_last,
+				price_1_cumulative: snapshot.price_1_cumulative_last,
+			},
 			snapshot.last_update_timestamp,
 			now,
-		)?;
+		);
 		{
 			let mut pool = self.pool.as_account_mut::<Pool>(&ID)?;
-			pool.price_0_cumulative_last.set(price_0_cumulative_last);
+			pool.price_0_cumulative_last
+				.set(accumulators.price_0_cumulative);
+			pool.price_1_cumulative_last
+				.set(accumulators.price_1_cumulative);
 			pool.last_update_timestamp.set(last_update_timestamp);
 		}
 		PoolSynced::emit(|event| {
 			event.pool = *self.pool.address();
 			event.reserve_0.set(reserve_0);
 			event.reserve_1.set(reserve_1);
-			event.price_0_cumulative_last.set(price_0_cumulative_last);
+			event
+				.price_0_cumulative_last
+				.set(accumulators.price_0_cumulative);
+			event
+				.price_1_cumulative_last
+				.set(accumulators.price_1_cumulative);
 			event.last_update_timestamp.set(last_update_timestamp);
 			Ok(())
 		})

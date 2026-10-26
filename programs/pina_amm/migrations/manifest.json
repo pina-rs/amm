@@ -128,6 +128,10 @@
 								"rustType": "u128"
 							},
 							{
+								"name": "price_1_cumulative_last",
+								"rustType": "u128"
+							},
+							{
 								"name": "last_update_timestamp",
 								"rustType": "u64"
 							}
@@ -336,6 +340,10 @@
 								"rustType": "u128"
 							},
 							{
+								"name": "price_1_cumulative_last",
+								"rustType": "u128"
+							},
+							{
 								"name": "last_update_timestamp",
 								"rustType": "u64"
 							}
@@ -394,6 +402,46 @@
 							{
 								"name": "new_creator",
 								"rustType": "Address"
+							}
+						]
+					}
+				}
+			]
+		},
+		"event:1:08": {
+			"rustName": "ConfigCreated",
+			"versions": [
+				{
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "amm_config",
+								"rustType": "Address"
+							},
+							{
+								"name": "authority",
+								"rustType": "Address"
+							},
+							{
+								"name": "pool_creator_authority",
+								"rustType": "Address"
+							},
+							{
+								"name": "trade_fee_rate",
+								"rustType": "u32"
+							},
+							{
+								"name": "protocol_fee_rate",
+								"rustType": "u32"
+							},
+							{
+								"name": "creator_fee_rate",
+								"rustType": "u32"
+							},
+							{
+								"name": "index",
+								"rustType": "u16"
 							}
 						]
 					}

@@ -21,6 +21,7 @@ use harness::ata;
 use pina_amm_client::PINA_AMM_ID;
 use pina_amm_client::accounts::AmmConfig;
 use pina_amm_client::accounts::Pool;
+use pina_amm_client::events::ConfigCreated;
 use pina_amm_client::instructions::CollectCreatorFees;
 use pina_amm_client::instructions::CollectCreatorFeesInstructionData;
 use pina_amm_client::instructions::CollectProtocolFees;
@@ -292,6 +293,7 @@ fn pool_state(h: &Harness, pool: &Pubkey) -> Pool {
 		creator_fee_mode: state.creator_fee_mode,
 		bump: state.bump,
 		price0_cumulative_last: state.price0_cumulative_last.get(),
+		price1_cumulative_last: state.price1_cumulative_last.get(),
 		last_update_timestamp: state.last_update_timestamp.get(),
 	}
 }
@@ -1247,6 +1249,80 @@ fn prefunded_pool_addresses_cannot_block_creation() {
 	});
 }
 
+/// The `Program data:` records the AMM itself emitted in one transaction's
+/// logs, base64-decoded.
+///
+/// Runtime logs frame every invocation with `Program <id> invoke [n]` and a
+/// matching `success` or `failed` line. A data record belongs to whichever
+/// program is innermost at that point, so records written by programs the AMM
+/// calls are never attributed to it. The same attribution rule is tested in
+/// the CLI's `program_events`.
+fn amm_data_records(logs: &[String]) -> Vec<Vec<u8>> {
+	use base64::engine::Engine as _;
+
+	let program = PINA_AMM_ID.to_string();
+	let mut stack: Vec<&str> = Vec::new();
+	let mut records = Vec::new();
+	for line in logs {
+		let Some(rest) = line.strip_prefix("Program ") else {
+			continue;
+		};
+		if let Some(data) = rest.strip_prefix("data: ") {
+			if stack.last() == Some(&program.as_str())
+				&& let Ok(bytes) = base64::engine::general_purpose::STANDARD.decode(data.trim())
+			{
+				records.push(bytes);
+			}
+			continue;
+		}
+		let Some((id, tail)) = rest.split_once(' ') else {
+			continue;
+		};
+		if tail.starts_with("invoke [") {
+			stack.push(id);
+		} else if tail == "success" || tail.starts_with("failed") {
+			stack.pop();
+		}
+	}
+	records
+}
+
+#[test]
+#[ignore = "run with `pina test`"]
+fn create_config_emits_its_event() {
+	pina_test::run(async {
+		let h = Harness::start().await.expect("start");
+		let admin = install_admin(&h);
+		let instruction = create_config_instruction(
+			&h.payer().pubkey(),
+			&admin.pubkey(),
+			3,
+			(TRADE_FEE_RATE, PROTOCOL_FEE_RATE, CREATOR_FEE_RATE),
+			&admin.pubkey(),
+			&Pubkey::default(),
+		);
+		let (_, logs) = h
+			.simulate_with_logs(&[instruction], &[&admin])
+			.unwrap_or_else(|(error, logs)| {
+				panic!("create config: {error:?}\n{}", logs.join("\n"))
+			});
+		let events = amm_data_records(&logs);
+		let bytes = events
+			.iter()
+			.find(|bytes| bytes.first() == Some(&8))
+			.expect("a ConfigCreated record");
+		let event = ConfigCreated::from_bytes(bytes).expect("decode ConfigCreated");
+		assert_eq!(event.amm_config, config_address(3));
+		assert_eq!(event.authority, admin.pubkey());
+		assert_eq!(event.pool_creator_authority, Pubkey::default());
+		assert_eq!(event.trade_fee_rate, TRADE_FEE_RATE);
+		assert_eq!(event.protocol_fee_rate, PROTOCOL_FEE_RATE);
+		assert_eq!(event.creator_fee_rate, CREATOR_FEE_RATE);
+		assert_eq!(event.index, 3);
+		h.stop().expect("stop");
+	});
+}
+
 /// Compute-unit ceilings per instruction. Steady-state instructions sit about
 /// 20% above their measured cost so a regression fails here before it reaches
 /// users. Pool creation searches for four PDA bumps whose cost varies with the
@@ -1260,8 +1336,10 @@ fn sync_accumulates_the_time_weighted_price() {
 		let fixture = spl_pool(&h, &admin, 0);
 		let created_at = pool_state(&h, &fixture.pool).last_update_timestamp;
 		// Reserves of 1,000,000,000 token 0 and 4,000,000,000 token 1 put
-		// price_0, token 1 per token 0 in Q64.64, at four.
+		// price_0, token 1 per token 0 in Q64.64, at four — and price_1 at a
+		// quarter.
 		let price_0 = 4_000_000_000u128 * (1u128 << 64) / 1_000_000_000u128;
+		let price_1 = 1_000_000_000u128 * (1u128 << 64) / 4_000_000_000u128;
 
 		h.advance_seconds(10).expect("advance");
 		h.send(&[sync_instruction(&fixture)], &[]).expect("sync");
@@ -1269,8 +1347,9 @@ fn sync_accumulates_the_time_weighted_price() {
 		let elapsed = synced.last_update_timestamp - created_at;
 		assert!(elapsed >= 9, "clock advanced by {elapsed}");
 		assert_eq!(synced.price0_cumulative_last, price_0 * u128::from(elapsed));
+		assert_eq!(synced.price1_cumulative_last, price_1 * u128::from(elapsed));
 
-		// A swap advances the accumulator with the price in force before it.
+		// A swap advances both accumulators with the price in force before it.
 		h.advance_seconds(10).expect("advance");
 		let trader = funded_trader(&h, &fixture, 1_000_000_000);
 		h.send(
@@ -1291,6 +1370,70 @@ fn sync_accumulates_the_time_weighted_price() {
 			swapped.price0_cumulative_last,
 			synced.price0_cumulative_last + price_0 * u128::from(second)
 		);
+		assert_eq!(
+			swapped.price1_cumulative_last,
+			synced.price1_cumulative_last + price_1 * u128::from(second)
+		);
+		h.stop().expect("stop");
+	});
+}
+
+#[test]
+#[ignore = "run with `pina test`"]
+fn extreme_pools_keep_trading_when_the_accumulator_saturates() {
+	pina_test::run(async {
+		let h = Harness::start().await.expect("start");
+		let admin = install_admin(&h);
+		let config = create_config(&h, &admin, 0, &Pubkey::default());
+		let (token_0, token_1) = ordered_mints(&h, &TOKEN_PROGRAM, &[], &TOKEN_PROGRAM, &[]);
+		// One raw unit of token 0 against 10^18 of token 1 puts the Q64.64
+		// price of token 1 in token 0 near 2^124; after a few idle minutes
+		// `price * elapsed` no longer fits u128. Before the accumulators
+		// saturated, every later swap failed with MathOverflow forever and
+		// froze the pool.
+		let fixture = create_pool(
+			&h,
+			&PoolSpec {
+				config,
+				token_0,
+				token_1,
+				amounts: (1, 1_000_000_000_000_000_000),
+				creator_fee_mode: 0,
+				pool_creator_authority: None,
+			},
+		);
+		h.advance_seconds(600).expect("advance");
+		let trader = funded_trader(&h, &fixture, 10_000);
+		// Selling the scarce side is the only direction whose output is not
+		// dust; 1,000 in clears the minimum fee and still moves the price of
+		// a pool whose other side holds a single unit.
+		let out_token = swap_route(&fixture, &trader.pubkey(), true).1;
+		let out_before = h.token_balance(&out_token);
+		h.send(
+			&[swap_exact_in_instruction(
+				&fixture,
+				&trader.pubkey(),
+				true,
+				1_000,
+				0,
+			)],
+			&[&trader],
+		)
+		.expect("swap still settles after saturation");
+		assert!(h.token_balance(&out_token) > out_before);
+
+		let pool = pool_state(&h, &fixture.pool);
+		assert_eq!(
+			pool.price0_cumulative_last,
+			u128::MAX,
+			"the extreme direction must be pinned at u128::MAX"
+		);
+
+		// SyncPool keeps working and the pinned accumulator stays pinned.
+		h.send(&[sync_instruction(&fixture)], &[]).expect("sync");
+		let synced = pool_state(&h, &fixture.pool);
+		assert_eq!(synced.price0_cumulative_last, u128::MAX);
+		assert!(synced.price1_cumulative_last >= pool.price1_cumulative_last);
 		h.stop().expect("stop");
 	});
 }
@@ -1361,7 +1504,10 @@ fn compute_units_stay_within_budget() {
 		);
 
 		let config = create_config(&h, &admin, 1, &Pubkey::default());
-		let (token_0, token_1) = ordered_mints(&h, &TOKEN_PROGRAM, &[], &TOKEN_PROGRAM, &[]);
+		// Fixed-seed mints, so the four canonical bump searches inside
+		// `CreatePool` cost the same on every run instead of varying with the
+		// addresses: the ceiling then measures a regression, not luck.
+		let (token_0, token_1) = crate::journeys::journey_mints(&h);
 		let owner = h.funded_keypair().expect("owner");
 		let (create, _) = create_pool_instruction(
 			&h,

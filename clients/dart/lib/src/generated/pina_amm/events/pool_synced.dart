@@ -17,6 +17,7 @@ class PoolSyncedEvent extends PinaAmmEvent {
     required this.reserve0,
     required this.reserve1,
     required this.price0CumulativeLast,
+    required this.price1CumulativeLast,
     required this.lastUpdateTimestamp,
   });
 
@@ -26,13 +27,14 @@ class PoolSyncedEvent extends PinaAmmEvent {
   final BigInt reserve0;
   final BigInt reserve1;
   final BigInt price0CumulativeLast;
+  final BigInt price1CumulativeLast;
   final BigInt lastUpdateTimestamp;
 
   @override
   String get name => 'poolSynced';
 
   String toString() =>
-      'PoolSyncedEvent(discriminator: ${discriminator}, migrationVersion: ${migrationVersion}, pool: ${pool}, reserve0: ${reserve0}, reserve1: ${reserve1}, price0CumulativeLast: ${price0CumulativeLast}, lastUpdateTimestamp: ${lastUpdateTimestamp})';
+      'PoolSyncedEvent(discriminator: ${discriminator}, migrationVersion: ${migrationVersion}, pool: ${pool}, reserve0: ${reserve0}, reserve1: ${reserve1}, price0CumulativeLast: ${price0CumulativeLast}, price1CumulativeLast: ${price1CumulativeLast}, lastUpdateTimestamp: ${lastUpdateTimestamp})';
 }
 
 /// The discriminator this event is emitted under.
@@ -45,7 +47,7 @@ const List<int> _poolSyncedEventDiscriminatorBytes = [5];
 const poolSyncedEventMigrationVersion = 0;
 
 /// Exact current byte length of a `PoolSynced` record, envelope included.
-const poolSyncedEventSize = 74;
+const poolSyncedEventSize = 90;
 
 /// Decode one `PoolSynced` record.
 PoolSyncedEvent decodePoolSyncedEvent(Uint8List data) {
@@ -79,8 +81,10 @@ PoolSyncedEvent decodePoolSyncedEvent(Uint8List data) {
   cursor = c4;
   final (v5, c5) = getU128Decoder().read(data, cursor);
   cursor = c5;
-  final (v6, c6) = getU64Decoder().read(data, cursor);
+  final (v6, c6) = getU128Decoder().read(data, cursor);
   cursor = c6;
+  final (v7, c7) = getU64Decoder().read(data, cursor);
+  cursor = c7;
 
   return PoolSyncedEvent(
     discriminator: v0,
@@ -89,7 +93,8 @@ PoolSyncedEvent decodePoolSyncedEvent(Uint8List data) {
     reserve0: v3,
     reserve1: v4,
     price0CumulativeLast: v5,
-    lastUpdateTimestamp: v6,
+    price1CumulativeLast: v6,
+    lastUpdateTimestamp: v7,
   );
 }
 

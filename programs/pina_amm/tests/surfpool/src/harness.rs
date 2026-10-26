@@ -69,6 +69,10 @@ impl CheatcodeBuilder for SetProgramAuthority {
 	}
 }
 
+/// A simulation's outcome: the value on success, or the transaction error and
+/// the logs it produced on failure.
+pub type SimulationOutcome<T> = Result<T, (Option<TransactionError>, Vec<String>)>;
+
 /// An offline Surfnet with the Pina AMM deployed at its program id.
 pub struct Harness {
 	surfnet: Surfnet,
@@ -225,7 +229,18 @@ impl Harness {
 		&self,
 		instructions: &[Instruction],
 		signers: &[&dyn Signer],
-	) -> Result<u64, (Option<TransactionError>, Vec<String>)> {
+	) -> SimulationOutcome<u64> {
+		self.simulate_with_logs(instructions, signers)
+			.map(|(units, _)| units)
+	}
+
+	/// Simulate a transaction and return its compute units and logs, or its
+	/// error and logs when it fails.
+	pub fn simulate_with_logs(
+		&self,
+		instructions: &[Instruction],
+		signers: &[&dyn Signer],
+	) -> SimulationOutcome<(u64, Vec<String>)> {
 		let transaction = self
 			.signed_transaction(instructions, signers)
 			.map_err(|error| (None, vec![error]))?;
@@ -244,7 +259,7 @@ impl Harness {
 		let logs = result.logs.unwrap_or_default();
 		match result.err {
 			Some(error) => Err((Some(error.into()), logs)),
-			None => Ok(result.units_consumed.unwrap_or_default()),
+			None => Ok((result.units_consumed.unwrap_or_default(), logs)),
 		}
 	}
 

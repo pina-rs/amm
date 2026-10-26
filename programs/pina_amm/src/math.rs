@@ -351,44 +351,67 @@ pub fn assert_constant_product(
 	Ok(())
 }
 
-/// One in Q64.64 fixed point, the unit of the price accumulator.
+/// One in Q64.64 fixed point, the unit of the price accumulators.
 pub const Q64: u128 = 1 << 64;
 
-/// Advance the time-weighted price accumulator of token 1 in token 0.
+/// Both time-weighted price accumulators of a pool.
 ///
-/// The accumulator sums `price_0 * elapsed_seconds` as Q64.64 price times
-/// seconds, exactly like Uniswap V2: the price in force for an interval is
-/// the pool's price at the start of it, so a caller samples the accumulator
-/// at two times and divides the difference by the time difference. A pool
-/// with an empty side records no price, and a zero `last_update` only
-/// anchors the clock, so a first sample after a migration adds nothing.
-pub fn advance_price_accumulator(
+/// Each sums its price times seconds in Q64.64, in the two directions a
+/// caller can quote: `price_0_cumulative` accumulates the price of token 1
+/// in token 0 and `price_1_cumulative` the price of token 0 in token 1.
+/// Floor division makes each direction an independent exact sum, so neither
+/// has to be derived from the other.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PriceAccumulators {
+	/// Sum of `price_0 * elapsed_seconds`, where `price_0` is the Q64.64
+	/// price of token 1 in token 0.
+	pub price_0_cumulative: u128,
+	/// Sum of `price_1 * elapsed_seconds`, where `price_1` is the Q64.64
+	/// price of token 0 in token 1.
+	pub price_1_cumulative: u128,
+}
+
+/// Advance both time-weighted price accumulators.
+///
+/// The accumulators sum `price * elapsed_seconds` as Q64.64 price times
+/// seconds, exactly like Uniswap V2's two cumulative prices: the price in
+/// force for an interval is the pool's price at the start of it, so a caller
+/// samples an accumulator at two times and divides the difference by the
+/// time difference. A pool with an empty side records no price, and a zero
+/// `last_update` only anchors the clock, so a first sample after a migration
+/// adds nothing.
+///
+/// Each accumulator saturates at `u128::MAX` instead of overflowing. An
+/// extreme reserve ratio would otherwise overflow `price * elapsed` after
+/// enough idle time and fail every later swap, permanently freezing the
+/// pool; a saturated accumulator only ends that pool's usable TWAP in that
+/// direction, which a consumer detects by reading `u128::MAX`. A price
+/// itself cannot overflow: `u64::MAX * Q64 / 1` is the largest value that
+/// fits `u128`.
+pub fn advance_price_accumulators(
 	reserve_0: u64,
 	reserve_1: u64,
-	cumulative: u128,
+	accumulators: PriceAccumulators,
 	last_update: u64,
 	now: u64,
-) -> Result<(u128, u64), ProgramError> {
+) -> (PriceAccumulators, u64) {
 	if now <= last_update {
-		return Ok((cumulative, last_update));
+		return (accumulators, last_update);
 	}
 	let advanced = if last_update == 0 || reserve_0 == 0 || reserve_1 == 0 {
-		cumulative
+		accumulators
 	} else {
-		let price_0 = u128::from(reserve_1)
-			.checked_mul(Q64)
-			.ok_or(AmmError::MathOverflow)?
-			/ u128::from(reserve_0);
-		let elapsed = now - last_update;
-		cumulative
-			.checked_add(
-				price_0
-					.checked_mul(u128::from(elapsed))
-					.ok_or(AmmError::MathOverflow)?,
-			)
-			.ok_or(AmmError::MathOverflow)?
+		let elapsed = u128::from(now - last_update);
+		let advance = |base: u128, numerator: u64, denominator: u64| {
+			let price = u128::from(numerator) * Q64 / u128::from(denominator);
+			base.saturating_add(price.saturating_mul(elapsed))
+		};
+		PriceAccumulators {
+			price_0_cumulative: advance(accumulators.price_0_cumulative, reserve_1, reserve_0),
+			price_1_cumulative: advance(accumulators.price_1_cumulative, reserve_0, reserve_1),
+		}
 	};
-	Ok((advanced, now))
+	(advanced, now)
 }
 
 /// LP issued by a new pool and the part minted to its first depositor.
@@ -656,29 +679,87 @@ mod tests {
 	}
 
 	#[test]
-	fn the_accumulator_sums_price_times_time() {
+	fn the_accumulators_sum_price_times_time_in_both_directions() {
 		let price = |r0: u64, r1: u64| u128::from(r1) * Q64 / u128::from(r0);
+		let start = PriceAccumulators {
+			price_0_cumulative: 0,
+			price_1_cumulative: 0,
+		};
 		// Ten seconds at 2:1, then ten at 4:1.
-		let (cumulative, _) =
-			advance_price_accumulator(100, 200, 0, 1_000, 1_010).expect("advance");
-		assert_eq!(cumulative, price(100, 200) * 10);
-		let (cumulative, _) =
-			advance_price_accumulator(100, 400, cumulative, 1_010, 1_020).expect("advance");
-		assert_eq!(cumulative, price(100, 200) * 10 + price(100, 400) * 10);
+		let (sampled, _) = advance_price_accumulators(100, 200, start, 1_000, 1_010);
+		assert_eq!(sampled.price_0_cumulative, price(100, 200) * 10);
+		assert_eq!(sampled.price_1_cumulative, price(200, 100) * 10);
+		let (sampled, _) = advance_price_accumulators(100, 400, sampled, 1_010, 1_020);
+		assert_eq!(
+			sampled.price_0_cumulative,
+			price(100, 200) * 10 + price(100, 400) * 10
+		);
+		assert_eq!(
+			sampled.price_1_cumulative,
+			price(200, 100) * 10 + price(400, 100) * 10
+		);
 		// A zero start or an empty side anchors the clock without a price.
 		assert_eq!(
-			advance_price_accumulator(100, 200, 0, 0, 500).expect("anchor"),
-			(0, 500)
+			advance_price_accumulators(100, 200, start, 0, 500),
+			(start, 500)
 		);
 		assert_eq!(
-			advance_price_accumulator(0, 200, 7, 500, 600).expect("empty"),
-			(7, 600)
+			advance_price_accumulators(
+				0,
+				200,
+				PriceAccumulators {
+					price_0_cumulative: 7,
+					price_1_cumulative: 9
+				},
+				500,
+				600
+			),
+			(
+				PriceAccumulators {
+					price_0_cumulative: 7,
+					price_1_cumulative: 9
+				},
+				600
+			)
 		);
 		// Time moving backwards or standing still changes nothing.
+		let anchored = PriceAccumulators {
+			price_0_cumulative: 7,
+			price_1_cumulative: 9,
+		};
 		assert_eq!(
-			advance_price_accumulator(100, 200, 7, 600, 599).expect("backwards"),
-			(7, 600)
+			advance_price_accumulators(100, 200, anchored, 600, 599),
+			(anchored, 600)
 		);
+	}
+
+	#[test]
+	fn the_accumulators_saturate_instead_of_failing_the_trade() {
+		let start = PriceAccumulators {
+			price_0_cumulative: 0,
+			price_1_cumulative: 0,
+		};
+		// A price alone cannot overflow: the largest Q64.64 price, one token
+		// 1 per single lamport of token 0, still fits u128.
+		let largest_price = u128::from(u64::MAX) * Q64;
+		let (extreme, _) = advance_price_accumulators(1, u64::MAX, start, 1, 2);
+		assert_eq!(extreme.price_0_cumulative, largest_price);
+		// Multiplying that price by elapsed seconds saturates instead of
+		// erroring, while the cheap direction still accumulates exactly.
+		let (saturated, _) = advance_price_accumulators(1, u64::MAX, extreme, 2, 12);
+		assert_eq!(saturated.price_0_cumulative, u128::MAX);
+		let cheap_price = Q64 / u128::from(u64::MAX);
+		assert_eq!(saturated.price_1_cumulative, cheap_price + cheap_price * 10);
+		// A saturated accumulator stays pinned but never blocks an advance.
+		let (pinned, _) = advance_price_accumulators(1, u64::MAX, saturated, 12, 60);
+		assert_eq!(pinned.price_0_cumulative, u128::MAX);
+		// A near-full accumulator saturates on the final add the same way.
+		let nearly_full = PriceAccumulators {
+			price_0_cumulative: u128::MAX - 1,
+			price_1_cumulative: 0,
+		};
+		let (topped, _) = advance_price_accumulators(1, 1, nearly_full, 1, 2);
+		assert_eq!(topped.price_0_cumulative, u128::MAX);
 	}
 
 	#[test]
@@ -801,6 +882,28 @@ mod tests {
 			prop_assert!(root * root <= value);
 			let next = root + 1;
 			prop_assert!(next.checked_mul(next).is_none_or(|square| square > value));
+		}
+
+		/// The accumulators never decrease, in either direction, whatever the
+		/// reserves, the elapsed time, or the starting point; saturation pins
+		/// an accumulator instead of failing the advance.
+		#[test]
+		fn accumulators_never_decrease(
+			reserve_0 in any::<u64>(),
+			reserve_1 in any::<u64>(),
+			seconds in 1u64..=u64::from(u32::MAX),
+			previous_0 in any::<u128>(),
+			previous_1 in any::<u128>(),
+		) {
+			let previous = PriceAccumulators {
+				price_0_cumulative: previous_0,
+				price_1_cumulative: previous_1,
+			};
+			let (advanced, now) =
+				advance_price_accumulators(reserve_0, reserve_1, previous, 1, 1 + seconds);
+			prop_assert_eq!(now, 1 + seconds);
+			prop_assert!(advanced.price_0_cumulative >= previous_0);
+			prop_assert!(advanced.price_1_cumulative >= previous_1);
 		}
 	}
 }

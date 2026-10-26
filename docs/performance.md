@@ -8,13 +8,13 @@ Measured on the real SBF artifact by the end-to-end suite (`compute_units_stay_w
 
 | Instruction    | Compute units | CPIs                | CI ceiling |
 | -------------- | ------------- | ------------------- | ---------- |
-| `SwapExactIn`  | ~4,670        | 2 transfers         | 6,000      |
-| `SwapExactOut` | ~4,780        | 2 transfers         | 6,000      |
-| `Deposit`      | ~5,440        | 2 transfers, 1 mint | 6,500      |
-| `Withdraw`     | ~5,340        | 1 burn, 2 transfers | 6,500      |
-| `CreatePool`   | 38,000–45,000 | creates 5 accounts  | 60,000     |
+| `SwapExactIn`  | ~5,470        | 2 transfers         | 6,000      |
+| `SwapExactOut` | ~5,590        | 2 transfers         | 6,000      |
+| `Deposit`      | ~5,460        | 2 transfers, 1 mint | 6,500      |
+| `Withdraw`     | ~5,360        | 1 burn, 2 transfers | 6,500      |
+| `CreatePool`   | 38,000–49,000 | creates 5 accounts  | 60,000     |
 
-The suite fails if any instruction exceeds its ceiling, so a regression is caught in the pull request that introduces it. `CreatePool`'s cost varies because it searches for four canonical PDA bumps whose cost depends on the addresses.
+The suite fails if any instruction exceeds its ceiling, so a regression is caught in the pull request that introduces it. `CreatePool`'s cost varies because it searches for four canonical PDA bumps whose cost depends on the addresses. Each swap advances both price accumulators, and the second direction's Q64.64 division is the ~800 compute units a swap costs over a one-direction accumulator; that is the price of an exactly quotable TWAP in both directions (see [math.md](math.md#time-weighted-average-price)).
 
 ## Continuous benchmarking
 

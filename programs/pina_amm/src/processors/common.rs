@@ -29,6 +29,7 @@ pub(crate) struct PoolSnapshot {
 	pub rates: FeeRates,
 	pub creator_fee_mode: CreatorFeeMode,
 	pub price_0_cumulative_last: u128,
+	pub price_1_cumulative_last: u128,
 	pub last_update_timestamp: u64,
 	pub bump: u8,
 }
@@ -61,6 +62,7 @@ impl PoolSnapshot {
 			},
 			creator_fee_mode,
 			price_0_cumulative_last: state.price_0_cumulative_last.get(),
+			price_1_cumulative_last: state.price_1_cumulative_last.get(),
 			last_update_timestamp: state.last_update_timestamp.get(),
 			bump: state.bump,
 		})

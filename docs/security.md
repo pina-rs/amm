@@ -39,18 +39,19 @@ The upgrade authority is the single point of trust, as for any upgradeable Solan
 
 ## Attacks considered
 
-| Attack                                                                     | Outcome                                                                 | Test                                                             |
-| -------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Pre-fund a vault or LP-mint address to block pool creation                 | Creation tops up, allocates, and assigns instead of failing             | `prefunded_pool_addresses_cannot_block_creation`                 |
-| Create a launchpad's pool before it does                                   | Restricted tiers require their pool-creator authority                   | `restricted_tiers_only_accept_their_pool_creator`                |
-| Pass another pool's vault, or a user account as a vault                    | `PoolAccountMismatch`                                                   | `swaps_enforce_slippage_limits_and_pool_vaults`                  |
-| Collect protocol fees through the wrong tier                               | `PoolAccountMismatch`                                                   | `fees_are_collected_only_by_their_owners`                        |
-| Use a transfer-fee or hook mint to make transfers move less than accounted | `UnsupportedMint` at creation                                           | `create_pool_rejects_unordered_mints_and_unsupported_extensions` |
-| Inflate share price as the first depositor                                 | Locked minimum liquidity                                                | `liquidity_locks_the_minimum` (unit)                             |
-| Donate to manipulate LP accounting                                         | Donations simply accrue to all LPs                                      | `donations_accrue_to_liquidity_providers`                        |
-| Create a tier without authority                                            | `Unauthorized`                                                          | `create_config_requires_the_upgrade_authority`                   |
-| Name the default address as a pool creator, making its fees unclaimable    | `DefaultCreator`                                                        | `create_pool_rejects_unordered_mints_and_unsupported_extensions` |
-| Read the spot price as an oracle                                           | Use the time-weighted accumulator advanced by `SyncPool` and every swap | `sync_accumulates_the_time_weighted_price`                       |
+| Attack                                                                                 | Outcome                                                                                                     | Test                                                             |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Pre-fund a vault or LP-mint address to block pool creation                             | Creation tops up, allocates, and assigns instead of failing                                                 | `prefunded_pool_addresses_cannot_block_creation`                 |
+| Create a launchpad's pool before it does                                               | Restricted tiers require their pool-creator authority                                                       | `restricted_tiers_only_accept_their_pool_creator`                |
+| Pass another pool's vault, or a user account as a vault                                | `PoolAccountMismatch`                                                                                       | `swaps_enforce_slippage_limits_and_pool_vaults`                  |
+| Collect protocol fees through the wrong tier                                           | `PoolAccountMismatch`                                                                                       | `fees_are_collected_only_by_their_owners`                        |
+| Use a transfer-fee or hook mint to make transfers move less than accounted             | `UnsupportedMint` at creation                                                                               | `create_pool_rejects_unordered_mints_and_unsupported_extensions` |
+| Inflate share price as the first depositor                                             | Locked minimum liquidity                                                                                    | `liquidity_locks_the_minimum` (unit)                             |
+| Donate to manipulate LP accounting                                                     | Donations simply accrue to all LPs                                                                          | `donations_accrue_to_liquidity_providers`                        |
+| Create a tier without authority                                                        | `Unauthorized`                                                                                              | `create_config_requires_the_upgrade_authority`                   |
+| Name the default address as a pool creator, making its fees unclaimable                | `DefaultCreator`                                                                                            | `create_pool_rejects_unordered_mints_and_unsupported_extensions` |
+| Read the spot price as an oracle                                                       | Use the time-weighted accumulators advanced by `SyncPool` and every swap                                    | `sync_accumulates_the_time_weighted_price`                       |
+| Leave a pool idle at an extreme reserve ratio until `price * elapsed` overflows `u128` | The accumulator saturates at `u128::MAX`; the pool keeps trading and the other direction keeps accumulating | `extreme_pools_keep_trading_when_the_accumulator_saturates`      |
 
 ## Static analysis
 
@@ -59,5 +60,5 @@ The upgrade authority is the single point of trust, as for any upgradeable Solan
 ## Known limitations
 
 - **Freeze authorities.** A mint with a freeze authority (USDC, for example) can have its pool vault frozen by that authority, halting the pool. This is inherent to such mints; the AMM accepts them because rejecting them would exclude most stablecoins.
-- **Spot price is not an oracle.** The pool price is manipulable within a transaction like every constant-product AMM. Use the pool's time-weighted price accumulator (see [math.md](math.md#time-weighted-average-price)) for oracle-grade reads; it still trusts no one but needs honest sampling.
+- **Spot price is not an oracle.** The pool price is manipulable within a transaction like every constant-product AMM. Use the pool's time-weighted price accumulators (see [math.md](math.md#time-weighted-average-price)) for oracle-grade reads; they trust no one but need honest sampling. An accumulator pinned at `u128::MAX` has saturated and carries no TWAP.
 - **No independent audit yet.** Do not deposit material value until one is published.
