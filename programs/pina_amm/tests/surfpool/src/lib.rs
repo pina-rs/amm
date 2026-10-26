@@ -10,6 +10,7 @@
 //! Run with `pina test` (or `devenv shell test:surfpool`) after `pina build`.
 
 mod cli;
+mod fuzz;
 mod harness;
 mod journeys;
 
