@@ -68,6 +68,8 @@ pina-amm -u mainnet config show --index 0
 pina build --verify     # deterministic build to compare with the deployed bytes
 ```
 
+The `reproducible-build` workflow builds the artifact twice from a clean tree on every change to `main` and fails if the digests differ; its job summary records the SHA-256 to quote next to a deployment.
+
 ## Running your own deployment
 
 Nothing in the program is tied to this repository's deployment. To run a separate instance, generate a new identity with `pina keys new`, run `pina migrations create` to rebind the migration history to the new address, regenerate the clients, and deploy. Your upgrade authority then controls your tiers.
