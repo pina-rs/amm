@@ -489,6 +489,44 @@ mod tests {
 	}
 
 	#[test]
+	fn failed_simulation_logs_are_safe_in_text_and_json_diagnostics() {
+		let logs = [
+			"Program log: café\tvalue=42",
+			"\u{1b}[2Jerase\rreplace\u{8}",
+			"\u{1b}]52;c;dGVzdA==\u{7}",
+			"\u{9b}2J\u{9d}52;c;dGVzdA==\u{9c}",
+		];
+		let (context, _) = recording_context(
+			true,
+			Some(json!({
+				"context": { "slot": 1 },
+				"value": { "err": "AccountNotFound", "logs": logs },
+			})),
+		);
+		let Err(error @ CliError::SimulationFailed { .. }) = context.simulate(&[]) else {
+			panic!("expected the RPC simulation failure");
+		};
+		let diagnostic = error.diagnostic(false);
+
+		assert!(diagnostic.contains("Program log: café\tvalue=42\n"));
+		assert!(diagnostic.contains("\\u{1b}[2Jerase\\rreplace\\u{8}"));
+		assert!(diagnostic.contains("\\u{1b}]52;c;dGVzdA==\\u{7}"));
+		assert!(diagnostic.contains("\\u{9b}2J\\u{9d}52;c;dGVzdA==\\u{9c}"));
+		assert!(!diagnostic.contains([
+			'\u{1b}', '\r', '\u{8}', '\u{7}', '\u{9b}', '\u{9d}', '\u{9c}'
+		]));
+
+		let json = error.diagnostic(true);
+		let value: Value = serde_json::from_str(&json).expect("JSON diagnostic");
+
+		assert_eq!(
+			value["error"],
+			diagnostic.strip_prefix("error: ").expect("text prefix")
+		);
+		assert!(!json.chars().any(char::is_control));
+	}
+
+	#[test]
 	fn resolves_cluster_names_and_rejects_remote_http() {
 		assert_eq!(resolve_endpoint("devnet").expect("devnet"), DEVNET);
 		assert_eq!(resolve_endpoint("l").expect("localhost"), LOCALHOST);

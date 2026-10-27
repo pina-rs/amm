@@ -74,3 +74,84 @@ pub enum CliError {
 	#[error("instruction data rejected the provided values")]
 	InvalidInstructionData,
 }
+
+impl CliError {
+	/// Render a command failure for stderr, escaping terminal controls.
+	pub fn diagnostic(&self, json: bool) -> String {
+		let message = self.to_string();
+		let mut safe = String::with_capacity(message.len());
+
+		// RPC messages and simulation logs can contain CSI, OSC, and C1 controls.
+		for character in message.chars() {
+			if character.is_control() && !matches!(character, '\n' | '\t') {
+				safe.extend(character.escape_debug());
+			} else {
+				safe.push(character);
+			}
+		}
+
+		if json {
+			serde_json::json!({ "error": safe }).to_string()
+		} else {
+			format!("error: {safe}")
+		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn readable_diagnostics_preserve_unicode_and_log_layout() {
+		let error = CliError::SimulationFailed {
+			error: "transaction rejected".to_owned(),
+			logs: "Program log: café\n\tvalue=42".to_owned(),
+		};
+
+		assert_eq!(
+			error.diagnostic(false),
+			"error: simulation failed: transaction rejected\nProgram log: café\n\tvalue=42"
+		);
+	}
+
+	#[test]
+	fn remote_errors_escape_all_c0_and_c1_controls_except_newlines_and_tabs() {
+		let controls: String = (0..=0x9f)
+			.filter_map(char::from_u32)
+			.filter(|character| character.is_control())
+			.collect();
+		let errors = [
+			CliError::Rpc(controls.clone()),
+			CliError::TransactionFailed(controls.clone()),
+			CliError::SimulationFailed {
+				error: controls.clone(),
+				logs: controls,
+			},
+		];
+
+		for error in errors {
+			for json in [false, true] {
+				let diagnostic = error.diagnostic(json);
+
+				assert!(diagnostic.chars().all(|character| {
+					!character.is_control() || matches!(character, '\n' | '\t')
+				}));
+
+				if json {
+					let value: serde_json::Value =
+						serde_json::from_str(&diagnostic).expect("JSON diagnostic");
+
+					assert!(
+						value["error"]
+							.as_str()
+							.expect("error string")
+							.contains("\\u{1b}")
+					);
+				} else {
+					assert!(diagnostic.contains("\\u{1b}"));
+				}
+			}
+		}
+	}
+}
