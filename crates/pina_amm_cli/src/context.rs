@@ -90,7 +90,8 @@ impl Context {
 			.is_some())
 	}
 
-	fn transaction(&self, instructions: &[Instruction]) -> Result<Transaction, CliError> {
+	/// Authorize a transaction only when it will be submitted.
+	fn signed_transaction(&self, instructions: &[Instruction]) -> Result<Transaction, CliError> {
 		let blockhash = self
 			.rpc
 			.get_latest_blockhash()
@@ -105,7 +106,10 @@ impl Context {
 
 	/// Simulate `instructions` and collect the AMM's events.
 	pub fn simulate(&self, instructions: &[Instruction]) -> Result<Simulation, CliError> {
-		let transaction = self.transaction(instructions)?;
+		// Security: A signed simulation could be broadcast by the RPC. Keep
+		// placeholder signatures and blockhash; the RPC replaces the latter.
+		let message = Message::new(instructions, Some(&self.signer.pubkey()));
+		let transaction = Transaction::new_unsigned(message);
 		let result = self
 			.rpc
 			.simulate_transaction_with_config(
@@ -146,7 +150,7 @@ impl Context {
 			}
 			return Ok(None);
 		}
-		let transaction = self.transaction(instructions)?;
+		let transaction = self.signed_transaction(instructions)?;
 		self.rpc
 			.send_and_confirm_transaction(&transaction)
 			.map(|signature| Some(signature.to_string()))
@@ -252,7 +256,218 @@ pub fn program_events(logs: &[String], program: &Pubkey) -> Vec<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
+	use std::sync::Arc;
+	use std::sync::Mutex;
+
+	use serde_json::Value;
+	use serde_json::json;
+	use solana_instruction::AccountMeta;
+	use solana_rpc_client::mock_sender::MockSender;
+	use solana_rpc_client::rpc_client::RpcClientConfig;
+	use solana_rpc_client::rpc_sender::RpcSender;
+	use solana_rpc_client::rpc_sender::RpcTransportStats;
+	use solana_rpc_client_api::request::RpcRequest;
+
 	use super::*;
+
+	type Requests = Arc<Mutex<Vec<(RpcRequest, Value)>>>;
+
+	/// Capture the real RPC client's serialized requests without a network.
+	struct RecordingSender {
+		inner: MockSender,
+		requests: Requests,
+	}
+
+	#[async_trait::async_trait]
+	impl RpcSender for RecordingSender {
+		async fn send(
+			&self,
+			request: RpcRequest,
+			params: Value,
+		) -> solana_rpc_client_api::client_error::Result<Value> {
+			self.requests
+				.lock()
+				.expect("requests")
+				.push((request, params.clone()));
+			self.inner.send(request, params).await
+		}
+
+		fn get_transport_stats(&self) -> RpcTransportStats {
+			self.inner.get_transport_stats()
+		}
+
+		fn url(&self) -> String {
+			self.inner.url()
+		}
+	}
+
+	/// Use the SDK's RPC responses, including a usable recent blockhash.
+	fn recording_context(simulate_only: bool, simulation: Option<Value>) -> (Context, Requests) {
+		let requests = Requests::default();
+		let mocks = simulation
+			.map(|response| (RpcRequest::SimulateTransaction, response))
+			.into_iter()
+			.collect();
+		let context = Context {
+			rpc: RpcClient::new_sender(
+				RecordingSender {
+					inner: MockSender::new_with_mocks("succeeds", mocks),
+					requests: Arc::clone(&requests),
+				},
+				RpcClientConfig::with_commitment(CommitmentConfig::confirmed()),
+			),
+			signer: Keypair::new(),
+			json: true,
+			simulate_only,
+		};
+
+		(context, requests)
+	}
+
+	/// A mutation requiring the user's authority, like quote and send instructions.
+	fn signed_instruction(context: &Context) -> Instruction {
+		Instruction {
+			program_id: PINA_AMM_ID,
+			accounts: vec![AccountMeta::new(context.signer(), true)],
+			data: vec![1, 2, 3],
+		}
+	}
+
+	/// Inspect the exact transaction bytes passed to the RPC transport.
+	fn decode_transaction(params: &Value) -> Transaction {
+		assert_eq!(params[1]["encoding"], "base64");
+		let bytes = base64::engine::general_purpose::STANDARD
+			.decode(params[0].as_str().expect("encoded transaction"))
+			.expect("base64 transaction");
+
+		wincode::deserialize(&bytes).expect("wire transaction")
+	}
+
+	/// No RPC should receive authorization to broadcast a simulation.
+	fn assert_unsigned_simulation(
+		context: &Context,
+		instructions: &[Instruction],
+		requests: &Requests,
+	) {
+		let requests = requests.lock().expect("requests");
+		let simulations: Vec<_> = requests
+			.iter()
+			.filter(|(request, _)| *request == RpcRequest::SimulateTransaction)
+			.collect();
+		assert_eq!(simulations.len(), 1);
+		assert!(!requests.iter().any(|(request, _)| {
+			matches!(
+				request,
+				RpcRequest::GetLatestBlockhash | RpcRequest::SendTransaction
+			)
+		}));
+
+		let params = &simulations[0].1;
+		let transaction = decode_transaction(params);
+		assert_eq!(params[1]["sigVerify"], false);
+		assert_eq!(params[1]["replaceRecentBlockhash"], true);
+		assert_eq!(
+			transaction.message,
+			Message::new(instructions, Some(&context.signer()))
+		);
+		assert_eq!(
+			transaction.signatures.len(),
+			usize::from(transaction.message.header.num_required_signatures)
+		);
+		assert!(
+			transaction
+				.signatures
+				.iter()
+				.all(|signature| *signature == Default::default())
+		);
+		assert_ne!(
+			transaction.signatures[0],
+			context.signer.sign_message(&transaction.message_data())
+		);
+		assert!(!transaction.is_signed());
+	}
+
+	#[test]
+	fn quote_and_simulate_only_requests_are_not_broadcastable() {
+		for simulate_only in [false, true] {
+			let (context, requests) = recording_context(simulate_only, None);
+			let instructions = [signed_instruction(&context)];
+
+			if simulate_only {
+				assert_eq!(context.send(&instructions).expect("simulate only"), None);
+			} else {
+				context.simulate(&instructions).expect("quote simulation");
+			}
+
+			assert_unsigned_simulation(&context, &instructions, &requests);
+		}
+	}
+
+	#[test]
+	fn failed_simulations_remain_unsigned_and_report_logs() {
+		for simulate_only in [false, true] {
+			let response = json!({
+				"context": { "slot": 1 },
+				"value": {
+					"err": { "InstructionError": [0, { "Custom": 7 }] },
+					"logs": ["Program log: rejected"]
+				}
+			});
+			let (context, requests) = recording_context(simulate_only, Some(response));
+			let instructions = [signed_instruction(&context)];
+			let error = if simulate_only {
+				context.send(&instructions).err()
+			} else {
+				context.simulate(&instructions).err()
+			};
+
+			assert!(
+				matches!(error, Some(CliError::SimulationFailed { logs, .. }) if logs == "Program log: rejected")
+			);
+			assert_unsigned_simulation(&context, &instructions, &requests);
+		}
+	}
+
+	#[test]
+	fn send_signs_the_rpc_blockhash_and_submits_once() {
+		let (context, requests) = recording_context(false, None);
+		let instructions = [signed_instruction(&context)];
+		let signature = context
+			.send(&instructions)
+			.expect("send")
+			.expect("signature");
+		let requests = requests.lock().expect("requests");
+		let sends: Vec<_> = requests
+			.iter()
+			.filter(|(request, _)| *request == RpcRequest::SendTransaction)
+			.collect();
+		assert_eq!(sends.len(), 1);
+		assert_eq!(
+			requests
+				.iter()
+				.filter(|(request, _)| *request == RpcRequest::GetLatestBlockhash)
+				.count(),
+			1
+		);
+		assert!(
+			!requests
+				.iter()
+				.any(|(request, _)| *request == RpcRequest::SimulateTransaction)
+		);
+
+		let transaction = decode_transaction(&sends[0].1);
+		let mut expected = Message::new(&instructions, Some(&context.signer()));
+		expected.recent_blockhash = solana_rpc_client::mock_sender::PUBKEY
+			.parse()
+			.expect("blockhash");
+		assert_eq!(transaction.message, expected);
+		assert_eq!(
+			transaction.signatures,
+			vec![context.signer.sign_message(&transaction.message_data())]
+		);
+		assert!(transaction.is_signed());
+		assert_eq!(signature, transaction.signatures[0].to_string());
+	}
 
 	#[test]
 	fn resolves_cluster_names_and_rejects_remote_http() {

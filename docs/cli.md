@@ -18,6 +18,8 @@ pina-amm --help
 
 Amounts are always **base units**, the integer a token account stores. One USDC with 6 decimals is `1000000`.
 
+Quotes and `--simulate` requests use unsigned transactions with placeholder signatures and a placeholder blockhash. The RPC replaces the blockhash for simulation and skips signature verification; it receives no signature it could use to broadcast the transaction. Only transactions being sent are signed with a recent blockhash.
+
 ## Fee tiers
 
 ```sh
