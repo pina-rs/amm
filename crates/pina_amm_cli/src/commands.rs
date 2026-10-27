@@ -1,7 +1,6 @@
 //! Command implementations.
 
 use pina_amm_client::accounts::Pool;
-use pina_amm_client::events::LiquidityChanged;
 use pina_amm_client::events::Swapped;
 use pina_amm_client::instructions::CollectCreatorFees;
 use pina_amm_client::instructions::CollectCreatorFeesInstructionData;
@@ -48,15 +47,14 @@ use crate::cli::CreatorFeeMode;
 use crate::cli::FeesCommand;
 use crate::cli::LiquidityArgs;
 use crate::cli::PoolCommand;
+use crate::cli::QuoteArgs;
 use crate::cli::SetCreatorArgs;
 use crate::cli::SwapArgs;
 use crate::cli::UpdateConfigArgs;
 use crate::context::Context;
 use crate::error::CliError;
 
-const BASIS_POINTS: u128 = 10_000;
 const SWAPPED_DISCRIMINATOR: u8 = 2;
-const LIQUIDITY_CHANGED_DISCRIMINATOR: u8 = 3;
 
 /// Run one command.
 pub fn run(context: &Context, command: Command) -> Result<(), CliError> {
@@ -75,10 +73,27 @@ pub fn run(context: &Context, command: Command) -> Result<(), CliError> {
 			Ok(())
 		}
 		Command::Pool(PoolCommand::SetCreator(args)) => set_creator(context, &args),
-		Command::Quote(args) => swap(context, &args, false),
-		Command::Swap(args) => swap(context, &args, true),
-		Command::Deposit(args) => liquidity(context, &args, true),
-		Command::Withdraw(args) => liquidity(context, &args, false),
+		Command::Quote(args) => swap(context, &args, None),
+		Command::Swap(args) => {
+			let amount = swap_amount(&args);
+			swap(context, &args.quote, Some(amount))
+		}
+		Command::Deposit(args) => {
+			liquidity(
+				context,
+				&args.liquidity,
+				true,
+				(args.maximum_amount_0, args.maximum_amount_1),
+			)
+		}
+		Command::Withdraw(args) => {
+			liquidity(
+				context,
+				&args.liquidity,
+				false,
+				(args.minimum_amount_0, args.minimum_amount_1),
+			)
+		}
 		Command::Fees(FeesCommand::CollectProtocol(args)) => {
 			collect_fees(context, &args.pool, true)
 		}
@@ -86,24 +101,6 @@ pub fn run(context: &Context, command: Command) -> Result<(), CliError> {
 			collect_fees(context, &args.pool, false)
 		}
 	}
-}
-
-/// Smallest acceptable output after `slippage_bps` of tolerance.
-pub fn minimum_after_slippage(amount: u64, slippage_bps: u16) -> Result<u64, CliError> {
-	let remaining = BASIS_POINTS
-		.checked_sub(u128::from(slippage_bps))
-		.ok_or(CliError::InvalidSlippage(slippage_bps))?;
-	Ok(u64::try_from(u128::from(amount) * remaining / BASIS_POINTS).unwrap_or(u64::MAX))
-}
-
-/// Largest acceptable input after `slippage_bps` of tolerance.
-pub fn maximum_after_slippage(amount: u64, slippage_bps: u16) -> Result<u64, CliError> {
-	if u128::from(slippage_bps) > BASIS_POINTS {
-		return Err(CliError::InvalidSlippage(slippage_bps));
-	}
-	let scaled =
-		(u128::from(amount) * (BASIS_POINTS + u128::from(slippage_bps))).div_ceil(BASIS_POINTS);
-	Ok(u64::try_from(scaled).unwrap_or(u64::MAX))
 }
 
 fn report(context: &Context, action: &str, signature: Option<String>, details: serde_json::Value) {
@@ -352,7 +349,31 @@ enum Amount {
 	ExactOut { amount_out: u64, maximum_in: u64 },
 }
 
-fn swap(context: &Context, args: &SwapArgs, send: bool) -> Result<(), CliError> {
+/// Preserve the caller's absolute limit without consulting an RPC quote.
+fn swap_amount(args: &SwapArgs) -> Amount {
+	match (
+		args.quote.amount_in,
+		args.quote.amount_out,
+		args.minimum_out,
+		args.maximum_in,
+	) {
+		(Some(amount_in), None, Some(minimum_out), None) => {
+			Amount::ExactIn {
+				amount_in,
+				minimum_out,
+			}
+		}
+		(None, Some(amount_out), None, Some(maximum_in)) => {
+			Amount::ExactOut {
+				amount_out,
+				maximum_in,
+			}
+		}
+		_ => unreachable!("clap requires an exact amount and its matching limit"),
+	}
+}
+
+fn swap(context: &Context, args: &QuoteArgs, amount: Option<Amount>) -> Result<(), CliError> {
 	let pool = load_pool(context, &args.pool)?;
 	let trader = context.signer();
 	let sell_token_0 = pool.sells_token_0(&args.sell)?;
@@ -367,7 +388,34 @@ fn swap(context: &Context, args: &SwapArgs, send: bool) -> Result<(), CliError> 
 		));
 	}
 
-	// Quote with an open limit, then send with the slippage-adjusted one.
+	// Security: Only explicit caller limits reach a signed transaction.
+	if let Some(amount) = amount {
+		prefix.push(swap_instruction(&args.pool, &trader, &route, amount)?);
+		let signature = context.send(&prefix)?;
+		let limits = match amount {
+			Amount::ExactIn {
+				amount_in,
+				minimum_out,
+			} => json!({ "amount_in": amount_in, "minimum_out": minimum_out }),
+			Amount::ExactOut {
+				amount_out,
+				maximum_in,
+			} => json!({ "amount_out": amount_out, "maximum_in": maximum_in }),
+		};
+		report(
+			context,
+			"swapped",
+			signature,
+			json!({
+				"pool": args.pool.to_string(),
+				"sell": args.sell.to_string(),
+				"limits": limits,
+			}),
+		);
+		return Ok(());
+	}
+
+	// Open limits are used only for advisory quote simulations.
 	let open = match (args.amount_in, args.amount_out) {
 		(Some(amount_in), _) => {
 			Amount::ExactIn {
@@ -383,9 +431,8 @@ fn swap(context: &Context, args: &SwapArgs, send: bool) -> Result<(), CliError> 
 		}
 		(None, None) => unreachable!("clap requires one amount"),
 	};
-	let mut quote_instructions = prefix.clone();
-	quote_instructions.push(swap_instruction(&args.pool, &trader, &route, open)?);
-	let simulation = context.simulate(&quote_instructions)?;
+	prefix.push(swap_instruction(&args.pool, &trader, &route, open)?);
+	let simulation = context.simulate(&prefix)?;
 	let event = simulation
 		.events
 		.iter()
@@ -393,20 +440,14 @@ fn swap(context: &Context, args: &SwapArgs, send: bool) -> Result<(), CliError> 
 		.ok_or(CliError::MissingEvent)?;
 	let quote = Swapped::from_bytes(event).map_err(|_| CliError::MissingEvent)?;
 	let (amount_in, amount_out) = (quote.amount_in.get(), quote.amount_out.get());
-	let limited = match open {
-		Amount::ExactIn { amount_in, .. } => {
-			Amount::ExactIn {
-				amount_in,
-				minimum_out: minimum_after_slippage(amount_out, args.slippage_bps)?,
-			}
-		}
-		Amount::ExactOut { amount_out, .. } => {
-			Amount::ExactOut {
-				amount_out,
-				maximum_in: maximum_after_slippage(amount_in, args.slippage_bps)?,
-			}
-		}
-	};
+	if quote.pool != args.pool
+		|| quote.trader != trader
+		|| quote.zero_for_one != u8::from(sell_token_0)
+		|| args.amount_in.is_some_and(|amount| amount != amount_in)
+		|| args.amount_out.is_some_and(|amount| amount != amount_out)
+	{
+		return Err(CliError::MismatchedQuote);
+	}
 	let details = json!({
 		"pool": args.pool.to_string(),
 		"sell": args.sell.to_string(),
@@ -417,18 +458,16 @@ fn swap(context: &Context, args: &SwapArgs, send: bool) -> Result<(), CliError> 
 		"creator_fee": quote.creator_fee.get(),
 		"compute_units": simulation.units,
 	});
-	if !send {
-		report(context, "quote", None, details);
-		return Ok(());
-	}
-	let mut instructions = prefix;
-	instructions.push(swap_instruction(&args.pool, &trader, &route, limited)?);
-	let signature = context.send(&instructions)?;
-	report(context, "swapped", signature, details);
+	report(context, "quote", None, details);
 	Ok(())
 }
 
-fn liquidity(context: &Context, args: &LiquidityArgs, deposit: bool) -> Result<(), CliError> {
+fn liquidity(
+	context: &Context,
+	args: &LiquidityArgs,
+	deposit: bool,
+	limits: (u64, u64),
+) -> Result<(), CliError> {
 	let pool = load_pool(context, &args.pool)?;
 	let owner = context.signer();
 	let token_0 = associated_token_address(&owner, &pool.mint_0, &pool.token_program_0);
@@ -490,32 +529,6 @@ fn liquidity(context: &Context, args: &LiquidityArgs, deposit: bool) -> Result<(
 		}
 	};
 
-	let open = if deposit {
-		(u64::MAX, u64::MAX)
-	} else {
-		(0, 0)
-	};
-	let mut quote_instructions = prefix.clone();
-	quote_instructions.push(build(open.0, open.1)?);
-	let simulation = context.simulate(&quote_instructions)?;
-	let event = simulation
-		.events
-		.iter()
-		.find(|bytes| bytes.first() == Some(&LIQUIDITY_CHANGED_DISCRIMINATOR))
-		.ok_or(CliError::MissingEvent)?;
-	let quote = LiquidityChanged::from_bytes(event).map_err(|_| CliError::MissingEvent)?;
-	let (amount_0, amount_1) = (quote.amount0.get(), quote.amount1.get());
-	let limits = if deposit {
-		(
-			maximum_after_slippage(amount_0, args.slippage_bps)?,
-			maximum_after_slippage(amount_1, args.slippage_bps)?,
-		)
-	} else {
-		(
-			minimum_after_slippage(amount_0, args.slippage_bps)?,
-			minimum_after_slippage(amount_1, args.slippage_bps)?,
-		)
-	};
 	let mut instructions = prefix;
 	instructions.push(build(limits.0, limits.1)?);
 	let signature = context.send(&instructions)?;
@@ -526,8 +539,10 @@ fn liquidity(context: &Context, args: &LiquidityArgs, deposit: bool) -> Result<(
 		json!({
 			"pool": args.pool.to_string(),
 			"lp_amount": args.lp_amount,
-			"amount_0": amount_0,
-			"amount_1": amount_1,
+			"mint_0": pool.mint_0.to_string(),
+			"mint_1": pool.mint_1.to_string(),
+			"limit_0": limits.0,
+			"limit_1": limits.1,
 		}),
 	);
 	Ok(())
@@ -659,20 +674,56 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn slippage_limits_round_against_the_trader() {
-		assert_eq!(minimum_after_slippage(10_000, 50).expect("min"), 9_950);
-		assert_eq!(minimum_after_slippage(9_999, 50).expect("min"), 9_949);
-		assert_eq!(maximum_after_slippage(10_000, 50).expect("max"), 10_050);
-		assert_eq!(maximum_after_slippage(9_999, 50).expect("max"), 10_049);
-		assert_eq!(maximum_after_slippage(u64::MAX, 50).expect("max"), u64::MAX);
-		assert_eq!(minimum_after_slippage(10_000, 10_000).expect("min"), 0);
-		assert!(matches!(
-			minimum_after_slippage(1, 10_001),
-			Err(CliError::InvalidSlippage(10_001))
-		));
-		assert!(matches!(
-			maximum_after_slippage(1, 10_001),
-			Err(CliError::InvalidSlippage(10_001))
-		));
+	fn swap_instructions_preserve_explicit_limits() {
+		use clap::Parser;
+
+		use crate::cli::Cli;
+
+		let pool = Pubkey::new_unique();
+		let trader = Pubkey::new_unique();
+		let sell = Pubkey::new_unique();
+		let route = Route {
+			input_token: Pubkey::new_unique(),
+			output_token: Pubkey::new_unique(),
+			input_vault: Pubkey::new_unique(),
+			output_vault: Pubkey::new_unique(),
+			input_program: TOKEN_PROGRAM,
+			output_program: TOKEN_PROGRAM,
+			output_mint: Pubkey::new_unique(),
+		};
+
+		for (flags, expected) in [
+			(
+				["--amount-in", "1000", "--minimum-out", "975"],
+				(1000_u64, 975_u64),
+			),
+			(
+				["--amount-out", "1000", "--maximum-in", "1025"],
+				(1000, 1025),
+			),
+		] {
+			let cli = Cli::parse_from(
+				[
+					&[
+						"pina-amm",
+						"swap",
+						"--pool",
+						&pool.to_string(),
+						"--sell",
+						&sell.to_string(),
+					][..],
+					&flags,
+				]
+				.concat(),
+			);
+			let Command::Swap(args) = cli.command else {
+				panic!("swap")
+			};
+			let instruction =
+				swap_instruction(&pool, &trader, &route, swap_amount(&args)).expect("instruction");
+			// Swap instruction fields follow the unversioned discriminator.
+			assert_eq!(&instruction.data[1..9], &expected.0.to_le_bytes());
+			assert_eq!(&instruction.data[9..17], &expected.1.to_le_bytes());
+		}
 	}
 }

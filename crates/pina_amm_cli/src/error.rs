@@ -53,9 +53,9 @@ pub enum CliError {
 	/// Two mints that must differ are the same.
 	#[error("a pool needs two different mints")]
 	SameMint,
-	/// The slippage tolerance is above 100%.
-	#[error("slippage of {0} basis points is above 10,000 (100%)")]
-	InvalidSlippage(u16),
+	/// An advisory simulation event describes a different swap.
+	#[error("the RPC quote does not match the requested swap")]
+	MismatchedQuote,
 	/// Simulation failed, so no transaction was sent.
 	#[error("simulation failed: {error}\n{logs}")]
 	SimulationFailed {

@@ -66,13 +66,13 @@ pub enum Command {
 	#[command(subcommand)]
 	Pool(PoolCommand),
 	/// Quote a swap without sending it.
-	Quote(SwapArgs),
+	Quote(QuoteArgs),
 	/// Swap one pool token for the other.
 	Swap(SwapArgs),
 	/// Add liquidity in proportion to the pool's reserves.
-	Deposit(LiquidityArgs),
+	Deposit(DepositArgs),
 	/// Remove liquidity in proportion to the pool's reserves.
-	Withdraw(LiquidityArgs),
+	Withdraw(WithdrawArgs),
 	/// Collect accrued protocol or creator fees.
 	#[command(subcommand)]
 	Fees(FeesCommand),
@@ -212,10 +212,10 @@ pub struct SetCreatorArgs {
 	pub new_creator: Pubkey,
 }
 
-/// `pina-amm quote` and `pina-amm swap`
+/// The pool, direction, and exact amount of a quote or swap.
 #[derive(Debug, Args)]
 #[command(group(clap::ArgGroup::new("amount").required(true).args(["amount_in", "amount_out"])))]
-pub struct SwapArgs {
+pub struct QuoteArgs {
 	/// Pool address.
 	#[arg(long)]
 	pub pool: Pubkey,
@@ -228,12 +228,24 @@ pub struct SwapArgs {
 	/// Buy exactly this many base units of the other mint.
 	#[arg(long)]
 	pub amount_out: Option<u64>,
-	/// Slippage tolerance in basis points (`50` is 0.5%).
-	#[arg(long, default_value_t = 50)]
-	pub slippage_bps: u16,
 }
 
-/// `pina-amm deposit` and `pina-amm withdraw`
+/// A swap with an explicit absolute limit chosen by the caller.
+#[derive(Debug, Args)]
+#[command(group(clap::ArgGroup::new("limit").required(true).args(["minimum_out", "maximum_in"])))]
+pub struct SwapArgs {
+	/// The pool, direction, and exact amount.
+	#[command(flatten)]
+	pub quote: QuoteArgs,
+	/// Minimum output in base units; required with `--amount-in`.
+	#[arg(long, requires = "amount_in", conflicts_with = "amount_out")]
+	pub minimum_out: Option<u64>,
+	/// Maximum input in base units; required with `--amount-out`.
+	#[arg(long, requires = "amount_out", conflicts_with = "amount_in")]
+	pub maximum_in: Option<u64>,
+}
+
+/// The pool and LP amount of a liquidity change.
 #[derive(Debug, Args)]
 pub struct LiquidityArgs {
 	/// Pool address.
@@ -242,9 +254,34 @@ pub struct LiquidityArgs {
 	/// LP base units to mint or burn.
 	#[arg(long)]
 	pub lp_amount: u64,
-	/// Slippage tolerance in basis points (`50` is 0.5%).
-	#[arg(long, default_value_t = 50)]
-	pub slippage_bps: u16,
+}
+
+/// A deposit with explicit maximum token amounts.
+#[derive(Debug, Args)]
+pub struct DepositArgs {
+	/// The pool and LP amount.
+	#[command(flatten)]
+	pub liquidity: LiquidityArgs,
+	/// Maximum token 0 input in base units (the pool's `mint_0`).
+	#[arg(long)]
+	pub maximum_amount_0: u64,
+	/// Maximum token 1 input in base units (the pool's `mint_1`).
+	#[arg(long)]
+	pub maximum_amount_1: u64,
+}
+
+/// A withdrawal with explicit minimum token amounts.
+#[derive(Debug, Args)]
+pub struct WithdrawArgs {
+	/// The pool and LP amount.
+	#[command(flatten)]
+	pub liquidity: LiquidityArgs,
+	/// Minimum token 0 output in base units (the pool's `mint_0`).
+	#[arg(long)]
+	pub minimum_amount_0: u64,
+	/// Minimum token 1 output in base units (the pool's `mint_1`).
+	#[arg(long)]
+	pub minimum_amount_1: u64,
 }
 
 /// `pina-amm fees ...`
@@ -268,15 +305,75 @@ mod tests {
 	}
 
 	#[test]
-	fn swap_requires_exactly_one_amount() {
+	fn quote_requires_exactly_one_amount() {
 		let pool = Pubkey::new_unique().to_string();
 		let sell = Pubkey::new_unique().to_string();
-		let base = ["pina-amm", "swap", "--pool", &pool, "--sell", &sell];
+		let base = ["pina-amm", "quote", "--pool", &pool, "--sell", &sell];
 		assert!(Cli::try_parse_from(base).is_err());
 		assert!(Cli::try_parse_from([&base[..], &["--amount-in", "5"]].concat()).is_ok());
 		assert!(
 			Cli::try_parse_from([&base[..], &["--amount-in", "5", "--amount-out", "5"]].concat())
 				.is_err()
 		);
+	}
+
+	#[test]
+	fn swaps_require_the_matching_explicit_limit() {
+		let pool = Pubkey::new_unique().to_string();
+		let sell = Pubkey::new_unique().to_string();
+		let base = ["pina-amm", "swap", "--pool", &pool, "--sell", &sell];
+
+		for invalid in [
+			vec!["--amount-in", "5"],
+			vec!["--amount-out", "5"],
+			vec!["--amount-in", "5", "--maximum-in", "6"],
+			vec!["--amount-out", "5", "--minimum-out", "4"],
+			vec![
+				"--amount-in",
+				"5",
+				"--minimum-out",
+				"4",
+				"--maximum-in",
+				"6",
+			],
+			vec![
+				"--amount-in",
+				"5",
+				"--minimum-out",
+				"4",
+				"--slippage-bps",
+				"50",
+			],
+		] {
+			assert!(
+				Cli::try_parse_from([&base[..], &invalid].concat()).is_err(),
+				"{invalid:?}"
+			);
+		}
+
+		for valid in [
+			["--amount-in", "5", "--minimum-out", "4"],
+			["--amount-out", "5", "--maximum-in", "6"],
+		] {
+			assert!(Cli::try_parse_from([&base[..], &valid].concat()).is_ok());
+		}
+	}
+
+	#[test]
+	fn liquidity_requires_both_explicit_limits() {
+		let pool = Pubkey::new_unique().to_string();
+
+		for (command, flags) in [
+			("deposit", ["--maximum-amount-0", "--maximum-amount-1"]),
+			("withdraw", ["--minimum-amount-0", "--minimum-amount-1"]),
+		] {
+			let base = ["pina-amm", command, "--pool", &pool, "--lp-amount", "5"];
+			assert!(Cli::try_parse_from(base).is_err());
+			assert!(Cli::try_parse_from([&base[..], &[flags[0], "6"]].concat()).is_err());
+			assert!(Cli::try_parse_from([&base[..], &[flags[1], "7"]].concat()).is_err());
+			assert!(
+				Cli::try_parse_from([&base[..], &[flags[0], "6", flags[1], "7"]].concat()).is_ok()
+			);
+		}
 	}
 }

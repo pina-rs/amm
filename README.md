@@ -43,11 +43,11 @@ cargo install pina_amm_cli
 pina-amm --url mainnet pool show --pool <POOL_ADDRESS>
 ```
 
-Quote a trade, then send it with a 0.5% slippage limit:
+Quote a trade, then choose an absolute minimum output before sending it:
 
 ```sh
 pina-amm quote --pool <POOL> --sell <MINT> --amount-in 1000000
-pina-amm swap  --pool <POOL> --sell <MINT> --amount-in 1000000 --slippage-bps 50
+pina-amm swap  --pool <POOL> --sell <MINT> --amount-in 1000000 --minimum-out 1800000
 ```
 
 The same swap from TypeScript:
