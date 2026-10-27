@@ -55,20 +55,26 @@ You can pass the mints in either order; the CLI sorts them. `--creator-fee-mode`
 
 ```sh
 pina-amm quote --pool <POOL> --sell <MINT> --amount-in 1000000
-pina-amm swap  --pool <POOL> --sell <MINT> --amount-in 1000000 --slippage-bps 50
-pina-amm swap  --pool <POOL> --sell <MINT> --amount-out 500000
+pina-amm swap  --pool <POOL> --sell <MINT> --amount-in 1000000 --minimum-out 1800000
+pina-amm swap  --pool <POOL> --sell <MINT> --amount-out 500000 --maximum-in 280000
 ```
 
-Each trade is first simulated with an open limit; the `Swapped` event the program emits is the quote. The CLI then sends the trade with the limit moved by `--slippage-bps` (default 50, 0.5%): a minimum output for `--amount-in`, a maximum input for `--amount-out`. If the output token account does not exist yet, it is created in the same transaction.
+`quote` simulates a swap and prints an advisory estimate supplied by the configured RPC. The endpoint can fabricate both logs and account data, even over HTTPS. Verify prices independently before choosing your limits; do not blindly copy an RPC quote into them.
+
+`swap` requires your explicit absolute limit: `--minimum-out` with `--amount-in`, or `--maximum-in` with `--amount-out`. It signs those exact amounts without deriving a limit from simulation events. The program rejects execution outside your bounds. `--slippage-bps` has been removed. If the output token account does not exist yet, it is created in the same transaction.
 
 ## Liquidity
 
 ```sh
-pina-amm deposit  --pool <POOL> --lp-amount 1000000 --slippage-bps 50
-pina-amm withdraw --pool <POOL> --lp-amount 1000000 --slippage-bps 50
+pina-amm deposit  --pool <POOL> --lp-amount 1000000 \
+  --maximum-amount-0 800000 --maximum-amount-1 1600000
+pina-amm withdraw --pool <POOL> --lp-amount 1000000 \
+  --minimum-amount-0 600000 --minimum-amount-1 1200000
 ```
 
-Both are quoted by simulation the same way, and missing token accounts are created first.
+Both token limits are required, including under `--simulate`. Token 0 and token 1 refer to the pool's `mint_0` and `mint_1`, shown by `pool show`; they are sorted by address, not by the order passed to `pool create`. Deposits cap each token input and withdrawals set each minimum output. Missing token accounts are created first. Simulation results never change these bounds.
+
+The amounts above are examples, not suggested prices. Swap results report the submitted `limits`; liquidity results report `limit_0`, `limit_1`, and their mint addresses. These are bounds, not execution amounts.
 
 ## Fees
 

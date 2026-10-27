@@ -108,5 +108,5 @@ for (final event in events) {
 ## Flutter notes
 
 - Keep `BigInt` end to end; token amounts exceed JavaScript-safe and Dart `int` ranges on the web.
-- Show users the quote _and_ the minimum they will accept, derived with the same slippage rule the CLI uses: `minimum = quote * (10000 - bps) ~/ 10000`.
+- Show users the quote _and_ the minimum they will accept: `minimum = quote * (10000 - bps) ~/ 10000`. RPC quotes are advisory; verify prices independently. The CLI requires callers to supply the absolute bound explicitly.
 - Map error codes such as `pinaAmmErrorSlippageExceeded` to product language in your app; the generated messages are written for developers.

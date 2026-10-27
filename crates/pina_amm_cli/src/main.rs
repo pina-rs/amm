@@ -3,9 +3,8 @@
 //! The binary is a thin layer over the generated `pina_amm_client` crate. It
 //! derives every PDA, vault, and associated token account, so commands take
 //! the handful of values a person actually chooses: a tier index, two mints,
-//! and amounts. Trades and liquidity changes are quoted by simulating the
-//! instruction and reading the event the program emits, then sent with a
-//! slippage limit derived from that quote.
+//! and amounts. Swap quotes are advisory simulation results. Trades and
+//! liquidity changes require explicit absolute limits chosen by the caller.
 //!
 //! Run `pina-amm --help` for the command reference, or read
 //! `docs/cli.md` in the repository.

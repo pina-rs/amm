@@ -5,6 +5,7 @@
 
 use std::path::PathBuf;
 use std::process::Command;
+use std::process::Output;
 
 use pina_test::Keypair;
 use pina_test::Pubkey;
@@ -21,8 +22,8 @@ fn binary() -> PathBuf {
 	)
 }
 
-/// Run `pina-amm --json <args>` as `signer` and parse its JSON output.
-fn run(h: &Harness, signer: &Keypair, args: &[&str]) -> serde_json::Value {
+/// Run the real CLI so successful and rejected transactions use the same path.
+fn execute(h: &Harness, signer: &Keypair, args: &[&str]) -> Output {
 	let directory = std::env::temp_dir().join(format!("pina-amm-cli-{}", signer.pubkey()));
 	std::fs::create_dir_all(&directory).expect("keypair directory");
 	let keypair = directory.join("signer.json");
@@ -31,7 +32,7 @@ fn run(h: &Harness, signer: &Keypair, args: &[&str]) -> serde_json::Value {
 		serde_json::to_string(&signer.to_bytes().to_vec()).expect("keypair json"),
 	)
 	.expect("write keypair");
-	let output = Command::new(binary())
+	Command::new(binary())
 		.arg("--url")
 		.arg(h.rpc_url())
 		.arg("--keypair")
@@ -44,7 +45,12 @@ fn run(h: &Harness, signer: &Keypair, args: &[&str]) -> serde_json::Value {
 				"run {}: {error}; build it with `cargo build -p pina_amm_cli`",
 				binary().display()
 			)
-		});
+		})
+}
+
+/// Run `pina-amm --json <args>` as `signer` and parse its JSON output.
+fn run(h: &Harness, signer: &Keypair, args: &[&str]) -> serde_json::Value {
+	let output = execute(h, signer, args);
 	assert!(
 		output.status.success(),
 		"pina-amm {args:?} failed:\n{}",
@@ -56,6 +62,13 @@ fn run(h: &Harness, signer: &Keypair, args: &[&str]) -> serde_json::Value {
 			String::from_utf8_lossy(&output.stdout)
 		)
 	})
+}
+
+/// Require the on-chain bound check, rather than an unrelated CLI failure.
+fn assert_slippage_rejected(output: &Output) {
+	let error = String::from_utf8_lossy(&output.stderr);
+	assert!(!output.status.success(), "slippage violation must fail");
+	assert!(error.contains("custom program error: 0x9"), "{error}");
 }
 
 #[test]
@@ -132,6 +145,24 @@ fn the_cli_runs_a_complete_pool_lifecycle() {
 
 		let token_b = ata(&admin.pubkey(), &mint_b, &TOKEN_PROGRAM);
 		let before = h.token_balance(&token_b);
+		let rejected = execute(
+			&h,
+			&admin,
+			&[
+				"swap",
+				"--pool",
+				&address,
+				"--sell",
+				&mint_a.to_string(),
+				"--amount-in",
+				"1000000",
+				"--minimum-out",
+				&u64::MAX.to_string(),
+			],
+		);
+		assert_slippage_rejected(&rejected);
+		assert_eq!(h.token_balance(&token_b), before);
+
 		run(
 			&h,
 			&admin,
@@ -143,9 +174,27 @@ fn the_cli_runs_a_complete_pool_lifecycle() {
 				&mint_a.to_string(),
 				"--amount-in",
 				"1000000",
+				"--minimum-out",
+				&quoted_out.to_string(),
 			],
 		);
 		assert_eq!(h.token_balance(&token_b) - before, quoted_out);
+		let rejected = execute(
+			&h,
+			&admin,
+			&[
+				"swap",
+				"--pool",
+				&address,
+				"--sell",
+				&mint_b.to_string(),
+				"--amount-out",
+				"500000",
+				"--maximum-in",
+				"1",
+			],
+		);
+		assert_slippage_rejected(&rejected);
 
 		run(
 			&h,
@@ -158,17 +207,71 @@ fn the_cli_runs_a_complete_pool_lifecycle() {
 				&mint_b.to_string(),
 				"--amount-out",
 				"500000",
+				"--maximum-in",
+				"2000000",
 			],
 		);
-		run(
+		let rejected = execute(
 			&h,
 			&admin,
-			&["deposit", "--pool", &address, "--lp-amount", "1000000"],
+			&[
+				"deposit",
+				"--pool",
+				&address,
+				"--lp-amount",
+				"1000000",
+				"--maximum-amount-0",
+				"1",
+				"--maximum-amount-1",
+				"1",
+			],
 		);
+		assert_slippage_rejected(&rejected);
 		run(
 			&h,
 			&admin,
-			&["withdraw", "--pool", &address, "--lp-amount", "1000000"],
+			&[
+				"deposit",
+				"--pool",
+				&address,
+				"--lp-amount",
+				"1000000",
+				"--maximum-amount-0",
+				"2000000",
+				"--maximum-amount-1",
+				"2000000",
+			],
+		);
+		let rejected = execute(
+			&h,
+			&admin,
+			&[
+				"withdraw",
+				"--pool",
+				&address,
+				"--lp-amount",
+				"1000000",
+				"--minimum-amount-0",
+				&u64::MAX.to_string(),
+				"--minimum-amount-1",
+				&u64::MAX.to_string(),
+			],
+		);
+		assert_slippage_rejected(&rejected);
+		run(
+			&h,
+			&admin,
+			&[
+				"withdraw",
+				"--pool",
+				&address,
+				"--lp-amount",
+				"1000000",
+				"--minimum-amount-0",
+				"1",
+				"--minimum-amount-1",
+				"1",
+			],
 		);
 		let protocol = run(
 			&h,
