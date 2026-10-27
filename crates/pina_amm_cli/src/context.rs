@@ -376,7 +376,7 @@ mod tests {
 			transaction
 				.signatures
 				.iter()
-				.all(|signature| *signature == Default::default())
+				.all(|signature| signature.as_ref() == [0; 64])
 		);
 		assert_ne!(
 			transaction.signatures[0],
