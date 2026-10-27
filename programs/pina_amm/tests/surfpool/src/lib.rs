@@ -187,11 +187,31 @@ fn create_pool_instruction(
 ) -> (Instruction, PoolFixture) {
 	let (mint_0, program_0) = spec.token_0;
 	let (mint_1, program_1) = spec.token_1;
+	// Ordinary fixtures leave funds for later deposits. At the supply
+	// boundary, fund only the opening deposit so both the amount and the
+	// mint's total supply remain representable for subsequent trader mints.
+	let funding = |amount: u64| {
+		if amount > u64::MAX / 10 {
+			amount
+		} else {
+			amount * 10
+		}
+	};
 	let owner_token_0 = h
-		.mint_to_owner(&mint_0, &owner.pubkey(), &program_0, spec.amounts.0 * 10)
+		.mint_to_owner(
+			&mint_0,
+			&owner.pubkey(),
+			&program_0,
+			funding(spec.amounts.0),
+		)
 		.expect("fund token 0");
 	let owner_token_1 = h
-		.mint_to_owner(&mint_1, &owner.pubkey(), &program_1, spec.amounts.1 * 10)
+		.mint_to_owner(
+			&mint_1,
+			&owner.pubkey(),
+			&program_1,
+			funding(spec.amounts.1),
+		)
 		.expect("fund token 1");
 	let pool = Pool::find_pda(&spec.config, &mint_0, &mint_1).0;
 	let lp_mint = lp_mint_address(&pool);
