@@ -154,8 +154,27 @@ The pool stores reserves rather than a precomputed price because it is the cheap
 To read the average price of token 0 over a window, sample the accumulator and the timestamp twice and divide:
 
 ```text
-twap_0 = wrapping_sub(cumulative_b, cumulative_a) / 2^64 / (timestamp_b - timestamp_a)
+twap_0 = ((cumulative_b - cumulative_a) mod 2^256) / (timestamp_b - timestamp_a) / 2^64
 ```
+
+The accumulator is a 256-bit unsigned integer in two little-endian `u128` fields: `price_0_cumulative_last` (low) and `price_0_cumulative_high_last` (high), with value `low + high * 2^128`. Decode both limbs before subtracting. For example, with TypeScript `bigint`:
+
+```typescript
+const decode = (low: bigint, high: bigint): bigint => low + (high << 128n);
+const mask = (1n << 256n) - 1n;
+const elapsed = timestampB - timestampA; // Require timestampB > timestampA.
+const cumulativeA = decode(
+	sampleA.price0CumulativeLast,
+	sampleA.price0CumulativeHighLast,
+);
+const cumulativeB = decode(
+	sampleB.price0CumulativeLast,
+	sampleB.price0CumulativeHighLast,
+);
+const averageQ64 = ((cumulativeB - cumulativeA) & mask) / elapsed;
+```
+
+Keep the result in Q64.64 until the final conversion to avoid losing fractional precision. The encoded price is below `2^128`, and the sum of elapsed seconds in any supported timestamp window is below `2^64`. The full price-time delta is therefore below `2^192`, strictly below the `2^256` modulus. Subtraction recovers every bit even at the maximum reserve ratio over the full clock range. The old 128-bit accumulator did not have this headroom: `1 : 2^63` reserves held for two seconds lost an entire cycle and reported zero.
 
 The value is token 1 per token 0; invert for the other direction. Notes:
 
@@ -163,7 +182,8 @@ The value is token 1 per token 0; invert for the other direction. Notes:
 - **Only the price standing at a second boundary counts.** Observations within the same Unix second accrue nothing, and the last one in that second sets the price for the next interval. Moving the price and restoring it inside one transaction, or inside one second, leaves the average untouched.
 - **Donations count from the next observation onward.** Folding one in with `SyncPool` is legitimate and makes the stored price match the vault balances; it never changes what has already accrued.
 - A pool with an empty side records no price, and a `last_update` of zero only anchors the clock.
-- The accumulator is `u128` and wraps modulo `2^128`, exactly like Uniswap V2. Only the difference between two samples matters, so subtract with wrapping arithmetic (`u128::wrapping_sub` in Rust, `(b - a) & (2n ** 128n - 1n)` with TypeScript `bigint`). Wrapping keeps a pool tradable forever: a checked sum would halt every swap once the accumulator filled.
+- Use both limbs for stored samples, `PoolSynced` events, and counterfactual stale-sample extension. Using only the low limb can alias the delta to zero. The pool remains tradable at extreme ratios without saturating or discarding the elapsed integral.
+- Take both samples after upgrading to the full-width schema. Migration initializes the high limb to zero; it cannot recover cycles already lost by the old accumulator. Never combine an old-schema sample or event with a full-width sample.
 
 [security.md](security.md#time-weighted-price) describes what the average does and does not resist.
 

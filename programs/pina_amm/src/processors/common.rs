@@ -64,7 +64,10 @@ impl PoolSnapshot {
 			},
 			creator_fee_mode,
 			oracle: PriceOracle {
-				price_0_cumulative: state.price_0_cumulative_last.get(),
+				price_0_cumulative: [
+					state.price_0_cumulative_last.get(),
+					state.price_0_cumulative_high_last.get(),
+				],
 				last_update: state.last_update_timestamp.get(),
 				reserve_0: state.reserve_0_last.get(),
 				reserve_1: state.reserve_1_last.get(),
@@ -111,7 +114,10 @@ pub(crate) fn unix_now() -> Result<u64, ProgramError> {
 /// Callers pass the result of `PriceOracle::observe` with the reserves the
 /// pool holds once their instruction settles.
 pub(crate) fn store_oracle(pool: &mut PoolZc, oracle: PriceOracle) {
-	pool.price_0_cumulative_last.set(oracle.price_0_cumulative);
+	pool.price_0_cumulative_last
+		.set(oracle.price_0_cumulative[0]);
+	pool.price_0_cumulative_high_last
+		.set(oracle.price_0_cumulative[1]);
 	pool.last_update_timestamp.set(oracle.last_update);
 	pool.reserve_0_last.set(oracle.reserve_0);
 	pool.reserve_1_last.set(oracle.reserve_1);

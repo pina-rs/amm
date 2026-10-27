@@ -45,7 +45,12 @@ impl<'a> ProcessAccountInfos<'a> for SyncPoolAccounts<'a> {
 			event.pool = *self.pool.address();
 			event.reserve_0.set(reserve_0);
 			event.reserve_1.set(reserve_1);
-			event.price_0_cumulative_last.set(oracle.price_0_cumulative);
+			event
+				.price_0_cumulative_last
+				.set(oracle.price_0_cumulative[0]);
+			event
+				.price_0_cumulative_high_last
+				.set(oracle.price_0_cumulative[1]);
 			event.last_update_timestamp.set(oracle.last_update);
 			Ok(())
 		})

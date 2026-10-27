@@ -15,6 +15,7 @@
     "src/generated/events/poolCreated.ts",
     "src/generated/events/poolCreatorChanged.ts",
     "src/generated/events/poolSynced.ts",
+    "src/generated/events/poolSyncedV0.ts",
     "src/generated/events/swapped.ts",
     "src/generated/index.ts",
     "src/generated/instructions/collectCreatorFees.ts",

@@ -30,22 +30,22 @@ Only the program's **upgrade authority** can create a tier. The program reads th
 PDA: [b"pool", amm_config, mint_0, mint_1]   (mint_0 < mint_1, compared byte by byte)
 ```
 
-| Field                                                     | Type      | Meaning                                                                      |
-| --------------------------------------------------------- | --------- | ---------------------------------------------------------------------------- |
-| `amm_config`                                              | `Address` | The tier this pool was created under                                         |
-| `creator`                                                 | `Address` | Recipient of this pool's creator fees                                        |
-| `mint_0`, `mint_1`                                        | `Address` | The pair, in canonical order                                                 |
-| `vault_0`, `vault_1`                                      | `Address` | Pool-owned token accounts holding the reserves                               |
-| `lp_mint`                                                 | `Address` | SPL Token mint for LP shares; its mint authority is the pool                 |
-| `lp_supply`                                               | `u64`     | Economic LP supply, including the locked minimum                             |
-| `protocol_fees_0`, `protocol_fees_1`                      | `u64`     | Protocol fees accrued in each vault and not yet collected                    |
-| `creator_fees_0`, `creator_fees_1`                        | `u64`     | Creator fees accrued in each vault and not yet collected                     |
-| `trade_fee_rate`, `protocol_fee_rate`, `creator_fee_rate` | `u32`     | Rates snapshotted from the tier at creation                                  |
-| `creator_fee_mode`                                        | `u8`      | Which token pays the creator fee: `0` input, `1` token 0, `2` token 1        |
-| `bump`                                                    | `u8`      | Canonical PDA bump                                                           |
-| `price_0_cumulative_last`                                 | `u128`    | Time-weighted price of token 1 in token 0, Q64.64 price times seconds        |
-| `last_update_timestamp`                                   | `u64`     | Unix second the accumulator last advanced                                    |
-| `reserve_0_last`, `reserve_1_last`                        | `u64`     | Reserves at the last observation; price the accumulator's next interval only |
+| Field                                                     | Type        | Meaning                                                                      |
+| --------------------------------------------------------- | ----------- | ---------------------------------------------------------------------------- |
+| `amm_config`                                              | `Address`   | The tier this pool was created under                                         |
+| `creator`                                                 | `Address`   | Recipient of this pool's creator fees                                        |
+| `mint_0`, `mint_1`                                        | `Address`   | The pair, in canonical order                                                 |
+| `vault_0`, `vault_1`                                      | `Address`   | Pool-owned token accounts holding the reserves                               |
+| `lp_mint`                                                 | `Address`   | SPL Token mint for LP shares; its mint authority is the pool                 |
+| `lp_supply`                                               | `u64`       | Economic LP supply, including the locked minimum                             |
+| `protocol_fees_0`, `protocol_fees_1`                      | `u64`       | Protocol fees accrued in each vault and not yet collected                    |
+| `creator_fees_0`, `creator_fees_1`                        | `u64`       | Creator fees accrued in each vault and not yet collected                     |
+| `trade_fee_rate`, `protocol_fee_rate`, `creator_fee_rate` | `u32`       | Rates snapshotted from the tier at creation                                  |
+| `creator_fee_mode`                                        | `u8`        | Which token pays the creator fee: `0` input, `1` token 0, `2` token 1        |
+| `bump`                                                    | `u8`        | Canonical PDA bump                                                           |
+| `price_0_cumulative_last`, `price_0_cumulative_high_last` | `u128` each | Low and high limbs of the 256-bit Q64.64 price-time integral                 |
+| `last_update_timestamp`                                   | `u64`       | Unix second the accumulator last advanced                                    |
+| `reserve_0_last`, `reserve_1_last`                        | `u64`       | Reserves at the last observation; price the accumulator's next interval only |
 
 Sorting the mints gives every pair exactly one canonical pool per tier, so liquidity for a pair concentrates instead of fragmenting across duplicates.
 

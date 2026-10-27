@@ -32,6 +32,8 @@ pina = { workspace = true, features = ["account-resize", "derive", "logs", "toke
 solana-security-txt = { workspace = true, optional = true }
 
 [dev-dependencies]
+num-bigint = { default-features = false, version = "0.4" }
+pina_amm_client.workspace = true
 proptest.workspace = true
 
 [lints]

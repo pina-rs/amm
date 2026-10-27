@@ -54,7 +54,7 @@ impl Rng {
 /// The pool facts each invariant is asserted against from the previous step.
 #[derive(Default)]
 struct InvariantState {
-	price_0_cumulative: u128,
+	price_0_cumulative: [u128; 2],
 	last_update_timestamp: u64,
 }
 
@@ -86,12 +86,17 @@ fn assert_invariants(h: &Harness, fixture: &PoolFixture, previous: &mut Invarian
 		balance_1,
 		pool.protocol_fees1 + pool.creator_fees1
 	);
-	// The accumulator wraps modulo 2^128 only at price ratios no fuzzer
-	// amount can reach: at 4:1 reserves it would take 2^61 seconds of
-	// elapsed time, so within this journey it can only move forward.
-	assert!(pool.price0_cumulative_last >= previous.price_0_cumulative);
+	// Numeric order compares the high limb first.
+	let current = crate::cumulative(&pool);
+	assert!(
+		current
+			.iter()
+			.rev()
+			.cmp(previous.price_0_cumulative.iter().rev())
+			.is_ge()
+	);
 	assert!(pool.last_update_timestamp >= previous.last_update_timestamp);
-	previous.price_0_cumulative = pool.price0_cumulative_last;
+	previous.price_0_cumulative = current;
 	previous.last_update_timestamp = pool.last_update_timestamp;
 	let (reserve_0, reserve_1) = reserves(h, fixture);
 	assert!(
@@ -110,7 +115,7 @@ fn random_operation_sequences_preserve_the_invariants() {
 		let trader = funded_trader(&h, &fixture, 2_000_000_000);
 		let mut rng = Rng(0x7069_6E61_6D6D);
 		let mut previous = InvariantState {
-			price_0_cumulative: 0,
+			price_0_cumulative: [0; 2],
 			last_update_timestamp: 0,
 		};
 		assert_invariants(&h, &fixture, &mut previous);

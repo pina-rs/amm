@@ -23,16 +23,18 @@ pub struct PoolSynced {
 	pub reserve0: u64,
 	/// Token 1 reserve recorded at the advance; it prices the next interval.
 	pub reserve1: u64,
-	/// The accumulator after the advance: Q64.64 price of token 1 in token 0,
-	/// summed over seconds.
+	/// Low 128 bits of the Q64.64 price-time integral after the advance.
+	/// Combine with `price_0_cumulative_high_last` as `low + high * 2^128`.
 	pub price0_cumulative_last: u128,
+	/// High 128 bits of the Q64.64 price-time integral after the advance.
+	pub price0_cumulative_high_last: u128,
 	/// Unix second of the advance.
 	pub last_update_timestamp: u64,
 }
 
 pub const POOL_SYNCED_DISCRIMINATOR: u8 = 5u8;
 
-pub const POOL_SYNCED_MIGRATION_VERSION: u8 = 0u8;
+pub const POOL_SYNCED_MIGRATION_VERSION: u8 = 1u8;
 
 impl PoolSynced {
 	/// Exact size of this event's representation.
@@ -73,11 +75,11 @@ impl core::fmt::Display for PoolSyncedVersionError {
 			Self::InvalidData => write!(f, "invalid PoolSynced event data"),
 			Self::Stale { stored } => write!(
 				f,
-				"event migration version mismatch: expected 0, received {stored} (an earlier version emitted it; decode it with the event generated for that version)"
+				"event migration version mismatch: expected 1, received {stored} (an earlier version emitted it; decode it with the event generated for that version)"
 			),
 			Self::Future { stored } => write!(
 				f,
-				"event migration version mismatch: expected 0, received {stored} (a later version emitted it; decode it with the event generated for that version, or regenerate this client)"
+				"event migration version mismatch: expected 1, received {stored} (a later version emitted it; decode it with the event generated for that version, or regenerate this client)"
 			),
 		}
 	}
@@ -94,6 +96,9 @@ impl PoolSynced {
 			.map_err(|_| PoolSyncedVersionError::InvalidData)?;
 		if event.discriminator != POOL_SYNCED_DISCRIMINATOR {
 			return Err(PoolSyncedVersionError::InvalidData);
+		}
+		if event.migration_version < POOL_SYNCED_MIGRATION_VERSION {
+			return Err(PoolSyncedVersionError::Stale { stored: event.migration_version });
 		}
 		if event.migration_version > POOL_SYNCED_MIGRATION_VERSION {
 			return Err(PoolSyncedVersionError::Future { stored: event.migration_version });

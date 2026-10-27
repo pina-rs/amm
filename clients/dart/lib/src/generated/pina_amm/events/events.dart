@@ -7,6 +7,7 @@ export 'swapped.dart';
 export 'liquidity_changed.dart';
 export 'fees_collected.dart';
 export 'pool_synced.dart';
+export 'pool_synced_v0.dart';
 export 'config_created.dart';
 export 'config_updated.dart';
 export 'pool_creator_changed.dart';
@@ -17,6 +18,7 @@ import 'swapped.dart';
 import 'liquidity_changed.dart';
 import 'fees_collected.dart';
 import 'pool_synced.dart';
+import 'pool_synced_v0.dart';
 import 'config_created.dart';
 import 'config_updated.dart';
 import 'pool_creator_changed.dart';
@@ -87,6 +89,11 @@ List<PinaAmmEvent> parsePinaAmmEventsFromLogs(
     final poolSynced = parsePoolSyncedEventFromLog(log);
     if (poolSynced != null) {
       discovered.add(poolSynced);
+      continue;
+    }
+    final poolSyncedV0 = parsePoolSyncedV0EventFromLog(log);
+    if (poolSyncedV0 != null) {
+      discovered.add(poolSyncedV0);
       continue;
     }
     final configCreated = parseConfigCreatedEventFromLog(log);

@@ -141,6 +141,105 @@
 							}
 						]
 					}
+				},
+				{
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "amm_config",
+								"rustType": "Address"
+							},
+							{
+								"name": "creator",
+								"rustType": "Address"
+							},
+							{
+								"name": "mint_0",
+								"rustType": "Address"
+							},
+							{
+								"name": "mint_1",
+								"rustType": "Address"
+							},
+							{
+								"name": "vault_0",
+								"rustType": "Address"
+							},
+							{
+								"name": "vault_1",
+								"rustType": "Address"
+							},
+							{
+								"name": "lp_mint",
+								"rustType": "Address"
+							},
+							{
+								"name": "lp_supply",
+								"rustType": "u64"
+							},
+							{
+								"name": "protocol_fees_0",
+								"rustType": "u64"
+							},
+							{
+								"name": "protocol_fees_1",
+								"rustType": "u64"
+							},
+							{
+								"name": "creator_fees_0",
+								"rustType": "u64"
+							},
+							{
+								"name": "creator_fees_1",
+								"rustType": "u64"
+							},
+							{
+								"name": "trade_fee_rate",
+								"rustType": "u32"
+							},
+							{
+								"name": "protocol_fee_rate",
+								"rustType": "u32"
+							},
+							{
+								"name": "creator_fee_rate",
+								"rustType": "u32"
+							},
+							{
+								"name": "creator_fee_mode",
+								"rustType": "u8"
+							},
+							{
+								"name": "bump",
+								"rustType": "u8"
+							},
+							{
+								"name": "price_0_cumulative_last",
+								"rustType": "u128"
+							},
+							{
+								"name": "price_0_cumulative_high_last",
+								"rustType": "u128"
+							},
+							{
+								"name": "last_update_timestamp",
+								"rustType": "u64"
+							},
+							{
+								"name": "reserve_0_last",
+								"rustType": "u64"
+							},
+							{
+								"name": "reserve_1_last",
+								"rustType": "u64"
+							}
+						]
+					},
+					"transition": {
+						"mode": "automatic",
+						"implementationSha256": "7b385737134c4bc4f85fd57b3be60cc564084bbc6001083b8082adb601d78aa1"
+					}
 				}
 			]
 		},
@@ -341,6 +440,37 @@
 							},
 							{
 								"name": "price_0_cumulative_last",
+								"rustType": "u128"
+							},
+							{
+								"name": "last_update_timestamp",
+								"rustType": "u64"
+							}
+						]
+					}
+				},
+				{
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "pool",
+								"rustType": "Address"
+							},
+							{
+								"name": "reserve_0",
+								"rustType": "u64"
+							},
+							{
+								"name": "reserve_1",
+								"rustType": "u64"
+							},
+							{
+								"name": "price_0_cumulative_last",
+								"rustType": "u128"
+							},
+							{
+								"name": "price_0_cumulative_high_last",
 								"rustType": "u128"
 							},
 							{

@@ -66,7 +66,7 @@ A market maker is deployed once and called on every swap, so it uses the speed p
 | Reserves derived from vault balances     | No reserve fields to write on every swap                                                                         |
 | Plain `Transfer` CPIs                    | No mint accounts or decimals in the swap account list; allowed Token-2022 extensions never need them             |
 | Fees accrued, not transferred            | A swap makes exactly two CPIs                                                                                    |
-| `u128` arithmetic only                   | Reserves are `u64`, so every product fits `u128`; no 256-bit math                                                |
+| `u128` trade arithmetic                  | Reserve products fit `u128`; the oracle alone uses two limbs to retain the full price-time integral              |
 | Bit-by-bit integer square root           | No software division per iteration on SBF                                                                        |
 | Pina's dispatch entrypoint               | Routes on the discriminator before parsing any account                                                           |
 | Pool PDA as the vault authority          | No global authority account in every instruction                                                                 |

@@ -17,6 +17,7 @@ class PoolSyncedEvent extends PinaAmmEvent {
     required this.reserve0,
     required this.reserve1,
     required this.price0CumulativeLast,
+    required this.price0CumulativeHighLast,
     required this.lastUpdateTimestamp,
   });
 
@@ -26,13 +27,14 @@ class PoolSyncedEvent extends PinaAmmEvent {
   final BigInt reserve0;
   final BigInt reserve1;
   final BigInt price0CumulativeLast;
+  final BigInt price0CumulativeHighLast;
   final BigInt lastUpdateTimestamp;
 
   @override
   String get name => 'poolSynced';
 
   String toString() =>
-      'PoolSyncedEvent(discriminator: ${discriminator}, migrationVersion: ${migrationVersion}, pool: ${pool}, reserve0: ${reserve0}, reserve1: ${reserve1}, price0CumulativeLast: ${price0CumulativeLast}, lastUpdateTimestamp: ${lastUpdateTimestamp})';
+      'PoolSyncedEvent(discriminator: ${discriminator}, migrationVersion: ${migrationVersion}, pool: ${pool}, reserve0: ${reserve0}, reserve1: ${reserve1}, price0CumulativeLast: ${price0CumulativeLast}, price0CumulativeHighLast: ${price0CumulativeHighLast}, lastUpdateTimestamp: ${lastUpdateTimestamp})';
 }
 
 /// The discriminator this event is emitted under.
@@ -42,10 +44,10 @@ const poolSyncedEventDiscriminator = 5;
 const List<int> _poolSyncedEventDiscriminatorBytes = [5];
 
 /// The migration version this event decodes.
-const poolSyncedEventMigrationVersion = 0;
+const poolSyncedEventMigrationVersion = 1;
 
 /// Exact current byte length of a `PoolSynced` record, envelope included.
-const poolSyncedEventSize = 74;
+const poolSyncedEventSize = 90;
 
 /// Decode one `PoolSynced` record.
 PoolSyncedEvent decodePoolSyncedEvent(Uint8List data) {
@@ -64,11 +66,11 @@ PoolSyncedEvent decodePoolSyncedEvent(Uint8List data) {
   }
   final (v1, c1) = getU8Decoder().read(data, cursor);
   cursor = c1;
-  if (v1 != 0) {
+  if (v1 != 1) {
     throw RangeError(
-      v1 < 0
-          ? 'event migration version mismatch: expected 0, received $v1 (decode it with the event for that version)'
-          : 'event migration version mismatch: expected 0, received $v1 (the log was written by a newer program; upgrade this client)',
+      v1 < 1
+          ? 'event migration version mismatch: expected 1, received $v1 (decode it with the event for that version)'
+          : 'event migration version mismatch: expected 1, received $v1 (the log was written by a newer program; upgrade this client)',
     );
   }
   final (v2, c2) = getAddressDecoder().read(data, cursor);
@@ -79,8 +81,10 @@ PoolSyncedEvent decodePoolSyncedEvent(Uint8List data) {
   cursor = c4;
   final (v5, c5) = getU128Decoder().read(data, cursor);
   cursor = c5;
-  final (v6, c6) = getU64Decoder().read(data, cursor);
+  final (v6, c6) = getU128Decoder().read(data, cursor);
   cursor = c6;
+  final (v7, c7) = getU64Decoder().read(data, cursor);
+  cursor = c7;
 
   return PoolSyncedEvent(
     discriminator: v0,
@@ -89,7 +93,8 @@ PoolSyncedEvent decodePoolSyncedEvent(Uint8List data) {
     reserve0: v3,
     reserve1: v4,
     price0CumulativeLast: v5,
-    lastUpdateTimestamp: v6,
+    price0CumulativeHighLast: v6,
+    lastUpdateTimestamp: v7,
   );
 }
 

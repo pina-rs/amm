@@ -131,9 +131,11 @@ pub struct PoolSynced {
 	pub reserve_0: u64,
 	/// Token 1 reserve recorded at the advance; it prices the next interval.
 	pub reserve_1: u64,
-	/// The accumulator after the advance: Q64.64 price of token 1 in token 0,
-	/// summed over seconds.
+	/// Low 128 bits of the Q64.64 price-time integral after the advance.
+	/// Combine with `price_0_cumulative_high_last` as `low + high * 2^128`.
 	pub price_0_cumulative_last: u128,
+	/// High 128 bits of the Q64.64 price-time integral after the advance.
+	pub price_0_cumulative_high_last: u128,
 	/// Unix second of the advance.
 	pub last_update_timestamp: u64,
 }

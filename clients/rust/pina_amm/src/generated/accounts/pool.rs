@@ -55,11 +55,14 @@ pub struct Pool {
 	pub creator_fee_mode: u8,
 	/// Canonical bump of this pool's PDA.
 	pub bump: u8,
-	/// Time-weighted price of token 1 in token 0, summed as Q64.64 price
-	/// times seconds and wrapping modulo `2^128`. Every swap, deposit,
+	/// Low 128 bits of the Q64.64 price-time integral. Combine with
+	/// `price_0_cumulative_high_last` as `low + high * 2^128`. Every swap, deposit,
 	/// withdrawal, and `SyncPool` advances it with `reserve_0_last` and
 	/// `reserve_1_last` before changing the reserves.
 	pub price0_cumulative_last: u128,
+	/// High 128 bits of the Q64.64 price-time integral. Together the limbs
+	/// retain every bit for all supported reserve ratios and timestamp windows.
+	pub price0_cumulative_high_last: u128,
 	/// Unix second of the last accumulator advance; zero before the first.
 	pub last_update_timestamp: u64,
 	/// Token 0 reserve at the end of the last instruction that changed or
@@ -76,7 +79,7 @@ pub struct Pool {
 
 pub const POOL_DISCRIMINATOR: u8 = 2u8;
 
-pub const POOL_MIGRATION_VERSION: u8 = 0u8;
+pub const POOL_MIGRATION_VERSION: u8 = 1u8;
 
 impl Pool {
 	pub const LEN: usize = core::mem::size_of::<PoolZc>();
@@ -152,10 +155,15 @@ impl Pool {
 
 /// Whether raw account bytes are stale for this contract: the envelope names this account's discriminator and carries a version older than
 /// [`POOL_MIGRATION_VERSION`]. Current or foreign bytes return false; decoding explains the difference.
-///
-/// Version 0 is the initial version, so no bytes can ever be stale.
-pub fn pool_needs_migration(_data: &[u8]) -> bool {
-	false
+pub fn pool_needs_migration(data: &[u8]) -> bool {
+	data.len() >= 2
+			&& data[0] == 2
+			&& {
+				let mut version = [0_u8; 8];
+				version[..1]
+					.copy_from_slice(&data[1..2]);
+				u64::from_le_bytes(version) < 1
+			}
 }
 
 
@@ -176,11 +184,11 @@ impl core::fmt::Display for PoolVersionError {
 			Self::InvalidData => write!(f, "invalid Pool account data"),
 			Self::Stale { stored } => write!(
 				f,
-				"migration version mismatch: expected 0, received {stored} (the data predates this client; migrate it by sending a transaction to the program, or decode it with a client generated from an older IDL)"
+				"migration version mismatch: expected 1, received {stored} (the data predates this client; migrate it by sending a transaction to the program, or decode it with a client generated from an older IDL)"
 			),
 			Self::Future { stored } => write!(
 				f,
-				"migration version mismatch: expected 0, received {stored} (the data was written by a newer program; upgrade this client)"
+				"migration version mismatch: expected 1, received {stored} (the data was written by a newer program; upgrade this client)"
 			),
 		}
 	}
@@ -195,6 +203,9 @@ impl Pool {
 			.map_err(|_| PoolVersionError::InvalidData)?;
 		if account.discriminator != POOL_DISCRIMINATOR {
 			return Err(PoolVersionError::InvalidData);
+		}
+		if account.migration_version < POOL_MIGRATION_VERSION {
+			return Err(PoolVersionError::Stale { stored: account.migration_version });
 		}
 		if account.migration_version > POOL_MIGRATION_VERSION {
 			return Err(PoolVersionError::Future { stored: account.migration_version });
@@ -216,11 +227,14 @@ mod pool_version_error_tests {
 
 	#[test]
 	fn stale_and_future_versions_are_distinguishable() {
-		let error = Pool::try_from_bytes(&envelope(1 as u8)).err().expect("a future envelope must fail");
-		assert_eq!(error, PoolVersionError::Future { stored: 1 });
-		assert_eq!(PoolVersionError::Future { stored: 1 }.to_string(), "migration version mismatch: expected 0, received 1 (the data was written by a newer program; upgrade this client)");
+		let error = Pool::try_from_bytes(&envelope(0 as u8)).err().expect("a stale envelope must fail");
+		assert_eq!(error, PoolVersionError::Stale { stored: 0 });
+		assert_eq!(PoolVersionError::Stale { stored: 0 }.to_string(), "migration version mismatch: expected 1, received 0 (the data predates this client; migrate it by sending a transaction to the program, or decode it with a client generated from an older IDL)");
+		let error = Pool::try_from_bytes(&envelope(2 as u8)).err().expect("a future envelope must fail");
+		assert_eq!(error, PoolVersionError::Future { stored: 2 });
+		assert_eq!(PoolVersionError::Future { stored: 2 }.to_string(), "migration version mismatch: expected 1, received 2 (the data was written by a newer program; upgrade this client)");
 		assert!(
-			Pool::try_from_bytes(&envelope(0 as u8)).is_ok(),
+			Pool::try_from_bytes(&envelope(1 as u8)).is_ok(),
 			"the current version must decode",
 		);
 	}

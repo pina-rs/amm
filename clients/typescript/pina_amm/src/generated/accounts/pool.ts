@@ -14,7 +14,7 @@ export const POOL_DISCRIMINATOR = 2;
 
 export function getPoolDiscriminatorBytes(): ReadonlyUint8Array { return getU8Encoder().encode(POOL_DISCRIMINATOR); }
 
-export const POOL_DISCRIMINATOR2 = 0;
+export const POOL_DISCRIMINATOR2 = 1;
 
 export function getPoolDiscriminator2Bytes(): ReadonlyUint8Array { return getU8Encoder().encode(POOL_DISCRIMINATOR2); }
 
@@ -67,12 +67,17 @@ creatorFeeMode: number;
 /** Canonical bump of this pool's PDA. */
 bump: number; 
 /**
- * Time-weighted price of token 1 in token 0, summed as Q64.64 price
- * times seconds and wrapping modulo `2^128`. Every swap, deposit,
+ * Low 128 bits of the Q64.64 price-time integral. Combine with
+ * `price_0_cumulative_high_last` as `low + high * 2^128`. Every swap, deposit,
  * withdrawal, and `SyncPool` advances it with `reserve_0_last` and
  * `reserve_1_last` before changing the reserves.
  */
 price0CumulativeLast: bigint; 
+/**
+ * High 128 bits of the Q64.64 price-time integral. Together the limbs
+ * retain every bit for all supported reserve ratios and timestamp windows.
+ */
+price0CumulativeHighLast: bigint; 
 /** Unix second of the last accumulator advance; zero before the first. */
 lastUpdateTimestamp: bigint; 
 /**
@@ -133,12 +138,17 @@ creatorFeeMode: number;
 /** Canonical bump of this pool's PDA. */
 bump: number; 
 /**
- * Time-weighted price of token 1 in token 0, summed as Q64.64 price
- * times seconds and wrapping modulo `2^128`. Every swap, deposit,
+ * Low 128 bits of the Q64.64 price-time integral. Combine with
+ * `price_0_cumulative_high_last` as `low + high * 2^128`. Every swap, deposit,
  * withdrawal, and `SyncPool` advances it with `reserve_0_last` and
  * `reserve_1_last` before changing the reserves.
  */
 price0CumulativeLast: number | bigint; 
+/**
+ * High 128 bits of the Q64.64 price-time integral. Together the limbs
+ * retain every bit for all supported reserve ratios and timestamp windows.
+ */
+price0CumulativeHighLast: number | bigint; 
 /** Unix second of the last accumulator advance; zero before the first. */
 lastUpdateTimestamp: number | bigint; 
 /**
@@ -158,12 +168,12 @@ reserve1Last: number | bigint;  };
 
 /** Gets the encoder for {@link PoolArgs} account data. */
 export function getPoolEncoder(): FixedSizeEncoder<PoolArgs> {
-    return transformEncoder(getStructEncoder([['discriminator', getU8Encoder()], ['migrationVersion', getU8Encoder()], ['ammConfig', getAddressEncoder()], ['creator', getAddressEncoder()], ['mint0', getAddressEncoder()], ['mint1', getAddressEncoder()], ['vault0', getAddressEncoder()], ['vault1', getAddressEncoder()], ['lpMint', getAddressEncoder()], ['lpSupply', getU64Encoder()], ['protocolFees0', getU64Encoder()], ['protocolFees1', getU64Encoder()], ['creatorFees0', getU64Encoder()], ['creatorFees1', getU64Encoder()], ['tradeFeeRate', getU32Encoder()], ['protocolFeeRate', getU32Encoder()], ['creatorFeeRate', getU32Encoder()], ['creatorFeeMode', getU8Encoder()], ['bump', getU8Encoder()], ['price0CumulativeLast', getU128Encoder()], ['lastUpdateTimestamp', getU64Encoder()], ['reserve0Last', getU64Encoder()], ['reserve1Last', getU64Encoder()]]), (value) => ({ ...value, discriminator: 2, migrationVersion: 0 }));
+    return transformEncoder(getStructEncoder([['discriminator', getU8Encoder()], ['migrationVersion', getU8Encoder()], ['ammConfig', getAddressEncoder()], ['creator', getAddressEncoder()], ['mint0', getAddressEncoder()], ['mint1', getAddressEncoder()], ['vault0', getAddressEncoder()], ['vault1', getAddressEncoder()], ['lpMint', getAddressEncoder()], ['lpSupply', getU64Encoder()], ['protocolFees0', getU64Encoder()], ['protocolFees1', getU64Encoder()], ['creatorFees0', getU64Encoder()], ['creatorFees1', getU64Encoder()], ['tradeFeeRate', getU32Encoder()], ['protocolFeeRate', getU32Encoder()], ['creatorFeeRate', getU32Encoder()], ['creatorFeeMode', getU8Encoder()], ['bump', getU8Encoder()], ['price0CumulativeLast', getU128Encoder()], ['price0CumulativeHighLast', getU128Encoder()], ['lastUpdateTimestamp', getU64Encoder()], ['reserve0Last', getU64Encoder()], ['reserve1Last', getU64Encoder()]]), (value) => ({ ...value, discriminator: 2, migrationVersion: 1 }));
 }
 
 /** Gets the decoder for {@link Pool} account data. */
 export function getPoolDecoder(): FixedSizeDecoder<Pool> {
-    return getStructDecoder([['discriminator', getPinaPodDiscriminatorDecoder(POOL_DISCRIMINATOR, getU8Decoder())], ['migrationVersion', getPinaPodMigrationVersionDecoder(0, getU8Decoder())], ['ammConfig', getAddressDecoder()], ['creator', getAddressDecoder()], ['mint0', getAddressDecoder()], ['mint1', getAddressDecoder()], ['vault0', getAddressDecoder()], ['vault1', getAddressDecoder()], ['lpMint', getAddressDecoder()], ['lpSupply', getU64Decoder()], ['protocolFees0', getU64Decoder()], ['protocolFees1', getU64Decoder()], ['creatorFees0', getU64Decoder()], ['creatorFees1', getU64Decoder()], ['tradeFeeRate', getU32Decoder()], ['protocolFeeRate', getU32Decoder()], ['creatorFeeRate', getU32Decoder()], ['creatorFeeMode', getU8Decoder()], ['bump', getU8Decoder()], ['price0CumulativeLast', getU128Decoder()], ['lastUpdateTimestamp', getU64Decoder()], ['reserve0Last', getU64Decoder()], ['reserve1Last', getU64Decoder()]]);
+    return getStructDecoder([['discriminator', getPinaPodDiscriminatorDecoder(POOL_DISCRIMINATOR, getU8Decoder())], ['migrationVersion', getPinaPodMigrationVersionDecoder(1, getU8Decoder())], ['ammConfig', getAddressDecoder()], ['creator', getAddressDecoder()], ['mint0', getAddressDecoder()], ['mint1', getAddressDecoder()], ['vault0', getAddressDecoder()], ['vault1', getAddressDecoder()], ['lpMint', getAddressDecoder()], ['lpSupply', getU64Decoder()], ['protocolFees0', getU64Decoder()], ['protocolFees1', getU64Decoder()], ['creatorFees0', getU64Decoder()], ['creatorFees1', getU64Decoder()], ['tradeFeeRate', getU32Decoder()], ['protocolFeeRate', getU32Decoder()], ['creatorFeeRate', getU32Decoder()], ['creatorFeeMode', getU8Decoder()], ['bump', getU8Decoder()], ['price0CumulativeLast', getU128Decoder()], ['price0CumulativeHighLast', getU128Decoder()], ['lastUpdateTimestamp', getU64Decoder()], ['reserve0Last', getU64Decoder()], ['reserve1Last', getU64Decoder()]]);
 }
 
 /** Gets the codec for {@link Pool} account data. */
@@ -236,7 +246,7 @@ export async function fetchMaybePoolFromSeeds(
 }
 
 /** The account schema version this client was generated from. */
-export const POOL_MIGRATION_VERSION = 0;
+export const POOL_MIGRATION_VERSION = 1;
 
 /**
  * Cheap envelope check for a fetched `Pool` account: `true` only when the
@@ -260,5 +270,5 @@ export function poolNeedsMigration(data: ReadonlyUint8Array): boolean {
 	if (data[0] !== 2) {
 		return false;
 	}
-	return data[1]! < 0;
+	return data[1]! < 1;
 }

@@ -354,6 +354,9 @@ pub fn assert_constant_product(
 /// One in Q64.64 fixed point, the unit of the price accumulator.
 pub const Q64: u128 = 1 << 64;
 
+/// Q64.64 price times seconds, stored as low then high `u128` limbs.
+pub type PriceCumulative = [u128; 2];
+
 /// Advance the time-weighted price accumulator of token 1 in token 0.
 ///
 /// The accumulator sums `price_0 * elapsed_seconds` as Q64.64 price times
@@ -365,19 +368,18 @@ pub const Q64: u128 = 1 << 64;
 /// with an empty side records no price, and a zero `last_update` only
 /// anchors the clock, so a first sample after a migration adds nothing.
 ///
-/// The accumulator wraps modulo `2^128` by design, as Uniswap V2's does.
-/// Only differences between two samples carry meaning, and a wrapping
-/// subtraction recovers them exactly. A checked sum would instead fail every
-/// swap and `SyncPool` forever once a pool with an extreme price ratio
-/// had accumulated enough time, because nothing can lower the accumulator.
+/// The accumulator uses 256 bits. An encoded price is below `2^128` and
+/// the total elapsed time in any window is below `2^64`, so its integral
+/// is below `2^192`. Subtraction modulo `2^256` therefore recovers the full
+/// integral even across a carry out of the low limb, without halting swaps.
 #[must_use]
 pub fn advance_price_accumulator(
 	reserve_0: u64,
 	reserve_1: u64,
-	cumulative: u128,
+	cumulative: PriceCumulative,
 	last_update: u64,
 	now: u64,
-) -> (u128, u64) {
+) -> (PriceCumulative, u64) {
 	if now <= last_update {
 		return (cumulative, last_update);
 	}
@@ -387,7 +389,17 @@ pub fn advance_price_accumulator(
 	// `reserve_1 < 2^64`, so the Q64.64 numerator always fits in `u128`.
 	let price_0 = (u128::from(reserve_1) << 64) / u128::from(reserve_0);
 	let elapsed = u128::from(now - last_update);
-	(cumulative.wrapping_add(price_0.wrapping_mul(elapsed)), now)
+	// Split the 128-by-64-bit product so no price-time bits are discarded.
+	let lower = (price_0 & (Q64 - 1)) * elapsed;
+	let upper = (price_0 >> 64) * elapsed;
+	let (increment_low, product_carry) = lower.overflowing_add(upper << 64);
+	let increment_high = (upper >> 64) + u128::from(product_carry);
+	let (low, carry) = cumulative[0].overflowing_add(increment_low);
+	let high = cumulative[1]
+		.wrapping_add(increment_high)
+		.wrapping_add(u128::from(carry));
+
+	([low, high], now)
 }
 
 /// A pool's time-weighted price state.
@@ -399,9 +411,9 @@ pub fn advance_price_accumulator(
 /// observation reprice time that has already passed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PriceOracle {
-	/// Q64.64 price of token 1 in token 0, summed over seconds. Wraps modulo
-	/// `2^128`.
-	pub price_0_cumulative: u128,
+	/// Q64.64 price of token 1 in token 0, summed over seconds in 256 bits,
+	/// with the low `u128` limb first.
+	pub price_0_cumulative: PriceCumulative,
 	/// Unix second of the last accumulator advance; zero before the first.
 	pub last_update: u64,
 	/// Token 0 reserve that prices the interval since `last_update`.
@@ -777,49 +789,93 @@ mod tests {
 	fn the_accumulator_sums_price_times_time() {
 		let price = |r0: u64, r1: u64| u128::from(r1) * Q64 / u128::from(r0);
 		// Ten seconds at 2:1, then ten at 4:1.
-		let (cumulative, _) = advance_price_accumulator(100, 200, 0, 1_000, 1_010);
-		assert_eq!(cumulative, price(100, 200) * 10);
+		let (cumulative, _) = advance_price_accumulator(100, 200, [0; 2], 1_000, 1_010);
+		assert_eq!(cumulative, [price(100, 200) * 10, 0]);
 		let (cumulative, _) = advance_price_accumulator(100, 400, cumulative, 1_010, 1_020);
-		assert_eq!(cumulative, price(100, 200) * 10 + price(100, 400) * 10);
+		assert_eq!(cumulative, [price(100, 200) * 10 + price(100, 400) * 10, 0]);
 		// A zero start or an empty side anchors the clock without a price.
-		assert_eq!(advance_price_accumulator(100, 200, 0, 0, 500), (0, 500));
-		assert_eq!(advance_price_accumulator(0, 200, 7, 500, 600), (7, 600));
+		assert_eq!(
+			advance_price_accumulator(100, 200, [0; 2], 0, 500),
+			([0; 2], 500)
+		);
+		assert_eq!(
+			advance_price_accumulator(0, 200, [7, 0], 500, 600),
+			([7, 0], 600)
+		);
+		assert_eq!(
+			advance_price_accumulator(100, 0, [7, 0], 500, 600),
+			([7, 0], 600)
+		);
 		// Time moving backwards or standing still changes nothing.
-		assert_eq!(advance_price_accumulator(100, 200, 7, 600, 599), (7, 600));
+		assert_eq!(
+			advance_price_accumulator(100, 200, [7, 0], 600, 599),
+			([7, 0], 600)
+		);
+		assert_eq!(
+			advance_price_accumulator(100, 200, [7, 0], 600, 600),
+			([7, 0], 600)
+		);
+	}
+
+	/// Interpret the wire limbs independently of the accumulator arithmetic.
+	fn full_width(value: PriceCumulative) -> num_bigint::BigUint {
+		(num_bigint::BigUint::from(value[1]) << 128) + num_bigint::BigUint::from(value[0])
 	}
 
 	#[test]
-	fn the_accumulator_wraps_instead_of_halting_the_pool() {
-		// The most extreme price a pool can hold, sampled just below the top
-		// of the accumulator's range. A checked sum would fail this advance,
-		// and every later swap and sync with it, forever.
-		let price = u128::from(u64::MAX) << 64;
-		let start = u128::MAX - 5;
-		let (cumulative, timestamp) = advance_price_accumulator(1, u64::MAX, start, 1_000, 1_002);
-		assert_eq!(timestamp, 1_002);
-		assert_eq!(cumulative, start.wrapping_add(price.wrapping_mul(2)));
-		// Integrators recover the elapsed price sum with a wrapping difference.
-		assert_eq!(cumulative.wrapping_sub(start), price.wrapping_mul(2));
+	fn the_two_second_extreme_price_does_not_alias_zero() {
+		let (cumulative, timestamp) = advance_price_accumulator(1, 1 << 63, [0; 2], 1, 3);
+		assert_eq!(timestamp, 3);
+		assert_eq!(cumulative, [0, 1]);
+		assert_eq!(full_width(cumulative) / 2u8 / Q64, (1u128 << 63).into());
+	}
+
+	#[test]
+	fn extreme_prices_retain_every_bit_over_the_full_clock_range() {
+		for (reserve_0, reserve_1) in [(1, u64::MAX), (u64::MAX, 1), (3, u64::MAX)] {
+			for elapsed in [1, 2, 600, u64::MAX - 1] {
+				let start = [u128::MAX - 5, 0];
+				let (cumulative, timestamp) =
+					advance_price_accumulator(reserve_0, reserve_1, start, 1, elapsed + 1);
+				let expected = full_width(start)
+					+ num_bigint::BigUint::from(q64_price(reserve_0, reserve_1)) * elapsed;
+
+				assert_eq!(timestamp, elapsed + 1);
+				assert_eq!(full_width(cumulative), expected);
+			}
+		}
+	}
+
+	#[test]
+	fn carries_across_both_limbs_preserve_the_delta() {
+		let start = [u128::MAX, u128::MAX];
+		let (cumulative, _) = advance_price_accumulator(1, 1, start, 1, 2);
+		assert_eq!(cumulative, [Q64 - 1, 0]);
+		let modulus = num_bigint::BigUint::from(1u8) << 256;
+		assert_eq!(
+			full_width(cumulative) + modulus - full_width(start),
+			num_bigint::BigUint::from(Q64)
+		);
 	}
 
 	proptest! {
 		#[test]
-		fn accumulator_differences_survive_wrapping(
+		fn accumulator_differences_recover_the_full_price_time_integral(
 			reserve_0 in 1u64..,
 			reserve_1 in 1u64..,
-			start in any::<u128>(),
-			last_update in 1u64..u64::MAX / 2,
-			elapsed in 1u64..1_000_000,
+			start in any::<[u128; 2]>(),
+			elapsed in 1u64..u64::MAX,
 		) {
-			let now = last_update + elapsed;
+			let now = 1 + elapsed;
 			let (cumulative, timestamp) =
-				advance_price_accumulator(reserve_0, reserve_1, start, last_update, now);
-			let price = (u128::from(reserve_1) << 64) / u128::from(reserve_0);
+				advance_price_accumulator(reserve_0, reserve_1, start, 1, now);
+			let price = (num_bigint::BigUint::from(reserve_1) << 64) / reserve_0;
+			let modulus = num_bigint::BigUint::from(1u8) << 256;
+			let delta = (full_width(cumulative) + &modulus - full_width(start)) % modulus;
+
 			prop_assert_eq!(timestamp, now);
-			prop_assert_eq!(
-				cumulative.wrapping_sub(start),
-				price.wrapping_mul(u128::from(elapsed))
-			);
+			prop_assert_eq!(&delta, &(&price * elapsed));
+			prop_assert_eq!(delta / elapsed, price);
 		}
 	}
 
@@ -834,7 +890,7 @@ mod tests {
 	#[test]
 	fn a_donation_cannot_reprice_the_elapsed_interval() {
 		let oracle = PriceOracle {
-			price_0_cumulative: 0,
+			price_0_cumulative: [0; 2],
 			last_update: 1_000,
 			reserve_0: 1_000_000_000,
 			reserve_1: 4_000_000_000,
@@ -843,15 +899,15 @@ mod tests {
 		let donated = oracle.observe(1_010, 1_000_000_000, 400_000_000_000);
 		assert_eq!(
 			honest.price_0_cumulative,
-			q64_price(1_000_000_000, 4_000_000_000) * 10
+			[q64_price(1_000_000_000, 4_000_000_000) * 10, 0]
 		);
 		assert_eq!(donated.price_0_cumulative, honest.price_0_cumulative);
 		assert_eq!(donated.last_update, 1_010);
 		// The donated price counts only for the time it actually stands.
 		let later = donated.observe(1_011, 1_000_000_000, 4_000_000_000);
 		assert_eq!(
-			later.price_0_cumulative,
-			honest.price_0_cumulative + q64_price(1_000_000_000, 400_000_000_000)
+			full_width(later.price_0_cumulative),
+			full_width(honest.price_0_cumulative) + q64_price(1_000_000_000, 400_000_000_000)
 		);
 	}
 
@@ -860,13 +916,13 @@ mod tests {
 	#[test]
 	fn same_second_observations_only_keep_the_last_reserves() {
 		let oracle = PriceOracle {
-			price_0_cumulative: 7,
+			price_0_cumulative: [7, 0],
 			last_update: 1_000,
 			reserve_0: 100,
 			reserve_1: 200,
 		};
 		let moved = oracle.observe(1_000, 100, 200_000);
-		assert_eq!(moved.price_0_cumulative, 7);
+		assert_eq!(moved.price_0_cumulative, [7, 0]);
 		let restored = moved.observe(1_000, 100, 200);
 		assert_eq!(restored, oracle);
 	}
@@ -1002,7 +1058,7 @@ mod tests {
 			let (mut reserve_0, mut reserve_1) = (1_000_000_000u64, 4_000_000_000u64);
 			let mut lp_supply = initial_liquidity(reserve_0, reserve_1).unwrap().lp_supply;
 			let mut oracle = PriceOracle {
-				price_0_cumulative: 0,
+				price_0_cumulative: [0; 2],
 				last_update: start,
 				reserve_0,
 				reserve_1,
@@ -1030,16 +1086,16 @@ mod tests {
 			// Each second from `start` up to the last observation is priced by
 			// the latest observation made at or before it.
 			let end = oracle.last_update;
-			let mut expected = 0u128;
+			let mut expected = num_bigint::BigUint::from(0u8);
 			for second in start..end {
 				let &(_, standing_0, standing_1) = timeline
 					.iter()
 					.rev()
 					.find(|(at, _, _)| *at <= second)
 					.unwrap();
-				expected = expected.wrapping_add(q64_price(standing_0, standing_1));
+				expected += q64_price(standing_0, standing_1);
 			}
-			prop_assert_eq!(oracle.price_0_cumulative, expected);
+			prop_assert_eq!(full_width(oracle.price_0_cumulative), expected);
 		}
 
 		/// Whatever the live reserves are when an instruction observes the
@@ -1048,7 +1104,7 @@ mod tests {
 		fn the_closed_interval_ignores_the_new_reserves(
 			stored_0 in 1u64..,
 			stored_1 in 1u64..,
-			start in any::<u128>(),
+			start in any::<[u128; 2]>(),
 			last_update in 1u64..u64::MAX / 2,
 			elapsed in 0u64..1_000_000,
 			live_a in (any::<u64>(), any::<u64>()),
@@ -1064,10 +1120,9 @@ mod tests {
 			let a = oracle.observe(now, live_a.0, live_a.1);
 			let b = oracle.observe(now, live_b.0, live_b.1);
 			prop_assert_eq!(a.price_0_cumulative, b.price_0_cumulative);
-			prop_assert_eq!(
-				a.price_0_cumulative.wrapping_sub(start),
-				q64_price(stored_0, stored_1).wrapping_mul(u128::from(elapsed))
-			);
+			let modulus = num_bigint::BigUint::from(1u8) << 256;
+			let delta = (full_width(a.price_0_cumulative) + &modulus - full_width(start)) % modulus;
+			prop_assert_eq!(delta, num_bigint::BigUint::from(q64_price(stored_0, stored_1)) * elapsed);
 		}
 	}
 

@@ -14,6 +14,7 @@
     "src/generated/events/pool_created.rs",
     "src/generated/events/pool_creator_changed.rs",
     "src/generated/events/pool_synced.rs",
+    "src/generated/events/pool_synced_v0.rs",
     "src/generated/events/swapped.rs",
     "src/generated/instructions/collect_creator_fees.rs",
     "src/generated/instructions/collect_protocol_fees.rs",

@@ -18,8 +18,9 @@ use crate::processors::*;
 use crate::state::*;
 
 /// Upper bound on the reserved `Migrate` instruction's rent top-up: roughly
-/// 6,960 lamports per byte an account grows when its layout changes.
-pub const MAX_MIGRATION_LAMPORTS: u64 = 100_000;
+/// 6,960 lamports per byte. The full-width accumulator adds 16 bytes to a
+/// pool, requiring 111,360 lamports at the standard rent rate.
+pub const MAX_MIGRATION_LAMPORTS: u64 = 120_000;
 
 /// Instruction discriminators. Values are part of the wire format.
 #[discriminator(
