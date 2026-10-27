@@ -1,7 +1,8 @@
 name: release-pr
 
+# Release authority is reserved for code merged to main. Manual dispatch
+# permits caller-selected refs and must not be enabled here.
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
