@@ -33,5 +33,9 @@ solana-signer = { workspace = true }
 solana-transaction = { workspace = true }
 thiserror = { workspace = true }
 
+[dev-dependencies]
+async-trait = { default-features = false, version = "0.1" }
+wincode = { default-features = false, version = "0.5", features = ["std"] }
+
 [lints]
 workspace = true
