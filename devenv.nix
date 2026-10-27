@@ -74,8 +74,14 @@ in
       fi
     '';
 
+    "test:workflows".exec = ''
+      set -euo pipefail
+      node --test tools/workflow-security.test.ts
+    '';
+
     "test:unit".exec = ''
       set -euo pipefail
+      test:workflows
       cargo test --workspace --all-features --locked
       pnpm --dir clients/typescript/pina_amm test
       pnpm --dir website test
