@@ -81,7 +81,7 @@ Fees are paid to the signer's associated token accounts, which are created if ne
 
 ## Scripting
 
-With `--json`, every command prints exactly one JSON object on stdout, in one of two shapes.
+With `--json`, every successful command prints exactly one JSON object on stdout, in one of two shapes.
 
 Commands that act (`config create`, `config update`, `pool create`, `pool set-creator`, `quote`, `swap`, `deposit`, `withdraw`, and `fees ...`) print an envelope. `signature` is `null` for `quote` and under `--simulate`:
 
@@ -97,4 +97,6 @@ $ pina-amm --json pool show --pool <POOL>
 {"address":"...","lp_supply":2000000000,"reserve_0":1000000000,"reserve_1":4000000000,...}
 ```
 
-The CLI exits with status 1 and a message on stderr when anything fails, including a failed simulation, which prints the program logs.
+The CLI exits with status 1 and a message on stderr when anything fails, including a failed simulation, which prints the program logs. Under `--json`, command failures emit one `{"error":"..."}` object on stderr and leave stdout empty. Argument parsing errors use the argument parser's own diagnostics.
+
+Error messages escape terminal control characters from RPC errors and program logs as visible text, preserving newlines and tabs for readability.

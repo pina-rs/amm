@@ -25,7 +25,7 @@ fn main() {
 	let cli = Cli::parse();
 	let result = Context::new(&cli.global).and_then(|context| commands::run(&context, cli.command));
 	if let Err(error) = result {
-		eprintln!("error: {error}");
+		eprintln!("{}", error.diagnostic(cli.global.json));
 		std::process::exit(1);
 	}
 }
