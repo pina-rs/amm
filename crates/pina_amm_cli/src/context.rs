@@ -355,15 +355,13 @@ mod tests {
 			.filter(|(request, _)| *request == RpcRequest::SimulateTransaction)
 			.collect();
 		assert_eq!(simulations.len(), 1);
-		assert!(!requests.iter().any(|(request, _)| {
-			matches!(
-				request,
-				RpcRequest::GetLatestBlockhash | RpcRequest::SendTransaction
-			)
-		}));
 
 		let params = &simulations[0].1;
 		let transaction = decode_transaction(params);
+		assert!(
+			!transaction.is_signed(),
+			"simulation exposed broadcast authorization"
+		);
 		assert_eq!(params[1]["sigVerify"], false);
 		assert_eq!(params[1]["replaceRecentBlockhash"], true);
 		assert_eq!(
@@ -384,7 +382,12 @@ mod tests {
 			transaction.signatures[0],
 			context.signer.sign_message(&transaction.message_data())
 		);
-		assert!(!transaction.is_signed());
+		assert!(!requests.iter().any(|(request, _)| {
+			matches!(
+				request,
+				RpcRequest::GetLatestBlockhash | RpcRequest::SendTransaction
+			)
+		}));
 	}
 
 	#[test]
@@ -424,6 +427,22 @@ mod tests {
 			assert!(
 				matches!(error, Some(CliError::SimulationFailed { logs, .. }) if logs == "Program log: rejected")
 			);
+			assert_unsigned_simulation(&context, &instructions, &requests);
+		}
+	}
+
+	#[test]
+	fn rpc_simulation_failures_never_fall_through_to_send() {
+		for simulate_only in [false, true] {
+			let (context, requests) = recording_context(simulate_only, Some(Value::Null));
+			let instructions = [signed_instruction(&context)];
+			let error = if simulate_only {
+				context.send(&instructions).err()
+			} else {
+				context.simulate(&instructions).err()
+			};
+
+			assert!(matches!(error, Some(CliError::Rpc(_))));
 			assert_unsigned_simulation(&context, &instructions, &requests);
 		}
 	}
