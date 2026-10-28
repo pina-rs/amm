@@ -23,6 +23,7 @@ use pina_amm_client::PINA_AMM_ID;
 use pina_amm_client::accounts::AmmConfig;
 use pina_amm_client::accounts::Pool;
 use pina_amm_client::events::ConfigCreated;
+use pina_amm_client::events::PoolSynced;
 use pina_amm_client::instructions::CollectCreatorFees;
 use pina_amm_client::instructions::CollectCreatorFeesInstructionData;
 use pina_amm_client::instructions::CollectProtocolFees;
@@ -186,11 +187,31 @@ fn create_pool_instruction(
 ) -> (Instruction, PoolFixture) {
 	let (mint_0, program_0) = spec.token_0;
 	let (mint_1, program_1) = spec.token_1;
+	// Ordinary fixtures leave funds for later deposits. At the supply
+	// boundary, fund only the opening deposit so both the amount and the
+	// mint's total supply remain representable for subsequent trader mints.
+	let funding = |amount: u64| {
+		if amount > u64::MAX / 10 {
+			amount
+		} else {
+			amount * 10
+		}
+	};
 	let owner_token_0 = h
-		.mint_to_owner(&mint_0, &owner.pubkey(), &program_0, spec.amounts.0 * 10)
+		.mint_to_owner(
+			&mint_0,
+			&owner.pubkey(),
+			&program_0,
+			funding(spec.amounts.0),
+		)
 		.expect("fund token 0");
 	let owner_token_1 = h
-		.mint_to_owner(&mint_1, &owner.pubkey(), &program_1, spec.amounts.1 * 10)
+		.mint_to_owner(
+			&mint_1,
+			&owner.pubkey(),
+			&program_1,
+			funding(spec.amounts.1),
+		)
 		.expect("fund token 1");
 	let pool = Pool::find_pda(&spec.config, &mint_0, &mint_1).0;
 	let lp_mint = lp_mint_address(&pool);
@@ -294,10 +315,19 @@ fn pool_state(h: &Harness, pool: &Pubkey) -> Pool {
 		creator_fee_mode: state.creator_fee_mode,
 		bump: state.bump,
 		price0_cumulative_last: state.price0_cumulative_last.get(),
+		price0_cumulative_high_last: state.price0_cumulative_high_last.get(),
 		last_update_timestamp: state.last_update_timestamp.get(),
 		reserve0_last: state.reserve0_last.get(),
 		reserve1_last: state.reserve1_last.get(),
 	}
+}
+
+/// Numeric accumulator limbs, least significant first.
+fn cumulative(pool: &Pool) -> [u128; 2] {
+	[
+		pool.price0_cumulative_last,
+		pool.price0_cumulative_high_last,
+	]
 }
 
 /// Decoded `Program data:` records from the logs of one transaction that
@@ -1301,7 +1331,7 @@ fn sync_accumulates_the_time_weighted_price() {
 		let synced = pool_state(&h, &fixture.pool);
 		let elapsed = synced.last_update_timestamp - created_at;
 		assert!(elapsed >= 9, "clock advanced by {elapsed}");
-		assert_eq!(synced.price0_cumulative_last, price_0 * u128::from(elapsed));
+		assert_eq!(cumulative(&synced), [price_0 * u128::from(elapsed), 0]);
 
 		// A swap advances the accumulator with the price in force before it.
 		h.advance_seconds(10).expect("advance");
@@ -1321,8 +1351,11 @@ fn sync_accumulates_the_time_weighted_price() {
 		let second = swapped.last_update_timestamp - synced.last_update_timestamp;
 		assert!(second >= 9, "clock advanced by {second}");
 		assert_eq!(
-			swapped.price0_cumulative_last,
-			synced.price0_cumulative_last + price_0 * u128::from(second)
+			cumulative(&swapped),
+			[
+				synced.price0_cumulative_last + price_0 * u128::from(second),
+				0
+			]
 		);
 		h.stop().expect("stop");
 	});
@@ -1382,8 +1415,8 @@ fn donations_cannot_reprice_the_elapsed_interval() {
 		assert!(elapsed >= 9, "clock advanced by {elapsed}");
 		// The elapsed interval is priced at 4, exactly as if nothing happened.
 		assert_eq!(
-			after_attack.price0_cumulative_last,
-			price_0 * u128::from(elapsed)
+			cumulative(&after_attack),
+			[price_0 * u128::from(elapsed), 0]
 		);
 		// The donation did land: the pool now stands at a price near 40.
 		let (reserve_0, reserve_1) = reserves(&h, &fixture);
@@ -1404,8 +1437,11 @@ fn donations_cannot_reprice_the_elapsed_interval() {
 		let second = synced.last_update_timestamp - after_attack.last_update_timestamp;
 		let donated_price = (u128::from(reserve_1) << 64) / u128::from(reserve_0);
 		assert_eq!(
-			synced.price0_cumulative_last,
-			after_attack.price0_cumulative_last + donated_price * u128::from(second)
+			cumulative(&synced),
+			[
+				after_attack.price0_cumulative_last + donated_price * u128::from(second),
+				0
+			]
 		);
 		h.stop().expect("stop");
 	});
@@ -1413,29 +1449,44 @@ fn donations_cannot_reprice_the_elapsed_interval() {
 
 #[test]
 #[ignore = "run with `pina test`"]
-fn extreme_pools_keep_trading_when_the_accumulator_wraps() {
+fn extreme_pools_keep_the_full_integral_and_keep_trading() {
 	pina_test::run(async {
 		let h = Harness::start().await.expect("start");
 		let admin = install_admin(&h);
 		let config = create_config(&h, &admin, 0, &Pubkey::default());
 		let (token_0, token_1) = ordered_mints(&h, &TOKEN_PROGRAM, &[], &TOKEN_PROGRAM, &[]);
-		// One raw unit of token 0 against 10^18 of token 1 puts the Q64.64
-		// price of token 1 in token 0 near 2^124; after a few idle minutes
-		// `price * elapsed` has wrapped past 2^128 several times over. Before
-		// the accumulator wrapped, every later swap failed with MathOverflow
-		// forever and froze the pool, so this journey is the wrap's end-to-end
-		// regression test.
+		// This valid price used to lose a full 2^128 cycle every two seconds.
 		let fixture = create_pool(
 			&h,
 			&PoolSpec {
 				config,
 				token_0,
 				token_1,
-				amounts: (1, 1_000_000_000_000_000_000),
+				amounts: (1, 1 << 63),
 				creator_fee_mode: 0,
 				pool_creator_authority: None,
 			},
 		);
+		let created = pool_state(&h, &fixture.pool);
+		h.advance_seconds(3).expect("advance");
+		let (_, simulation_logs) = h
+			.simulate_with_logs(&[sync_instruction(&fixture)], &[])
+			.expect("simulate sync");
+		let logs = program_events(&simulation_logs);
+		let event = logs
+			.iter()
+			.find_map(|log| PoolSynced::from_bytes(log).ok())
+			.expect("sync event");
+		assert!(event.price0_cumulative_high_last.get() > 0);
+		h.send(&[sync_instruction(&fixture)], &[]).expect("sync");
+		let synced = pool_state(&h, &fixture.pool);
+		let elapsed = synced.last_update_timestamp - created.last_update_timestamp;
+		assert!(elapsed >= 2);
+		assert_eq!(
+			cumulative(&synced),
+			[u128::from(elapsed % 2) << 127, u128::from(elapsed / 2)]
+		);
+
 		h.advance_seconds(600).expect("advance");
 		let trader = funded_trader(&h, &fixture, 10_000);
 		// Selling the scarce side is the only direction whose output is not
@@ -1453,12 +1504,17 @@ fn extreme_pools_keep_trading_when_the_accumulator_wraps() {
 			)],
 			&[&trader],
 		)
-		.expect("swap still settles after the accumulator wraps");
+		.expect("swap still settles with a full-width accumulator");
 		assert!(h.token_balance(&out_token) > out_before);
 		let advanced = pool_state(&h, &fixture.pool);
 		assert!(advanced.last_update_timestamp > 0);
+		let elapsed = advanced.last_update_timestamp - created.last_update_timestamp;
+		assert_eq!(
+			cumulative(&advanced),
+			[u128::from(elapsed % 2) << 127, u128::from(elapsed / 2)]
+		);
 
-		// SyncPool keeps working on the wrapped pool.
+		// SyncPool keeps working after the swap changes the reserves.
 		h.send(&[sync_instruction(&fixture)], &[]).expect("sync");
 		let synced = pool_state(&h, &fixture.pool);
 		assert!(synced.last_update_timestamp >= advanced.last_update_timestamp);

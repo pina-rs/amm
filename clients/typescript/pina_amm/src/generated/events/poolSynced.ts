@@ -13,7 +13,7 @@ export const POOL_SYNCED_EVENT_DISCRIMINATOR = 5;
 
 export function getPoolSyncedEventDiscriminatorBytes(): ReadonlyUint8Array { return getU8Encoder().encode(POOL_SYNCED_EVENT_DISCRIMINATOR); }
 
-export const POOL_SYNCED_EVENT_DISCRIMINATOR2 = 0;
+export const POOL_SYNCED_EVENT_DISCRIMINATOR2 = 1;
 
 export function getPoolSyncedEventDiscriminator2Bytes(): ReadonlyUint8Array { return getU8Encoder().encode(POOL_SYNCED_EVENT_DISCRIMINATOR2); }
 
@@ -30,10 +30,12 @@ reserve0: bigint;
 /** Token 1 reserve recorded at the advance; it prices the next interval. */
 reserve1: bigint; 
 /**
- * The accumulator after the advance: Q64.64 price of token 1 in token 0,
- * summed over seconds.
+ * Low 128 bits of the Q64.64 price-time integral after the advance.
+ * Combine with `price_0_cumulative_high_last` as `low + high * 2^128`.
  */
 price0CumulativeLast: bigint; 
+/** High 128 bits of the Q64.64 price-time integral after the advance. */
+price0CumulativeHighLast: bigint; 
 /** Unix second of the advance. */
 lastUpdateTimestamp: bigint;  };
 
@@ -45,21 +47,23 @@ reserve0: number | bigint;
 /** Token 1 reserve recorded at the advance; it prices the next interval. */
 reserve1: number | bigint; 
 /**
- * The accumulator after the advance: Q64.64 price of token 1 in token 0,
- * summed over seconds.
+ * Low 128 bits of the Q64.64 price-time integral after the advance.
+ * Combine with `price_0_cumulative_high_last` as `low + high * 2^128`.
  */
 price0CumulativeLast: number | bigint; 
+/** High 128 bits of the Q64.64 price-time integral after the advance. */
+price0CumulativeHighLast: number | bigint; 
 /** Unix second of the advance. */
 lastUpdateTimestamp: number | bigint;  };
 
 /** Gets the encoder for {@link PoolSyncedEventArgs} event data. */
 export function getPoolSyncedEventEncoder(): FixedSizeEncoder<PoolSyncedEventArgs> {
-    return transformEncoder(getStructEncoder([['discriminator', getU8Encoder()], ['migrationVersion', getU8Encoder()], ['pool', getAddressEncoder()], ['reserve0', getU64Encoder()], ['reserve1', getU64Encoder()], ['price0CumulativeLast', getU128Encoder()], ['lastUpdateTimestamp', getU64Encoder()]]), (value) => ({ ...value, discriminator: 5, migrationVersion: 0 }));
+    return transformEncoder(getStructEncoder([['discriminator', getU8Encoder()], ['migrationVersion', getU8Encoder()], ['pool', getAddressEncoder()], ['reserve0', getU64Encoder()], ['reserve1', getU64Encoder()], ['price0CumulativeLast', getU128Encoder()], ['price0CumulativeHighLast', getU128Encoder()], ['lastUpdateTimestamp', getU64Encoder()]]), (value) => ({ ...value, discriminator: 5, migrationVersion: 1 }));
 }
 
 /** Gets the decoder for {@link PoolSyncedEvent} event data. */
 export function getPoolSyncedEventDecoder(): FixedSizeDecoder<PoolSyncedEvent> {
-    return getStructDecoder([['discriminator', getPinaPodDiscriminatorDecoder(POOL_SYNCED_EVENT_DISCRIMINATOR, getU8Decoder())], ['migrationVersion', getPinaPodMigrationVersionDecoder(0, getU8Decoder())], ['pool', getAddressDecoder()], ['reserve0', getU64Decoder()], ['reserve1', getU64Decoder()], ['price0CumulativeLast', getU128Decoder()], ['lastUpdateTimestamp', getU64Decoder()]]);
+    return getStructDecoder([['discriminator', getPinaPodDiscriminatorDecoder(POOL_SYNCED_EVENT_DISCRIMINATOR, getU8Decoder())], ['migrationVersion', getPinaPodMigrationVersionDecoder(1, getU8Decoder())], ['pool', getAddressDecoder()], ['reserve0', getU64Decoder()], ['reserve1', getU64Decoder()], ['price0CumulativeLast', getU128Decoder()], ['price0CumulativeHighLast', getU128Decoder()], ['lastUpdateTimestamp', getU64Decoder()]]);
 }
 
 /** Gets the codec for {@link PoolSyncedEvent} event data. */

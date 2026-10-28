@@ -35,6 +35,11 @@ import {
 	type PoolSyncedEvent,
 } from "./poolSynced.js";
 import {
+	getPoolSyncedV0EventDecoder,
+	getPoolSyncedV0EventDiscriminatorBytes,
+	type PoolSyncedV0Event,
+} from "./poolSyncedV0.js";
+import {
 	getConfigCreatedEventDecoder,
 	getConfigCreatedEventDiscriminatorBytes,
 	type ConfigCreatedEvent,
@@ -299,9 +304,9 @@ export function decodePoolSyncedEvent(
 		}
 	}
 	const sourceVersion = bytes[1];
-	if (sourceVersion !== 0) {
+	if (sourceVersion !== 1) {
 		throw new RangeError(
-			`event migration version mismatch: expected 0, received ${sourceVersion} (decode it with the event for that version, or regenerate this client)`,
+			`event migration version mismatch: expected 1, received ${sourceVersion} (decode it with the event for that version, or regenerate this client)`,
 		);
 	}
 	return { name: "poolSynced", data: getPoolSyncedEventDecoder().decode(bytes) };
@@ -329,10 +334,67 @@ export function parsePoolSyncedEventFromLog(log: string): DecodedPoolSyncedEvent
 			return null;
 		}
 	}
-	if (bytes[1] !== 0) {
+	if (bytes[1] !== 1) {
 		return null;
 	}
 	return decodePoolSyncedEvent(bytes);
+}
+
+/**
+ * Decode one `poolSyncedV0` record: only records carrying this event's migration version decode.
+ */
+export function decodePoolSyncedV0Event(
+	data: ReadonlyUint8Array | Uint8Array,
+): DecodedPoolSyncedV0Event {
+	const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+	const discriminatorBytes = getPoolSyncedV0EventDiscriminatorBytes();
+	if (bytes.length < 2) {
+		throw new RangeError(
+			`the provided data is too short for the "PoolSyncedV0Event" event envelope`,
+		);
+	}
+	for (let index = 0; index < 1; index += 1) {
+		if (bytes[index] !== discriminatorBytes[index]) {
+			throw new RangeError(
+				'the provided data does not match the "PoolSyncedV0Event" event discriminator.',
+			);
+		}
+	}
+	const sourceVersion = bytes[1];
+	if (sourceVersion !== 0) {
+		throw new RangeError(
+			`event migration version mismatch: expected 0, received ${sourceVersion} (decode it with the event for that version, or regenerate this client)`,
+		);
+	}
+	return { name: "poolSyncedV0", data: getPoolSyncedV0EventDecoder().decode(bytes) };
+}
+
+/** One log entry that named this event. */
+export type DecodedPoolSyncedV0Event = { name: "poolSyncedV0"; data: PoolSyncedV0Event };
+
+/**
+ * Decode a `Program data:` log line, or return `null` when the line is not
+ * this event.
+ */
+export function parsePoolSyncedV0EventFromLog(log: string): DecodedPoolSyncedV0Event | null {
+	const prefix = "Program data: ";
+	if (!log.startsWith(prefix)) {
+		return null;
+	}
+	const bytes = getBase64Encoder().encode(log.slice(prefix.length));
+	if (bytes.length < 2) {
+		return null;
+	}
+	const discriminatorBytes = getPoolSyncedV0EventDiscriminatorBytes();
+	for (let index = 0; index < 1; index += 1) {
+		if (bytes[index] !== discriminatorBytes[index]) {
+			return null;
+		}
+	}
+	if (bytes[1] !== 0) {
+		return null;
+	}
+	return decodePoolSyncedV0Event(bytes);
 }
 
 /**
@@ -567,6 +629,7 @@ export type DecodedPinaAmmEvent =
 	| DecodedLiquidityChangedEvent
 	| DecodedFeesCollectedEvent
 	| DecodedPoolSyncedEvent
+	| DecodedPoolSyncedV0Event
 	| DecodedConfigCreatedEvent
 	| DecodedConfigUpdatedEvent
 	| DecodedPoolCreatorChangedEvent;
@@ -638,6 +701,11 @@ export function parsePinaAmmEventsFromLogs(
 		const poolSynced = parsePoolSyncedEventFromLog(log);
 		if (poolSynced !== null) {
 			discovered.push(poolSynced);
+			continue;
+		}
+		const poolSyncedV0 = parsePoolSyncedV0EventFromLog(log);
+		if (poolSyncedV0 !== null) {
+			discovered.push(poolSyncedV0);
 			continue;
 		}
 		const configCreated = parseConfigCreatedEventFromLog(log);

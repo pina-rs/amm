@@ -177,7 +177,7 @@ fn every_instruction_runs_in_one_journey() {
 		.expect("sync");
 		let pool = pool_state(&h, &fixture.pool);
 		assert!(
-			pool.price0_cumulative_last > 0,
+			crate::cumulative(&pool) != [0; 2],
 			"the journey advanced the price accumulator"
 		);
 		assert!(pool.protocol_fees0 > 0, "swaps must accrue fees");

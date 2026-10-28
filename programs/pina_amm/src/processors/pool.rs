@@ -151,6 +151,7 @@ impl<'a> ProcessAccountInfos<'a> for CreatePoolAccounts<'a> {
 			pool.creator_fee_mode = creator_fee_mode;
 			pool.bump = bump;
 			pool.price_0_cumulative_last.set(0);
+			pool.price_0_cumulative_high_last.set(0);
 			pool.last_update_timestamp.set(activation_timestamp);
 			// The opening deposit is the first observed price.
 			pool.reserve_0_last.set(amount_0);

@@ -32,11 +32,12 @@ class Pool {
     required this.creatorFeeMode,
     required this.bump,
     required this.price0CumulativeLast,
+    required this.price0CumulativeHighLast,
     required this.lastUpdateTimestamp,
     required this.reserve0Last,
     required this.reserve1Last,
   }) : discriminator = 2,
-       migrationVersion = 0;
+       migrationVersion = 1;
 
   final int discriminator;
   final int migrationVersion;
@@ -58,6 +59,7 @@ class Pool {
   final int creatorFeeMode;
   final int bump;
   final BigInt price0CumulativeLast;
+  final BigInt price0CumulativeHighLast;
   final BigInt lastUpdateTimestamp;
   final BigInt reserve0Last;
   final BigInt reserve1Last;
@@ -87,6 +89,7 @@ class Pool {
           creatorFeeMode == other.creatorFeeMode &&
           bump == other.bump &&
           price0CumulativeLast == other.price0CumulativeLast &&
+          price0CumulativeHighLast == other.price0CumulativeHighLast &&
           lastUpdateTimestamp == other.lastUpdateTimestamp &&
           reserve0Last == other.reserve0Last &&
           reserve1Last == other.reserve1Last;
@@ -113,6 +116,7 @@ class Pool {
     creatorFeeMode,
     bump,
     price0CumulativeLast,
+    price0CumulativeHighLast,
     lastUpdateTimestamp,
     reserve0Last,
     reserve1Last,
@@ -120,7 +124,7 @@ class Pool {
 
   @override
   String toString() =>
-      'Pool(discriminator: $discriminator, migrationVersion: $migrationVersion, ammConfig: $ammConfig, creator: $creator, mint0: $mint0, mint1: $mint1, vault0: $vault0, vault1: $vault1, lpMint: $lpMint, lpSupply: $lpSupply, protocolFees0: $protocolFees0, protocolFees1: $protocolFees1, creatorFees0: $creatorFees0, creatorFees1: $creatorFees1, tradeFeeRate: $tradeFeeRate, protocolFeeRate: $protocolFeeRate, creatorFeeRate: $creatorFeeRate, creatorFeeMode: $creatorFeeMode, bump: $bump, price0CumulativeLast: $price0CumulativeLast, lastUpdateTimestamp: $lastUpdateTimestamp, reserve0Last: $reserve0Last, reserve1Last: $reserve1Last)';
+      'Pool(discriminator: $discriminator, migrationVersion: $migrationVersion, ammConfig: $ammConfig, creator: $creator, mint0: $mint0, mint1: $mint1, vault0: $vault0, vault1: $vault1, lpMint: $lpMint, lpSupply: $lpSupply, protocolFees0: $protocolFees0, protocolFees1: $protocolFees1, creatorFees0: $creatorFees0, creatorFees1: $creatorFees1, tradeFeeRate: $tradeFeeRate, protocolFeeRate: $protocolFeeRate, creatorFeeRate: $creatorFeeRate, creatorFeeMode: $creatorFeeMode, bump: $bump, price0CumulativeLast: $price0CumulativeLast, price0CumulativeHighLast: $price0CumulativeHighLast, lastUpdateTimestamp: $lastUpdateTimestamp, reserve0Last: $reserve0Last, reserve1Last: $reserve1Last)';
 }
 
 Encoder<Pool> getPoolEncoder() {
@@ -145,6 +149,7 @@ Encoder<Pool> getPoolEncoder() {
     ('creatorFeeMode', getU8Encoder()),
     ('bump', getU8Encoder()),
     ('price0CumulativeLast', getU128Encoder()),
+    ('price0CumulativeHighLast', getU128Encoder()),
     ('lastUpdateTimestamp', getU64Encoder()),
     ('reserve0Last', getU64Encoder()),
     ('reserve1Last', getU64Encoder()),
@@ -154,7 +159,7 @@ Encoder<Pool> getPoolEncoder() {
     structEncoder,
     (Pool value) => <String, Object?>{
       'discriminator': 2,
-      'migrationVersion': 0,
+      'migrationVersion': 1,
       'ammConfig': value.ammConfig,
       'creator': value.creator,
       'mint0': value.mint0,
@@ -173,6 +178,7 @@ Encoder<Pool> getPoolEncoder() {
       'creatorFeeMode': value.creatorFeeMode,
       'bump': value.bump,
       'price0CumulativeLast': value.price0CumulativeLast,
+      'price0CumulativeHighLast': value.price0CumulativeHighLast,
       'lastUpdateTimestamp': value.lastUpdateTimestamp,
       'reserve0Last': value.reserve0Last,
       'reserve1Last': value.reserve1Last,
@@ -202,6 +208,7 @@ Decoder<Pool> getPoolDecoder() {
     ('creatorFeeMode', getU8Decoder()),
     ('bump', getU8Decoder()),
     ('price0CumulativeLast', getU128Decoder()),
+    ('price0CumulativeHighLast', getU128Decoder()),
     ('lastUpdateTimestamp', getU64Decoder()),
     ('reserve0Last', getU64Decoder()),
     ('reserve1Last', getU64Decoder()),
@@ -218,11 +225,11 @@ Decoder<Pool> getPoolDecoder() {
   (Pool, int) readTopLevel(Uint8List bytes, int offset) {
     getConstantDecoder(getU8Encoder().encode(2)).read(bytes, offset + 0);
     final (storedMigrationVersion, _) = getU8Decoder().read(bytes, offset + 1);
-    if (storedMigrationVersion != 0) {
+    if (storedMigrationVersion != 1) {
       throw StateError(
-        storedMigrationVersion < 0
-            ? 'migration version mismatch: expected 0, received $storedMigrationVersion (the data predates this client; migrate it by sending a transaction to the program, or decode it with a client generated from an older IDL)'
-            : 'migration version mismatch: expected 0, received $storedMigrationVersion (the data was written by a newer program; upgrade this client)',
+        storedMigrationVersion < 1
+            ? 'migration version mismatch: expected 1, received $storedMigrationVersion (the data predates this client; migrate it by sending a transaction to the program, or decode it with a client generated from an older IDL)'
+            : 'migration version mismatch: expected 1, received $storedMigrationVersion (the data was written by a newer program; upgrade this client)',
       );
     }
     final (map, newOffset) = structDecoder.read(bytes, offset);
@@ -247,6 +254,7 @@ Decoder<Pool> getPoolDecoder() {
         creatorFeeMode: map['creatorFeeMode']! as int,
         bump: map['bump']! as int,
         price0CumulativeLast: map['price0CumulativeLast']! as BigInt,
+        price0CumulativeHighLast: map['price0CumulativeHighLast']! as BigInt,
         lastUpdateTimestamp: map['lastUpdateTimestamp']! as BigInt,
         reserve0Last: map['reserve0Last']! as BigInt,
         reserve1Last: map['reserve1Last']! as BigInt,
@@ -282,7 +290,7 @@ Account<Pool> decodePool(EncodedAccount encodedAccount) {
 }
 
 /// The account schema version this client was generated from.
-const int poolMigrationVersion = 0;
+const int poolMigrationVersion = 1;
 
 /// Cheap envelope check for fetched `Pool` bytes: returns true only when
 /// the bytes carry this account's discriminator and a migration version older
@@ -295,5 +303,5 @@ bool poolNeedsMigration(List<int> data) {
   if (data[0] != 2) {
     return false;
   }
-  return data[1] < 0;
+  return data[1] < 1;
 }

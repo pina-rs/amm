@@ -15,6 +15,7 @@
     "lib/src/generated/pina_amm/events/pool_created.dart",
     "lib/src/generated/pina_amm/events/pool_creator_changed.dart",
     "lib/src/generated/pina_amm/events/pool_synced.dart",
+    "lib/src/generated/pina_amm/events/pool_synced_v0.dart",
     "lib/src/generated/pina_amm/events/swapped.dart",
     "lib/src/generated/pina_amm/instructions/collect_creator_fees.dart",
     "lib/src/generated/pina_amm/instructions/collect_protocol_fees.dart",

@@ -176,7 +176,7 @@ Emits `PoolSynced`. Errors: the pool and vault mismatches from the other read pa
 | `Swapped`            | `pool`, `trader`, `zero_for_one`, `amount_in`, `amount_out`, `trade_fee`, `protocol_fee`, `creator_fee`, `creator_fee_on_input`, `reserve_0`, `reserve_1` |
 | `LiquidityChanged`   | `pool`, `owner`, `is_deposit`, `lp_amount`, `amount_0`, `amount_1`, `lp_supply`                                                                           |
 | `FeesCollected`      | `pool`, `collector`, `is_protocol`, `amount_0`, `amount_1`                                                                                                |
-| `PoolSynced`         | `pool`, `reserve_0`, `reserve_1`, `price_0_cumulative_last`, `last_update_timestamp`                                                                      |
+| `PoolSynced`         | `pool`, `reserve_0`, `reserve_1`, `price_0_cumulative_last`, `price_0_cumulative_high_last`, `last_update_timestamp`                                      |
 | `ConfigCreated`      | `amm_config`, `authority`, `pool_creator_authority`, `trade_fee_rate`, `protocol_fee_rate`, `creator_fee_rate`, `index`                                   |
 | `ConfigUpdated`      | `amm_config`, `new_authority`, `trade_fee_rate`, `protocol_fee_rate`, `creator_fee_rate`                                                                  |
 | `PoolCreatorChanged` | `pool`, `previous_creator`, `new_creator`                                                                                                                 |

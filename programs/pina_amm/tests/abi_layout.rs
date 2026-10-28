@@ -6,7 +6,7 @@
 //! check` fails when this file no longer matches the manifest. A layout
 //! change that forgets an offset fails `cargo test` in the same change.
 
-// manifest-sha256: 76ad5e4cc7225104225ae3d48945ba2febe8ff09a548203ffd864bac834e8695
+// manifest-sha256: 3b23034e8d9dc24e3cadf03c60c273b2d75be17523a827f74602bf9cba988084
 // program-id: pAMMzVPRwtrxQs2CjLTUUpfCAp9XdvVmwwVhpAuCobi
 // version_type: u8
 
@@ -59,9 +59,9 @@ pub mod account_1_02 {
 	/// Rust type name as declared in the program.
 	pub const RUST_NAME: &str = "Pool";
 	/// Current schema version.
-	pub const VERSION: u32 = 0;
+	pub const VERSION: u32 = 1;
 	/// Schema hash recorded for this version.
-	pub const SCHEMA_SHA256: &str = "4f4a9b9fb7612348b205451075b85d774ca08bfdd5779b6617b784fa7612b855";
+	pub const SCHEMA_SHA256: &str = "3083c1c8326afdc109f15b4edb9dfeb0a905e3cc6b3c39c4ae265ef33ab2a639";
 	/// Width of the discriminator in bytes.
 	pub const DISCRIMINATOR_BYTES: usize = 1;
 	/// Byte offset of the migration version field.
@@ -71,11 +71,11 @@ pub mod account_1_02 {
 	/// Bytes occupied by the discriminator and version envelope together.
 	pub const MIGRATION_HEADER_SIZE: usize = 2;
 	/// Payload size in bytes, excluding the envelope header.
-	pub const PAYLOAD_SIZE: usize = 318;
+	pub const PAYLOAD_SIZE: usize = 334;
 	/// Total encoded size in bytes, including the envelope header.
 	pub const SIZE: usize = MIGRATION_HEADER_SIZE + PAYLOAD_SIZE;
 	/// Manifest payload size; must agree with `PAYLOAD_SIZE`.
-	pub const MANIFEST_PAYLOAD_SIZE: usize = 318;
+	pub const MANIFEST_PAYLOAD_SIZE: usize = 334;
 	/// `(name, absolute_offset, size)` in encoded bytes.
 	pub const FIELDS: &[(&str, usize, usize)] = &[
 		("amm_config", MIGRATION_HEADER_SIZE + 0, 32),
@@ -96,9 +96,10 @@ pub mod account_1_02 {
 		("creator_fee_mode", MIGRATION_HEADER_SIZE + 276, 1),
 		("bump", MIGRATION_HEADER_SIZE + 277, 1),
 		("price_0_cumulative_last", MIGRATION_HEADER_SIZE + 278, 16),
-		("last_update_timestamp", MIGRATION_HEADER_SIZE + 294, 8),
-		("reserve_0_last", MIGRATION_HEADER_SIZE + 302, 8),
-		("reserve_1_last", MIGRATION_HEADER_SIZE + 310, 8),
+		("price_0_cumulative_high_last", MIGRATION_HEADER_SIZE + 294, 16),
+		("last_update_timestamp", MIGRATION_HEADER_SIZE + 310, 8),
+		("reserve_0_last", MIGRATION_HEADER_SIZE + 318, 8),
+		("reserve_1_last", MIGRATION_HEADER_SIZE + 326, 8),
 	];
 }
 
@@ -257,9 +258,9 @@ pub mod event_1_05 {
 	/// Rust type name as declared in the program.
 	pub const RUST_NAME: &str = "PoolSynced";
 	/// Current schema version.
-	pub const VERSION: u32 = 0;
+	pub const VERSION: u32 = 1;
 	/// Schema hash recorded for this version.
-	pub const SCHEMA_SHA256: &str = "50f7f80060b3271e6ea1a1b6b59df1e06453c747537531cd026b76013c4ed0b1";
+	pub const SCHEMA_SHA256: &str = "1f0ef764655e1de4e0e3ae13dc1ca1d29f63b8ed4de69dd1714c572f490a289f";
 	/// Width of the discriminator in bytes.
 	pub const DISCRIMINATOR_BYTES: usize = 1;
 	/// Byte offset of the migration version field.
@@ -269,18 +270,19 @@ pub mod event_1_05 {
 	/// Bytes occupied by the discriminator and version envelope together.
 	pub const MIGRATION_HEADER_SIZE: usize = 2;
 	/// Payload size in bytes, excluding the envelope header.
-	pub const PAYLOAD_SIZE: usize = 72;
+	pub const PAYLOAD_SIZE: usize = 88;
 	/// Total encoded size in bytes, including the envelope header.
 	pub const SIZE: usize = MIGRATION_HEADER_SIZE + PAYLOAD_SIZE;
 	/// Manifest payload size; must agree with `PAYLOAD_SIZE`.
-	pub const MANIFEST_PAYLOAD_SIZE: usize = 72;
+	pub const MANIFEST_PAYLOAD_SIZE: usize = 88;
 	/// `(name, absolute_offset, size)` in encoded bytes.
 	pub const FIELDS: &[(&str, usize, usize)] = &[
 		("pool", MIGRATION_HEADER_SIZE + 0, 32),
 		("reserve_0", MIGRATION_HEADER_SIZE + 32, 8),
 		("reserve_1", MIGRATION_HEADER_SIZE + 40, 8),
 		("price_0_cumulative_last", MIGRATION_HEADER_SIZE + 48, 16),
-		("last_update_timestamp", MIGRATION_HEADER_SIZE + 64, 8),
+		("price_0_cumulative_high_last", MIGRATION_HEADER_SIZE + 64, 16),
+		("last_update_timestamp", MIGRATION_HEADER_SIZE + 80, 8),
 	];
 }
 

@@ -164,11 +164,14 @@ pub struct Pool {
 	pub creator_fee_mode: u8,
 	/// Canonical bump of this pool's PDA.
 	pub bump: u8,
-	/// Time-weighted price of token 1 in token 0, summed as Q64.64 price
-	/// times seconds and wrapping modulo `2^128`. Every swap, deposit,
+	/// Low 128 bits of the Q64.64 price-time integral. Combine with
+	/// `price_0_cumulative_high_last` as `low + high * 2^128`. Every swap, deposit,
 	/// withdrawal, and `SyncPool` advances it with `reserve_0_last` and
 	/// `reserve_1_last` before changing the reserves.
 	pub price_0_cumulative_last: u128,
+	/// High 128 bits of the Q64.64 price-time integral. Together the limbs
+	/// retain every bit for all supported reserve ratios and timestamp windows.
+	pub price_0_cumulative_high_last: u128,
 	/// Unix second of the last accumulator advance; zero before the first.
 	pub last_update_timestamp: u64,
 	/// Token 0 reserve at the end of the last instruction that changed or

@@ -14,4 +14,5 @@ export * from './liquidityChanged';
 export * from './poolCreated';
 export * from './poolCreatorChanged';
 export * from './poolSynced';
+export * from './poolSyncedV0';
 export * from './swapped';
