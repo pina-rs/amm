@@ -1,6 +1,6 @@
 [package]
 name = "pina_amm_cpi"
-version = "0.1.0"
+version = "0.2.0"
 categories = ["cryptography::cryptocurrencies", "no-std"]
 edition.workspace = true
 homepage.workspace = true
