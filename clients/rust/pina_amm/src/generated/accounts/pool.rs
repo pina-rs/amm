@@ -227,10 +227,10 @@ mod pool_version_error_tests {
 
 	#[test]
 	fn stale_and_future_versions_are_distinguishable() {
-		let error = Pool::try_from_bytes(&envelope(0 as u8)).expect_err("a stale envelope must fail");
+		let error = Pool::try_from_bytes(&envelope(0 as u8)).err().expect("a stale envelope must fail");
 		assert_eq!(error, PoolVersionError::Stale { stored: 0 });
 		assert_eq!(PoolVersionError::Stale { stored: 0 }.to_string(), "migration version mismatch: expected 1, received 0 (the data predates this client; migrate it by sending a transaction to the program, or decode it with a client generated from an older IDL)");
-		let error = Pool::try_from_bytes(&envelope(2 as u8)).expect_err("a future envelope must fail");
+		let error = Pool::try_from_bytes(&envelope(2 as u8)).err().expect("a future envelope must fail");
 		assert_eq!(error, PoolVersionError::Future { stored: 2 });
 		assert_eq!(PoolVersionError::Future { stored: 2 }.to_string(), "migration version mismatch: expected 1, received 2 (the data was written by a newer program; upgrade this client)");
 		assert!(
