@@ -20,21 +20,21 @@ base64 = { default-features = false, version = "0.22", features = ["std"] }
 clap = { default-features = false, version = "4", features = ["derive", "env", "error-context", "help", "std", "suggestions", "usage"] }
 num-derive = { default-features = false, version = "0.5" }
 num-traits = { default-features = false, version = "0.2" }
-pina = { default-features = false, version = "=0.23.0" }
+pina = { default-features = false, version = "=0.24.0" }
 pina_amm_client = { path = "clients/rust/pina_amm", version = "0.1.0" }
 proptest = { default-features = false, version = "1", features = ["std"] }
 serde_json = { default-features = false, version = "1", features = ["std"] }
 solana-commitment-config = { default-features = false, version = "3.1" }
-solana-instruction = { default-features = false, version = "~3.4" }
+solana-instruction = { default-features = false, version = "~3.5" }
 solana-keypair = { default-features = false, version = "3.1" }
 solana-message = { default-features = false, version = "4.4" }
 solana-program-error = { default-features = false, version = "3.0" }
 solana-pubkey = { default-features = false, version = "4", features = ["std"] }
-solana-rpc-client = { default-features = false, version = "4.2" }
-solana-rpc-client-api = { default-features = false, version = "4.2" }
+solana-rpc-client = { default-features = false, version = "=4.3.2" }
+solana-rpc-client-api = { default-features = false, version = "=4.3.2" }
 solana-security-txt = { default-features = false, version = "1.1.3" }
 solana-signer = { default-features = false, version = "3.0" }
-solana-transaction = { default-features = false, version = "4.1" }
+solana-transaction = { default-features = false, version = "=4.3.0" }
 thiserror = { default-features = false, version = "2" }
 
 [workspace.lints.rust]
