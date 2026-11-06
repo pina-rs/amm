@@ -13,15 +13,18 @@ description = "End-to-end tests that run the compiled Pina AMM on an offline Sur
 [dependencies]
 base64 = "=0.22.1"
 pina_amm_client = { path = "../../../../clients/rust/pina_amm" }
-pina_test = "=0.23.0"
+pina_test = "=0.24.0"
 serde_json = "1"
 solana-commitment-config = "=3.1.1"
-solana-message = "=4.4.1"
+solana-message = "=4.6.0"
 solana-program-pack = "=3.1.0"
-solana-rpc-client-api = "=4.2.2"
-solana-transaction = "=4.1.6"
+solana-rpc-client-api = "=4.3.2"
+# pina_test 0.24 requires the 4.3 line and surfpool 1.7 needs >=4.3.2; pin
+# the shared runtime so the resolver does not hold 4.3.0.
+solana-runtime = "=4.3.2"
+solana-transaction = "=4.3.0"
 spl-token-2022-interface = "=3.1.1"
-surfpool-sdk = "=1.6.0"
+surfpool-sdk = "=1.7.0"
 
 [lints.rust]
 missing_docs = "allow"
