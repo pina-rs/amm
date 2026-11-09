@@ -26,13 +26,22 @@ fi
 # shellcheck disable=SC1091
 . "${HOME}/.nix-profile/etc/profile.d/nix.sh"
 
+# Single-user Nix reads this file for every shell, login or not. Flakes are
+# required for the locked devenv install. The devenv cache is the one
+# documented at https://devenv.sh/binary-caching/ ; `extra-*` adds it to the
+# default cache.nixos.org substituter instead of replacing that list.
 mkdir -p "${HOME}/.config/nix"
 cat > "${HOME}/.config/nix/nix.conf" << 'EOF'
 experimental-features = nix-command flakes
 accept-flake-config = true
-substituters = https://cache.nixos.org https://devenv.cachix.org
-trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw=
+extra-substituters = https://devenv.cachix.org
+extra-trusted-public-keys = devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw=
 EOF
+
+if ! nix config show substituters | grep -q 'https://devenv.cachix.org'; then
+	echo "devenv.cachix.org is not configured as a substituter; refusing to build devenv from source." >&2
+	exit 1
+fi
 
 devenv_revision="$(
 	nix eval --impure --raw --expr '
@@ -47,6 +56,9 @@ if ! nix profile list --json | grep -q "github:cachix/devenv/${devenv_revision}"
 	if nix profile list --json | grep -q '"devenv"'; then
 		nix profile remove devenv
 	fi
+	# `nix profile install` is a deprecated alias of `add`. The installable is
+	# the devenv revision pinned in devenv.lock, which devenv.cachix.org
+	# serves as a binary. A floating `nixpkgs#devenv` would not match CI.
 	nix profile add --accept-flake-config "github:cachix/devenv/${devenv_revision}#devenv"
 fi
 
@@ -55,6 +67,10 @@ fi
 # live on the default PATH.
 sudo ln -sfn "${HOME}/.nix-profile/bin/nix" /usr/local/bin/nix
 sudo ln -sfn "${HOME}/.nix-profile/bin/devenv" /usr/local/bin/devenv
+
+# Build and cache the locked shell (Agave, Pina, Node, Dart, Rust, …) before
+# language packages are installed. Later `devenv shell` calls reuse it.
+devenv shell -- true
 
 devenv shell -- install:all
 
