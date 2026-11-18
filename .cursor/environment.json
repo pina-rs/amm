@@ -1,0 +1,4 @@
+{
+	"name": "Pina AMM",
+	"install": "bash .cursor/install.sh"
+}
