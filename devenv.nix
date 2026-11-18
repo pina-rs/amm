@@ -1,25 +1,86 @@
 { pkgs, inputs, ... }:
 let
   custom = inputs.ifiokjr-nixpkgs.packages.${pkgs.stdenv.hostPlatform.system};
+
+  # Locked nixpkgs ships pnpm 12.3.4 as `pkgs.pnpm`. Pin the release that
+  # package.json names. Standalone pnpm before 10.34.8 and 11.28.8 bundles a
+  # Node that trusts compromised eMudhra certificates (GHSA-w8f5-6m3h-r453);
+  # 12.21.0 does not. The Linux binary is patched onto Nix's loader so it
+  # runs under NixOS and on Ubuntu CI.
+  pnpmVersion = "12.21.0";
+  pnpmArchives = {
+    x86_64-linux = {
+      file = "pnpm-linux-x64.tar.gz";
+      hash = "sha256-hMR3O89KIX9Ag817KpHkzuYQPPQkJsEoLvN9MI9VpBA=";
+    };
+    aarch64-linux = {
+      file = "pnpm-linux-arm64.tar.gz";
+      hash = "sha256-bFkTpIyTs6VWtxw72b8Sxr+fv7u9LcvR1SqFxTl1G54=";
+    };
+    x86_64-darwin = {
+      file = "pnpm-darwin-x64.tar.gz";
+      hash = "sha256-QVwFrkJiyJuPJMpYxpO+XZaYVq6QnAhqoGmWlR/KMOo=";
+    };
+    aarch64-darwin = {
+      file = "pnpm-darwin-arm64.tar.gz";
+      hash = "sha256-XE1zAY4A3WAlMc5xRiVZT7aTy+EQ5nGd8rBDsK5iqxo=";
+    };
+  };
+  pnpmArchive =
+    pnpmArchives.${pkgs.stdenv.hostPlatform.system}
+      or (throw "pnpm ${pnpmVersion} has no prebuilt binary for ${pkgs.stdenv.hostPlatform.system}");
+  pnpm = pkgs.stdenv.mkDerivation {
+    pname = "pnpm";
+    version = pnpmVersion;
+    src = pkgs.fetchurl {
+      url = "https://github.com/pnpm/pnpm/releases/download/v${pnpmVersion}/${pnpmArchive.file}";
+      hash = pnpmArchive.hash;
+    };
+
+    sourceRoot = ".";
+    dontConfigure = true;
+    dontBuild = true;
+    dontStrip = true;
+
+    nativeBuildInputs = pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+      pkgs.autoPatchelfHook
+    ];
+    buildInputs = pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+      pkgs.stdenv.cc.cc.lib
+    ];
+
+    installPhase = ''
+      runHook preInstall
+      mkdir -p "$out/bin"
+      install -m755 pnpm "$out/bin/pnpm"
+      cp -R dist "$out/bin/dist"
+      ln -s pnpm "$out/bin/pn"
+      printf '%s\n' '#!/bin/sh' 'exec "$(dirname "$0")/pnpm" dlx "$@"' > "$out/bin/pnpx"
+      chmod +x "$out/bin/pnpx"
+      ln -s pnpx "$out/bin/pnx"
+      runHook postInstall
+    '';
+  };
 in
 {
-  packages = with pkgs; [
-    actionlint
-    cargo-deny
-    curl
-    custom.agave
-    custom.monochange
-    custom.pina
-    dart
-    dprint
-    git
-    libiconv
-    nixfmt
-    nodejs_24
-    pnpm
-    rustup
-    zlib
-  ];
+  packages =
+    (with pkgs; [
+      actionlint
+      cargo-deny
+      curl
+      custom.agave
+      custom.monochange
+      custom.pina
+      dart
+      dprint
+      git
+      libiconv
+      nixfmt
+      nodejs_24
+      rustup
+      zlib
+    ])
+    ++ [ pnpm ];
 
   env = {
     PINA_BPF_TOOLCHAIN = "nightly-2025-11-20";
@@ -154,7 +215,7 @@ in
     # CLOUDFLARE_ACCOUNT_ID; the website workflow runs it on every push to main.
     "deploy:website".exec = ''
       set -euo pipefail
-      # `run` is required: `pnpm deploy` is a built-in that shadows the script.
+      # `run` selects the package script. `deploy` is also a pnpm built-in.
       pnpm --dir website run deploy
     '';
 
