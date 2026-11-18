@@ -122,14 +122,37 @@ function parseArguments(): { out: string; buildRoot: string } {
 function run(
 	command: string,
 	args: string[],
-	options: { cwd?: string; env?: Record<string, string> } = {},
+	options: {
+		cwd?: string;
+		env?: Record<string, string>;
+		// Surfpool binds a port twice and the second bind can lose to
+		// TIME_WAIT. The base harness cannot be edited from this checkout, so
+		// the journey itself is retried when that race fires.
+		retryAddressInUse?: boolean;
+	} = {},
 ): void {
-	const result = spawnSync(command, args, {
-		stdio: "inherit",
-		cwd: options.cwd,
-		env: { ...process.env, ...options.env },
-	});
-	if (result.status !== 0) {
+	const attempts = options.retryAddressInUse ? 3 : 1;
+	for (let attempt = 1; attempt <= attempts; attempt += 1) {
+		const result = spawnSync(command, args, {
+			stdio: options.retryAddressInUse ? "pipe" : "inherit",
+			cwd: options.cwd,
+			env: { ...process.env, ...options.env },
+			encoding: "utf8",
+		});
+		if (options.retryAddressInUse) {
+			if (result.stdout) process.stdout.write(result.stdout);
+			if (result.stderr) process.stderr.write(result.stderr);
+		}
+		if (result.status === 0) return;
+		const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+		if (
+			options.retryAddressInUse &&
+			attempt < attempts &&
+			output.includes("Address already in use")
+		) {
+			console.log("benchmark: Surfpool port was busy; retrying the journey");
+			continue;
+		}
 		throw new Error(
 			`${command} ${args.join(" ")} failed with status ${
 				String(result.status)
@@ -248,6 +271,7 @@ function main(): void {
 						PINA_SBF_ARTIFACT: artifact,
 						PINA_CU_RECORD_FILE: samplesPath,
 					},
+					retryAddressInUse: true,
 				},
 			);
 		}

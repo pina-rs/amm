@@ -83,7 +83,27 @@ impl Harness {
 	///
 	/// `pina test` sets `PINA_SBF_ARTIFACT`; a plain `cargo test` falls back to
 	/// the workspace's `target/deploy/pina_amm.so`, which `pina build` writes.
+	///
+	/// Surfpool picks a free port by binding it, dropping that socket, and
+	/// binding the same port again. The second bind can lose to `TIME_WAIT`
+	/// and return `Address already in use`, so a start that fails that way is
+	/// tried again.
 	pub async fn start() -> Result<Self, String> {
+		const ATTEMPTS: u32 = 5;
+		let mut last_error = String::new();
+		for attempt in 1..=ATTEMPTS {
+			match Self::start_once().await {
+				Ok(harness) => return Ok(harness),
+				Err(error) if attempt < ATTEMPTS && error.contains("Address already in use") => {
+					last_error = error;
+				}
+				Err(error) => return Err(error),
+			}
+		}
+		Err(last_error)
+	}
+
+	async fn start_once() -> Result<Self, String> {
 		let artifact = std::env::var_os("PINA_SBF_ARTIFACT").map_or_else(
 			|| {
 				PathBuf::from(env!("CARGO_MANIFEST_DIR"))
