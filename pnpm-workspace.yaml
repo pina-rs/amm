@@ -14,3 +14,11 @@ onlyBuiltDependencies:
 # and GHSA-rgj7-g3m4-5g8c. 0.35.5 is the patched release of the same minor line.
 overrides:
   sharp: 0.35.5
+
+# picomatch <=4.0.7 is GHSA-fc5q-39xc-vjpf, a ReDoS with no patched release.
+# It arrives through the website (astro, unstorage, anymatch) and the
+# TypeScript client (tsup, tinyglobby). Ignore this advisory only, until a
+# fix is published.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-fc5q-39xc-vjpf

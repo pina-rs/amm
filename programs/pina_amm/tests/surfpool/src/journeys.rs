@@ -76,6 +76,20 @@ pub(crate) fn journey_mints(h: &Harness) -> ((Pubkey, Pubkey), (Pubkey, Pubkey))
 	}
 }
 
+/// Move the cluster clock past the pool's last oracle update before an
+/// instruction that observes the price oracle.
+///
+/// `advance_price_accumulator` returns immediately when `now <= last_update`
+/// and otherwise runs a `u128` division. Surfnet's clock follows wall time, so
+/// without this jump an instruction's compute units depend on whether a second
+/// boundary fell since the previous observation. The jump is two seconds, not
+/// one, so it still clears `last_update` when the clock sysvar trails the
+/// timestamp `advance_seconds` reads. `sync_accumulates_the_time_weighted_price`
+/// allows the same one-second slack.
+fn advance_clock(h: &Harness) {
+	h.advance_seconds(2).expect("advance the clock");
+}
+
 /// The journey's tier authority: a funded, fixed-seed keypair installed as
 /// the program's upgrade authority.
 fn journey_admin(h: &Harness) -> Keypair {
@@ -126,6 +140,7 @@ fn every_instruction_runs_in_one_journey() {
 		h.send(&[create], &[&owner]).expect("create pool");
 		assert_eq!(pool_state(&h, &fixture.pool).lp_supply, 2_000_000_000);
 
+		advance_clock(&h);
 		h.send(
 			&[deposit_instruction(
 				&fixture,
@@ -139,6 +154,7 @@ fn every_instruction_runs_in_one_journey() {
 		assert_eq!(pool_state(&h, &fixture.pool).lp_supply, 2_001_000_000);
 
 		let trader = funded_trader(&h, &fixture, 1_000_000_000);
+		advance_clock(&h);
 		h.send(
 			&[swap_exact_in_instruction(
 				&fixture,
@@ -150,6 +166,7 @@ fn every_instruction_runs_in_one_journey() {
 			&[&trader],
 		)
 		.expect("swap exact in");
+		advance_clock(&h);
 		h.send(
 			&[swap_exact_out_instruction(
 				&fixture,
@@ -163,6 +180,7 @@ fn every_instruction_runs_in_one_journey() {
 		.expect("swap exact out");
 
 		// SyncPool advances the accumulator outside a trade.
+		advance_clock(&h);
 		h.send(
 			&[SyncPool::new(
 				fixture.pool,
@@ -235,6 +253,7 @@ fn every_instruction_runs_in_one_journey() {
 		h.send(&[set_creator], &[&owner]).expect("set pool creator");
 		assert_eq!(pool_state(&h, &fixture.pool).creator, successor.pubkey());
 
+		advance_clock(&h);
 		h.send(
 			&[withdraw_instruction(
 				&fixture,

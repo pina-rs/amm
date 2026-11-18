@@ -23,7 +23,7 @@ Every pull request that touches the program, the clients, or the harness is benc
 - the deployed binary size, base against head;
 - every instruction's compute units, base against head, as the median of three runs.
 
-The journey uses fixed keypair seeds for every address that feeds a PDA derivation, so identical binaries measure identical compute units and the comparison shows program changes, not address luck.
+The journey uses fixed keypair seeds for every address that feeds a PDA derivation, so identical binaries measure identical compute units and the comparison shows program changes, not address luck. It also moves the cluster clock two seconds forward before `deposit`, both swaps, `SyncPool`, and `withdraw`. Those instructions observe the price oracle, and the oracle runs its division once the clock has moved since the previous observation. Surfnet's clock follows wall time, so the jump makes every sample take that division. The jump is two seconds because the clock sysvar can trail the timestamp the test reads by one second, the same slack `sync_accumulates_the_time_weighted_price` allows. When a pull request's base journey does not yet contain the jump, the benchmark applies this same edit for the base measurement and restores the file afterwards. The base program still runs in the base test crate.
 
 The policy in `scripts/benchmark-policy.json` gates the pull request:
 

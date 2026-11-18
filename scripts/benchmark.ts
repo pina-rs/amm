@@ -5,17 +5,71 @@
 // holds `benchmark.json`, the single artifact `compare-benchmarks.ts`
 // compares between the PR base and head.
 //
+// The journey moves Surfnet's clock two seconds past the pool's last oracle
+// update before every instruction that observes it. `advance_price_accumulator`
+// divides only after the clock has moved. Surfnet's clock otherwise follows
+// wall time, so an unpinned journey measures timing luck. When the base
+// journey does not yet contain the pin, this script applies the same edit
+// for the measurement and restores the file afterwards. The base program
+// still runs in the base test crate, so an account-layout change keeps its
+// own decoder.
+//
 // Usage: node scripts/benchmark.ts --out <directory>
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const PROGRAM = "pina_amm";
 const PROGRAM_DIR = "programs/pina_amm";
 const JOURNEY_TEST = "journeys::every_instruction";
 const TEST_MANIFEST = "programs/pina_amm/tests/surfpool/Cargo.toml";
+const JOURNEY_SOURCE = "programs/pina_amm/tests/surfpool/src/journeys.rs";
+
+// Text of the clock pin committed in the journey. Replayed onto a base
+// journey that predates the pin, so both binaries take the division path.
+export const JOURNEY_CLOCK_PIN = [
+	"/// Move the cluster clock past the pool's last oracle update before an",
+	"/// instruction that observes the price oracle.",
+	"///",
+	"/// `advance_price_accumulator` returns immediately when `now <= last_update`",
+	"/// and otherwise runs a `u128` division. Surfnet's clock follows wall time, so",
+	"/// without this jump an instruction's compute units depend on whether a second",
+	"/// boundary fell since the previous observation. The jump is two seconds, not",
+	"/// one, so it still clears `last_update` when the clock sysvar trails the",
+	"/// timestamp `advance_seconds` reads. `sync_accumulates_the_time_weighted_price`",
+	"/// allows the same one-second slack.",
+	"fn advance_clock(h: &Harness) {",
+	'\th.advance_seconds(2).expect("advance the clock");',
+	"}",
+	"",
+	"",
+].join("\n");
+
+const CLOCK_OBSERVATIONS: ReadonlyArray<readonly [string, string]> = [
+	[
+		"\t\th.send(\n\t\t\t&[deposit_instruction(",
+		"\t\tadvance_clock(&h);\n\t\th.send(\n\t\t\t&[deposit_instruction(",
+	],
+	[
+		"\t\th.send(\n\t\t\t&[swap_exact_in_instruction(",
+		"\t\tadvance_clock(&h);\n\t\th.send(\n\t\t\t&[swap_exact_in_instruction(",
+	],
+	[
+		"\t\th.send(\n\t\t\t&[swap_exact_out_instruction(",
+		"\t\tadvance_clock(&h);\n\t\th.send(\n\t\t\t&[swap_exact_out_instruction(",
+	],
+	[
+		"\t\t// SyncPool advances the accumulator outside a trade.\n\t\th.send(\n",
+		"\t\t// SyncPool advances the accumulator outside a trade.\n\t\tadvance_clock(&h);\n\t\th.send(\n",
+	],
+	[
+		"\t\th.send(\n\t\t\t&[withdraw_instruction(",
+		"\t\tadvance_clock(&h);\n\t\th.send(\n\t\t\t&[withdraw_instruction(",
+	],
+];
 
 interface IdlInstruction {
 	name: string;
@@ -68,20 +122,89 @@ function parseArguments(): { out: string; buildRoot: string } {
 function run(
 	command: string,
 	args: string[],
-	options: { cwd?: string; env?: Record<string, string> } = {},
+	options: {
+		cwd?: string;
+		env?: Record<string, string>;
+		// Surfpool binds a port twice and the second bind can lose to
+		// TIME_WAIT. The base harness cannot be edited from this checkout, so
+		// the journey itself is retried when that race fires.
+		retryAddressInUse?: boolean;
+	} = {},
 ): void {
-	const result = spawnSync(command, args, {
-		stdio: "inherit",
-		cwd: options.cwd,
-		env: { ...process.env, ...options.env },
-	});
-	if (result.status !== 0) {
+	const attempts = options.retryAddressInUse ? 3 : 1;
+	for (let attempt = 1; attempt <= attempts; attempt += 1) {
+		const result = spawnSync(command, args, {
+			stdio: options.retryAddressInUse ? "pipe" : "inherit",
+			cwd: options.cwd,
+			env: { ...process.env, ...options.env },
+			encoding: "utf8",
+		});
+		if (options.retryAddressInUse) {
+			if (result.stdout) process.stdout.write(result.stdout);
+			if (result.stderr) process.stderr.write(result.stderr);
+		}
+		if (result.status === 0) return;
+		const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+		if (
+			options.retryAddressInUse &&
+			attempt < attempts &&
+			output.includes("Address already in use")
+		) {
+			console.log("benchmark: Surfpool port was busy; retrying the journey");
+			continue;
+		}
 		throw new Error(
 			`${command} ${args.join(" ")} failed with status ${
 				String(result.status)
 			}`,
 		);
 	}
+}
+
+// Replay the journey's oracle-clock pin onto `source`.
+//
+// Returns `source` when the pin is already present. Returns `undefined` when
+// `source` has no pin and is missing an anchor, so a partial edit cannot
+// measure some instructions on the division path and others on the early
+// return.
+export function pinJourneyClock(source: string): string | undefined {
+	if (source.includes("fn advance_clock(")) {
+		return source;
+	}
+	const marker = "/// The journey's tier authority:";
+	if (!source.includes(marker)) {
+		return undefined;
+	}
+	let pinned = source.replace(marker, `${JOURNEY_CLOCK_PIN}${marker}`);
+	for (const [from, to] of CLOCK_OBSERVATIONS) {
+		if (!pinned.includes(from)) {
+			return undefined;
+		}
+		pinned = pinned.replace(from, to);
+	}
+	return pinned;
+}
+
+// Pin the base journey's clock when it predates this edit, then restore the
+// file. The head journey is left untouched.
+function alignBaseJourneyClock(buildRoot: string): () => void {
+	const basePath = resolve(buildRoot, JOURNEY_SOURCE);
+	const headPath = resolve(JOURNEY_SOURCE);
+	if (basePath === headPath) {
+		return () => {};
+	}
+	const baseSource = readFileSync(basePath, "utf8");
+	const pinned = pinJourneyClock(baseSource);
+	if (pinned === undefined || pinned === baseSource) {
+		return () => {};
+	}
+	writeFileSync(basePath, pinned);
+	console.log(
+		"benchmark: pinned the base journey's oracle clock so both binaries take the division path",
+	);
+	return () => {
+		writeFileSync(basePath, baseSource);
+	};
 }
 
 function median(values: number[]): number {
@@ -97,9 +220,9 @@ function main(): void {
 	const { out, buildRoot } = parseArguments();
 	mkdirSync(out, { recursive: true });
 
-	// The program is built from `--build-root`, which lets a pull request
-	// benchmark the base's binary through this checkout's journey harness:
-	// the test deploys whatever `PINA_SBF_ARTIFACT` points at.
+	// Build the program from `--build-root`. The journey deploys whatever
+	// `PINA_SBF_ARTIFACT` points at, which is how the base and head binaries
+	// are measured separately.
 	run("pina", ["build", "--project", join(buildRoot, PROGRAM_DIR)]);
 
 	const artifact = resolve(buildRoot, `target/deploy/${PROGRAM}.so`);
@@ -122,26 +245,38 @@ function main(): void {
 	// regression behind averaging.
 	const RUNS = 3;
 	const samplesPath = resolve(out, "samples.jsonl");
+	writeFileSync(samplesPath, "");
 	// The base is measured through its own journey harness: the head's test
 	// crate can only decode accounts the head's program writes, so a layout
 	// change would otherwise break the base benchmark instead of reporting.
+	// The clock pin is the exception: it is replayed onto that harness when
+	// the base journey does not already contain it.
 	const manifest = resolve(buildRoot, TEST_MANIFEST);
-	for (let attempt = 0; attempt < RUNS; attempt += 1) {
-		run(
-			"cargo",
-			[
-				"test",
-				"--manifest-path",
-				manifest,
-				"--locked",
-				"--",
-				"--ignored",
-				JOURNEY_TEST,
-			],
-			{
-				env: { PINA_SBF_ARTIFACT: artifact, PINA_CU_RECORD_FILE: samplesPath },
-			},
-		);
+	const restoreBaseJourney = alignBaseJourneyClock(buildRoot);
+	try {
+		for (let attempt = 0; attempt < RUNS; attempt += 1) {
+			run(
+				"cargo",
+				[
+					"test",
+					"--manifest-path",
+					manifest,
+					"--locked",
+					"--",
+					"--ignored",
+					JOURNEY_TEST,
+				],
+				{
+					env: {
+						PINA_SBF_ARTIFACT: artifact,
+						PINA_CU_RECORD_FILE: samplesPath,
+					},
+					retryAddressInUse: true,
+				},
+			);
+		}
+	} finally {
+		restoreBaseJourney();
 	}
 
 	const byDiscriminator = new Map<number, number[]>();
@@ -179,4 +314,14 @@ function main(): void {
 	);
 }
 
-main();
+function invokedDirectly(): boolean {
+	const entry = process.argv[1];
+	if (entry === undefined) {
+		return false;
+	}
+	return import.meta.url === pathToFileURL(resolve(entry)).href;
+}
+
+if (invokedDirectly()) {
+	main();
+}
