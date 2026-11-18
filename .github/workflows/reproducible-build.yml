@@ -67,10 +67,17 @@ jobs:
 
       # The second pass starts from an empty target directory, so nothing
       # from the first build can leak into the artifact it produces.
+      # The first digest is stored under target/, so park it outside that
+      # tree before the wipe and restore it for the comparison and upload.
       - name: Build the program (clean second pass)
         run: |
+          preserved="$(mktemp -d)"
+          cp -a target/reproducible/. "$preserved/"
           rm -rf target
           devenv shell build:program
+          mkdir -p target/reproducible
+          cp -a "$preserved/." target/reproducible/
+          rm -rf "$preserved"
           cp target/deploy/pina_amm.so target/reproducible/pina_amm-second.so
           sha256sum target/reproducible/pina_amm-second.so | tee target/reproducible/second.sha256
 
