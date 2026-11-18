@@ -76,7 +76,7 @@ in
 
     "test:workflows".exec = ''
       set -euo pipefail
-      node --test tools/workflow-security.test.ts
+      node --test tools/workflow-security.test.ts tools/pin-benchmark-clock.test.ts
     '';
 
     "test:unit".exec = ''
