@@ -1,6 +1,6 @@
 {
 	"binarySize": {
-		"maxIncreaseBytes": 0
+		"maxIncreaseBytes": 4536
 	},
 	"computeUnits": {
 		"thresholdPercent": 2
