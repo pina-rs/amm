@@ -13,7 +13,7 @@ description = "End-to-end tests that run the compiled Pina AMM on an offline Sur
 [dependencies]
 base64 = "=0.22.1"
 pina_amm_client = { path = "../../../../clients/rust/pina_amm" }
-pina_test = "=0.24.0"
+pina_test = "=0.25.0"
 serde_json = "1"
 solana-commitment-config = "=3.1.1"
 solana-message = "=4.6.0"
