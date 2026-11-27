@@ -14,6 +14,10 @@ use crate::errors::AmmError;
 pub const BPF_LOADER_UPGRADEABLE_ID: Address =
 	address!("BPFLoaderUpgradeab1e11111111111111111111111");
 
+/// This program's canonical program-data PDA and bump, derived at compile time.
+pub(crate) const PROGRAM_DATA_PDA: (Address, u8) =
+	find_program_address_const(&[ID.as_array()], &BPF_LOADER_UPGRADEABLE_ID);
+
 /// `UpgradeableLoaderState::ProgramData` tag, little-endian `u32`.
 const PROGRAM_DATA_TAG: [u8; 4] = [3, 0, 0, 0];
 
@@ -31,9 +35,7 @@ pub fn assert_upgrade_authority(
 	program_data
 		.assert_owner(&BPF_LOADER_UPGRADEABLE_ID)
 		.map_err(|_| AmmError::InvalidProgramData)?;
-	let (expected, _) = try_find_program_address(&[ID.as_ref()], &BPF_LOADER_UPGRADEABLE_ID)
-		.ok_or(AmmError::InvalidProgramData)?;
-	if program_data.address() != &expected {
+	if program_data.address() != &PROGRAM_DATA_PDA.0 {
 		return Err(AmmError::InvalidProgramData.into());
 	}
 
@@ -51,4 +53,17 @@ pub fn assert_upgrade_authority(
 		return Err(AmmError::Unauthorized.into());
 	}
 	Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn program_data_pda_matches_runtime_derivation() {
+		assert_eq!(
+			Some(PROGRAM_DATA_PDA),
+			try_find_program_address(&[ID.as_ref()], &BPF_LOADER_UPGRADEABLE_ID)
+		);
+	}
 }

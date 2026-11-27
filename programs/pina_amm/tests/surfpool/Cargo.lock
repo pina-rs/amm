@@ -2555,9 +2555,9 @@ checksum = "00b0228411908ca8685dba7fc2cdd70ec9990a6e753e89b6ac91a84c40fbaf4b"
 
 [[package]]
 name = "form_urlencoded"
-version = "1.2.2"
+version = "1.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb4cb245038516f5f85277875cdaa4f7d2c9a0fa0468de06ed190163b1581fcf"
+checksum = "afa489199eaffb1211795df1c6236ce1ad0d41a6fa45250add73e3b02420f06e"
 dependencies = [
  "percent-encoding 2.3.2",
 ]
@@ -4552,7 +4552,7 @@ dependencies = [
  "rand 0.7.3",
  "sha-1",
  "slab",
- "url 2.5.8",
+ "url 2.5.9",
 ]
 
 [[package]]
@@ -4801,9 +4801,9 @@ checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
 name = "pina"
-version = "0.24.0"
+version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03d586b8244d2e9b8a578e249460b65c7c79352f0a832ad2ecf7265e69229acb"
+checksum = "3c7738360566b1ff473fb26fe43476417b1e329e68acf08e8a1f7b949722ff56"
 dependencies = [
  "pinapod",
  "pinocchio",
@@ -4845,9 +4845,9 @@ dependencies = [
 
 [[package]]
 name = "pina_test"
-version = "0.24.0"
+version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d943d2b20eb1473e3946dd961cd34c32a96654af19a3a28c55c18810873e767"
+checksum = "19540054bd96e3c78e8c6ef152a9027aed13a0c13d69b3be10d723ca2dc9ab99"
 dependencies = [
  "base64 0.23.1",
  "serde_json",
@@ -4882,9 +4882,9 @@ dependencies = [
 
 [[package]]
 name = "pinapod"
-version = "0.4.9"
+version = "0.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db60a908d2fef976728d379ead1149f40616a9a2184bc2e16eeaf21eb1a6dfc8"
+checksum = "9011be3a31433bbb51c5fe14e5686283a2929ff123f8dbce19ed563d0c995607"
 dependencies = [
  "pinapod-derive",
  "solana-address 2.7.0",
@@ -4893,9 +4893,9 @@ dependencies = [
 
 [[package]]
 name = "pinapod-derive"
-version = "0.4.9"
+version = "0.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2a45b02a4a72ec7035e99224dbe7ecf718057a7c16f86ee16667abae090080a"
+checksum = "c048c6b64e2551fa844ae43ce921ea8f22213478ecdae071f4a38f6a2d156bc7"
 dependencies = [
  "proc-macro-crate 3.5.0",
  "proc-macro2",
@@ -5513,7 +5513,7 @@ dependencies = [
  "tower",
  "tower-http",
  "tower-service",
- "url 2.5.8",
+ "url 2.5.9",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -7849,7 +7849,7 @@ dependencies = [
  "solana-svm-type-overrides",
  "thiserror 2.0.21",
  "tokio",
- "url 2.5.8",
+ "url 2.5.9",
 ]
 
 [[package]]
@@ -8279,7 +8279,7 @@ dependencies = [
  "tokio-stream",
  "tokio-tungstenite",
  "tungstenite",
- "url 2.5.8",
+ "url 2.5.9",
 ]
 
 [[package]]
@@ -10936,7 +10936,7 @@ dependencies = [
  "tower",
  "tower-layer",
  "tower-service",
- "url 2.5.8",
+ "url 2.5.9",
 ]
 
 [[package]]
@@ -11027,7 +11027,7 @@ dependencies = [
  "serde_json",
  "sha2 0.10.9",
  "strum 0.26.3",
- "url 2.5.8",
+ "url 2.5.9",
  "uuid",
 ]
 
@@ -11218,9 +11218,9 @@ dependencies = [
 
 [[package]]
 name = "url"
-version = "2.5.8"
+version = "2.5.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff67a8a4397373c3ef660812acab3268222035010ab8680ec4215f38ba3d0eed"
+checksum = "f00cd2407bb42c0ef17be88d4cf020f5cceffd121665bac9b8b9493a369b3b1a"
 dependencies = [
  "form_urlencoded",
  "idna 1.1.0",
