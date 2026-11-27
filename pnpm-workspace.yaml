@@ -6,14 +6,21 @@ linkWorkspacePackages: true
 preferWorkspacePackages: true
 
 # Wrangler's local runtime and the bundler install platform binaries.
-onlyBuiltDependencies:
-  - esbuild
-  - workerd
+# pnpm 11 replaced onlyBuiltDependencies with this allowlist.
+allowBuilds:
+  esbuild: true
+  workerd: true
 
 # miniflare (through wrangler) pins sharp 0.35.4, which carries GHSA-wq5f-xc86-pv6w
 # and GHSA-rgj7-g3m4-5g8c. 0.35.5 is the patched release of the same minor line.
+# Selector overrides used to live in package.json; pnpm 11 no longer reads that field.
 overrides:
   sharp: 0.35.5
+  "@astrojs/sitemap>zod": 4.6.7
+  "astro>zod": 4.6.7
+  "miniflare>sharp": 0.35.5
+  "miniflare>undici": 7.30.1
+  "unifont>undici": 8.12.3
 
 # picomatch <=4.0.7 is GHSA-fc5q-39xc-vjpf, a ReDoS with no patched release.
 # It arrives through the website (astro, unstorage, anymatch) and the
